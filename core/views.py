@@ -2,21 +2,74 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+from core.models import Topic
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.models import Group
+from .models import Test, TestQuestion, Question
+
+@login_required
+@require_GET
+def ajax_questions(request):
+    qs = Question.objects.filter(created_by=request.user).select_related(
+        "topic", "grade", "subject"
+    )
+
+    grade_id = request.GET.get("grade")
+    subject_id = request.GET.get("subject")
+    topic_ids = request.GET.getlist("topics[]")
+    question_type = request.GET.get("question_type")
+    marks = request.GET.get("marks")
+    year = request.GET.get("year")
+    sort = request.GET.get("sort")
+
+    if grade_id:
+        qs = qs.filter(grade_id=grade_id)
+
+    if subject_id:
+        qs = qs.filter(subject_id=subject_id)
+
+    if topic_ids:
+        qs = qs.filter(topic_id__in=topic_ids)
+
+    if question_type:
+        qs = qs.filter(question_type=question_type)
+
+    if marks:
+        qs = qs.filter(marks=marks)
+
+    if year:
+        qs = qs.filter(year=year)
+
+    if sort == "marks":
+        qs = qs.order_by("marks")
+    elif sort == "latest":
+        qs = qs.order_by("-id")
+    elif sort == "oldest":
+        qs = qs.order_by("id")
+
+    data = {
+        "questions": [
+            {
+                "id": q.id,
+                "text": q.question_text,
+                "marks": q.marks,
+                "type": q.question_type,
+                "topic": q.topic.name,
+            }
+            for q in qs
+        ]
+    }
+
+    return JsonResponse(data)
+
 
 @login_required
 def teacher_dashboard(request):
-    return render(request, "teacher/teacher_dashboard.html")
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
+    return render(request, "teacher/teacher_dashboard.html")  
 
 @login_required
 def student_dashboard(request):
     return render(request, "student/student_dashboard.html")
-
 
 from .models import (
     LearningObjective,
@@ -24,17 +77,12 @@ from .models import (
     Grade,
     Subject,
     Topic,
-)
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
-
-from django.shortcuts import redirect
+)  
 
 def root_redirect(request):
     if request.user.is_authenticated:
         return redirect("teacher_dashboard")  # ✅ CHANGE HERE
     return redirect("login")
-
 
 @login_required
 def tests_list(request):
@@ -44,7 +92,26 @@ def tests_list(request):
         request,
         "teacher/tests_list.html",
         {"tests": tests}
-    )
+    ) 
+
+@login_required
+def ajax_topics(request):
+    grade_id = request.GET.get("grade_id")
+    subject_id = request.GET.get("subject_id")
+
+    qs = Topic.objects.all()
+
+    if grade_id:
+        qs = qs.filter(grade_id=grade_id)
+    if subject_id:
+        qs = qs.filter(subject_id=subject_id)
+
+    topics = [
+        {"id": t.id, "name": t.name}
+        for t in qs.order_by("name")
+    ]
+
+    return JsonResponse({"topics": topics})
 
 
 @login_required
@@ -115,7 +182,6 @@ def add_edit_question(request, question_id=None):
 
     grades = Grade.objects.all()
     subjects = Subject.objects.all()
-    topics = Topic.objects.all()
 
     if request.method == "POST":
         data = request.POST
@@ -141,9 +207,10 @@ def add_edit_question(request, question_id=None):
             question.question_type = data["question_type"]
             question.save()
 
-        question.learning_objectives.set(
-            data.getlist("los")
-        )
+        # ✅ FIXED: AJAX-compatible LO saving
+        los_selected = data.get("los_selected", "")
+        lo_ids = [int(x) for x in los_selected.split(",") if x]
+        question.learning_objectives.set(lo_ids)
 
         return redirect("question_library")
 
@@ -154,10 +221,11 @@ def add_edit_question(request, question_id=None):
             "question": question,
             "grades": grades,
             "subjects": subjects,
-            "topics": topics,
-            "selected_lo_ids": selected_lo_ids,  # ✅ FIX
+            "selected_lo_ids": selected_lo_ids,
         }
     )
+
+
 @login_required
 def toggle_publish(request, test_id):
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
@@ -232,46 +300,24 @@ def test_editor(request, test_id=None):
         }
     )
     
+#@login_required
+#def create_test(request):
+ #   test = Test.objects.create(
+  #      title="Untitled Test",
+   ##)
+    #return redirect("edit_test", test_id=test.id)
 
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import Group
-@login_required
-def create_test(request):
-    """
-    Create new test.
-    Uses the unified test_editor.html page.
-    """
-    return render(
-        request,
-        "teacher/test_editor.html",
-        {
-            "test": None,   # important: template expects this safely
-        }
-    )
 
 @login_required
 def edit_test(request, test_id):
-    """
-    Edit existing test.
-    Uses the same test_editor.html page.
-    """
-    # Placeholder: actual Test fetching will come later
-    test = {
-        "id": test_id,
-        "name": "Sample Test",
-    }
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
     return render(
         request,
         "teacher/test_editor.html",
-        {
-            "test": test,
-        }
+        {"test": test}
     )
 
-
-from django.shortcuts import redirect
-from django.contrib.auth import authenticate, login
 
 def custom_login(request):
     error = None
@@ -297,7 +343,3 @@ def custom_login(request):
                 return redirect("/admin/")
 
     return render(request, "registration/login.html", {"error": error})
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from .models import Test, TestQuestion, Question

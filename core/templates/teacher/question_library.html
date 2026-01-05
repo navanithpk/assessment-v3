@@ -5,9 +5,7 @@
 {% block content %}
 
 <style>
-h1 {
-  margin-top: 0;
-}
+h1 { margin-top: 0; }
 
 /* ACTION BAR */
 .action-bar {
@@ -94,18 +92,13 @@ th, td {
   font-size: 14px;
 }
 
-th {
-  background: #f1f1f1;
-}
+th { background: #f1f1f1; }
 
 tr:not(:last-child) td {
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* BULK ACTIONS */
-.bulk-actions {
-  margin-bottom: 12px;
-}
+.bulk-actions { margin-bottom: 12px; }
 </style>
 
 <div class="action-bar">
@@ -117,13 +110,13 @@ tr:not(:last-child) td {
 </div>
 
 <!-- FILTERS -->
-<form method="get" class="filters">
+<div class="filters">
 
   <div class="filter-grid">
 
     <div>
       <label>Grade *</label>
-      <select name="grade" required>
+      <select id="gradeFilter">
         <option value="">Select</option>
         {% for g in grades %}
           <option value="{{ g.id }}">{{ g.name }}</option>
@@ -133,7 +126,7 @@ tr:not(:last-child) td {
 
     <div>
       <label>Subject *</label>
-      <select name="subject" required>
+      <select id="subjectFilter">
         <option value="">Select</option>
         {% for s in subjects %}
           <option value="{{ s.id }}">{{ s.name }}</option>
@@ -143,7 +136,7 @@ tr:not(:last-child) td {
 
     <div>
       <label>Question Type</label>
-      <select name="question_type">
+      <select id="typeFilter">
         <option value="">Any</option>
         <option value="mcq">MCQ</option>
         <option value="theory">Theory</option>
@@ -154,12 +147,12 @@ tr:not(:last-child) td {
 
     <div>
       <label>Marks</label>
-      <input type="number" name="marks">
+      <input type="number" id="marksFilter">
     </div>
 
     <div>
       <label>Exam Year</label>
-      <input type="number" name="year">
+      <input type="number" id="yearFilter">
     </div>
 
   </div>
@@ -168,23 +161,19 @@ tr:not(:last-child) td {
     <strong>Topics *</strong><br>
     {% for t in topics %}
       <label>
-        <input type="checkbox" name="topics" value="{{ t.id }}">
+        <input type="checkbox" class="topicFilter" value="{{ t.id }}">
         {{ t.name }}
       </label><br>
     {% endfor %}
   </div>
 
-  <div style="margin-top:14px;">
-    <button class="btn gray" type="submit">Apply Filters</button>
-  </div>
-
-</form>
+</div>
 
 <!-- SORT -->
 <div class="sort-bar">
-  <a href="?sort=marks">Sort by Marks</a>
-  <a href="?sort=latest">Latest</a>
-  <a href="?sort=oldest">Oldest</a>
+  <a href="#" data-sort="marks">Sort by Marks</a>
+  <a href="#" data-sort="latest">Latest</a>
+  <a href="#" data-sort="oldest">Oldest</a>
 </div>
 
 <!-- TABLE -->
@@ -209,7 +198,7 @@ tr:not(:last-child) td {
       </tr>
     </thead>
 
-    <tbody>
+    <tbody id="questionsBody">
       {% for q in questions %}
       <tr>
         <td><input type="checkbox" name="selected_questions" value="{{ q.id }}"></td>
@@ -238,6 +227,80 @@ document.getElementById("selectAll").onclick = function() {
     cb.checked = this.checked;
   });
 };
+</script>
+
+<!-- AJAX FILTERING -->
+<script>
+const gradeFilter = document.getElementById("gradeFilter");
+const subjectFilter = document.getElementById("subjectFilter");
+const typeFilter = document.getElementById("typeFilter");
+const marksFilter = document.getElementById("marksFilter");
+const yearFilter = document.getElementById("yearFilter");
+const topicFilters = document.querySelectorAll(".topicFilter");
+const questionsBody = document.getElementById("questionsBody");
+
+let currentSort = null;
+
+function fetchQuestions() {
+  const params = new URLSearchParams();
+
+  if (gradeFilter.value) params.append("grade", gradeFilter.value);
+  if (subjectFilter.value) params.append("subject", subjectFilter.value);
+  if (typeFilter.value) params.append("question_type", typeFilter.value);
+  if (marksFilter.value) params.append("marks", marksFilter.value);
+  if (yearFilter.value) params.append("year", yearFilter.value);
+  if (currentSort) params.append("sort", currentSort);
+
+  topicFilters.forEach(cb => {
+    if (cb.checked) params.append("topics[]", cb.value);
+  });
+
+  fetch(`/ajax/questions/?${params.toString()}`)
+    .then(res => res.json())
+    .then(data => {
+      questionsBody.innerHTML = "";
+
+      if (!data.questions.length) {
+        questionsBody.innerHTML =
+          `<tr><td colspan="6"><em>No questions found</em></td></tr>`;
+        return;
+      }
+
+      data.questions.forEach(q => {
+        questionsBody.innerHTML += `
+          <tr>
+            <td><input type="checkbox" name="selected_questions" value="${q.id}"></td>
+            <td>${q.text.replace(/<[^>]*>?/gm, "").slice(0, 120)}...</td>
+            <td>${q.marks}</td>
+            <td>${q.type}</td>
+            <td>${q.topic}</td>
+            <td>
+              <a href="/questions/edit/${q.id}/" target="_blank">Edit</a>
+            </td>
+          </tr>
+        `;
+      });
+    });
+}
+
+/* Filter triggers */
+[
+  gradeFilter,
+  subjectFilter,
+  typeFilter,
+  marksFilter,
+  yearFilter,
+  ...topicFilters
+].forEach(el => el.addEventListener("change", fetchQuestions));
+
+/* Sort triggers */
+document.querySelectorAll(".sort-bar a").forEach(link => {
+  link.addEventListener("click", e => {
+    e.preventDefault();
+    currentSort = link.dataset.sort;
+    fetchQuestions();
+  });
+});
 </script>
 
 {% endblock %}

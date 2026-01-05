@@ -6,9 +6,6 @@
 
 {% block content %}
 
-<!-- Quill CSS -->
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-
 <style>
 .editor-card {
   background: white;
@@ -47,11 +44,6 @@
   font-weight: 600;
   display: block;
   margin-bottom: 6px;
-}
-
-.editor {
-  height: 260px;
-  background: white;
 }
 
 .lo-box {
@@ -158,22 +150,19 @@
 <!-- QUESTION -->
 <div class="section">
   <label>Question Text</label>
-  <div id="questionEditor" class="editor">
-    {{ question.question_text|safe }}
-  </div>
+  <textarea name="question_text" class="tinymce">
+{{ question.question_text|default_if_none:"" }}
+  </textarea>
 </div>
 
 <!-- ANSWER -->
 <div class="section">
   <label>Answer / Mark Scheme</label>
-  <div id="answerEditor" class="editor">
-    {{ question.answer_text|safe }}
-  </div>
+  <textarea name="answer_text" class="tinymce">
+{{ question.answer_text|default_if_none:"" }}
+  </textarea>
 </div>
 
-<!-- hidden fields -->
-<input type="hidden" name="question_text" id="questionTextInput">
-<input type="hidden" name="answer_text" id="answerTextInput">
 <input type="hidden" name="los_selected" id="losSelectedInput">
 
 <div class="actions">
@@ -184,37 +173,31 @@
 </form>
 </div>
 
-<!-- Quill JS -->
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
-
+<!-- TinyMCE -->
+<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js"></script>
 <script>
-const toolbarOptions = [
-  ['bold', 'italic', 'underline'],
-  [{ list: 'ordered' }, { list: 'bullet' }],
-  ['link', 'image'],
-  ['clean']
-];
-
-const questionQuill = new Quill('#questionEditor', {
-  theme: 'snow',
-  modules: { toolbar: toolbarOptions }
-});
-
-const answerQuill = new Quill('#answerEditor', {
-  theme: 'snow',
-  modules: { toolbar: toolbarOptions }
+tinymce.init({
+  selector: ".tinymce",
+  height: 280,
+  menubar: false,
+  plugins: "lists table image code fullscreen autoresize",
+  toolbar:
+    "undo redo | bold italic underline | " +
+    "alignleft aligncenter alignright | bullist numlist | table image | code fullscreen"
 });
 </script>
 
-<!-- AJAX LOGIC (UNCHANGED) -->
+<!-- AJAX LOGIC -->
 <script>
 const gradeSelect = document.getElementById("gradeSelect");
 const subjectSelect = document.getElementById("subjectSelect");
 const topicSelect = document.getElementById("topicSelect");
 const loBox = document.getElementById("loBox");
 
+/* GLOBAL persistent LO store */
 const selectedLOs = new Set({{ selected_lo_ids|default:"[]"|safe }});
 
+/* Load topics by grade + subject */
 function loadTopics() {
   const gradeId = gradeSelect.value;
   const subjectId = subjectSelect.value;
@@ -236,6 +219,7 @@ function loadTopics() {
     });
 }
 
+/* Load LOs for selected topic */
 function loadLOs(topicId) {
   if (!topicId) return;
 
@@ -279,14 +263,8 @@ gradeSelect.addEventListener("change", loadTopics);
 subjectSelect.addEventListener("change", loadTopics);
 topicSelect.addEventListener("change", () => loadLOs(topicSelect.value));
 
-/* submit capture */
+/* Submit selected LOs */
 document.querySelector("form").addEventListener("submit", () => {
-  document.getElementById("questionTextInput").value =
-    questionQuill.root.innerHTML;
-
-  document.getElementById("answerTextInput").value =
-    answerQuill.root.innerHTML;
-
   document.getElementById("losSelectedInput").value =
     Array.from(selectedLOs).join(",");
 });
