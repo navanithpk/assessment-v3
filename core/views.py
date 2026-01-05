@@ -368,23 +368,63 @@ def test_editor(request, test_id=None):
         }
     )
     
-#@login_required
-#def create_test(request):
- #   test = Test.objects.create(
-  #      title="Untitled Test",
-   ##)
-    #return redirect("edit_test", test_id=test.id)
-
-
 @login_required
-def edit_test(request, test_id):
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+def tests_list(request):
+    tests = Test.objects.filter(created_by=request.user).order_by("-id")
 
     return render(
         request,
-        "teacher/test_editor.html",
-        {"test": test}
+        "teacher/tests_list.html",
+        {"tests": tests}
     )
+
+
+@login_required
+def test_editor(request, test_id=None):
+    """
+    Handles BOTH create and edit.
+    Uses teacher/create_test.html
+    """
+    test = None
+
+    if test_id:
+        test = get_object_or_404(
+            Test,
+            id=test_id,
+            created_by=request.user
+        )
+
+    if request.method == "POST":
+        title = request.POST.get("title")
+        duration = request.POST.get("duration_minutes")
+        start_time = request.POST.get("start_time")
+
+        if not test:
+            test = Test.objects.create(
+                title=title,
+                duration_minutes=duration,
+                start_time=start_time,
+                created_by=request.user
+            )
+        else:
+            test.title = title
+            test.duration_minutes = duration
+            test.start_time = start_time
+            test.save()
+
+        return redirect("tests_list")
+
+    questions = test.questions.order_by("order") if test else []
+
+    return render(
+        request,
+        "teacher/create_test.html",
+        {
+            "test": test,
+            "questions": questions,
+        }
+    )
+
 
 
 def custom_login(request):

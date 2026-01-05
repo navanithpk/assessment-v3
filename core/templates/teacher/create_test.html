@@ -4,11 +4,15 @@
 <meta charset="UTF-8">
 <title>{% if test %}Edit Test{% else %}Create Test{% endif %}</title>
 
+<!-- Quill -->
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
 <style>
 body {
   margin: 0;
   font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f2f2f2;
+  background: #f4f6f8;
+  color: #1f2937;
 }
 
 .page {
@@ -19,7 +23,7 @@ body {
 
 /* MAIN */
 .main {
-  padding: 30px;
+  padding: 28px;
   overflow-y: auto;
 }
 
@@ -27,97 +31,123 @@ body {
 .header {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
-  gap: 20px;
-  margin-bottom: 30px;
+  gap: 16px;
+  margin-bottom: 22px;
 }
 
 .header input {
-  padding: 14px 16px;
-  font-size: 18px;
-  border-radius: 14px;
-  border: 1px solid #ccc;
-}
-
-/* ACTION BUTTONS */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.actions button {
-  border: none;
-  border-radius: 22px;
-  padding: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
   font-size: 15px;
-  cursor: pointer;
 }
 
-.btn-purple { background: #b23be0; color: white; }
-.btn-green { background: #8bc34a; color: black; }
-.btn-red { background: #d32f2f; color: white; }
-
-/* QUESTIONS */
-.questions {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.question-card {
-  background: #cfcfcf;
-  border-radius: 22px;
-  padding: 20px;
-  position: relative;
-}
-
-.question-text {
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.answer-options {
-  font-size: 14px;
-  color: #444;
-}
-
-/* QUESTION ACTIONS */
-.q-actions {
-  position: absolute;
-  right: 16px;
-  top: 16px;
+/* ACTIONS */
+.actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.q-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
-  background: #d32f2f;
-  color: white;
+.actions button {
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 14px;
   cursor: pointer;
-  font-size: 12px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
 }
 
-/* ASSIGN PANEL */
-.assign-panel {
-  background: #d32f2f;
+.actions .primary {
+  background: #2563eb;
   color: white;
-  padding: 24px;
-  overflow-y: auto;
+  border: none;
 }
 
-.assign-panel h2 {
+/* QUESTIONS */
+.questions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.question-card {
+  background: white;
+  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+  position: relative;
+}
+
+.question-text {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.answer-text {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Question actions */
+.q-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.q-btn {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  background: white;
+  cursor: pointer;
+}
+
+/* RIGHT PANEL */
+.side-panel {
+  background: #fafafa;
+  border-left: 1px solid #e5e7eb;
+  padding: 20px;
+}
+
+.side-panel h3 {
   margin-top: 0;
+  font-size: 16px;
 }
 
-.assign-panel label {
-  display: block;
-  margin-bottom: 12px;
-  font-size: 15px;
+/* MODAL */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
 }
 </style>
 </head>
@@ -136,76 +166,121 @@ body {
 
 <!-- HEADER -->
 <div class="header">
-  <input
-    type="text"
-    name="title"
-    placeholder="Test name"
-    required
-    value="{{ test.title|default_if_none:'' }}"
-  >
-
-  <input
-    type="text"
-    name="schedule"
-    placeholder="Test duration and start time"
-    value="{{ test.schedule|default_if_none:'' }}"
-  >
-
+  <input name="title" placeholder="Test name" value="{{ test.title|default_if_none:'' }}" required>
+  <input name="schedule" placeholder="Duration / start time" value="{{ test.schedule|default_if_none:'' }}">
   <div class="actions">
-    <button type="button" class="btn-purple">
-      Type new question
-    </button>
-
-    <button type="button" class="btn-green">
-      Import questions from library
-    </button>
-
-    <button type="submit" class="btn-red">
-      Save test
-    </button>
+    <button type="button" onclick="openEditor()">➕ New Question</button>
+    <button type="button" onclick="openImport()">📚 Import from Library</button>
+    <button type="submit" class="primary">Save Test</button>
   </div>
 </div>
 
 <!-- QUESTIONS -->
 <div class="questions">
 
-  {% if questions %}
-    {% for q in questions %}
-    <div class="question-card">
-      <div class="q-actions">
-        <button type="button" class="q-btn">Edit</button>
-        <button type="button" class="q-btn">✕</button>
-      </div>
-
-      <div class="question-text">
-        {{ q.question_text|truncatechars:120 }}
-      </div>
-
-      <div class="answer-options">
-        {{ q.answer_text|truncatechars:120 }}
-      </div>
+{% if questions %}
+  {% for q in questions %}
+  <div class="question-card">
+    <div class="q-actions">
+      <button type="button" class="q-btn">✎</button>
+      <button type="button" class="q-btn">✕</button>
     </div>
-    {% endfor %}
-  {% else %}
-    <p><em>No questions yet.</em></p>
-  {% endif %}
+
+    <div class="question-text">
+      {{ q.question_text|striptags|truncatechars:120 }}
+    </div>
+
+    <div class="answer-text">
+      {{ q.answer_text|striptags|truncatechars:120 }}
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <p><em>No questions added yet.</em></p>
+{% endif %}
 
 </div>
 
 </form>
 </main>
 
-<!-- ASSIGN PANEL -->
-<aside class="assign-panel">
-  <h2>Assign test</h2>
+<!-- SIDE PANEL -->
+<aside class="side-panel">
+  <h3>Test settings</h3>
 
+  <label>
+    <input type="checkbox" name="is_published"
+      {% if test and test.is_published %}checked{% endif %}>
+    Published
+  </label>
+
+  <hr>
+
+  <h3>Assign test</h3>
   <label><input type="checkbox"> Class 8A</label>
   <label><input type="checkbox"> Class 8B</label>
   <label><input type="checkbox"> Student – Rahul</label>
-  <label><input type="checkbox"> Student – Ananya</label>
 </aside>
 
 </div>
+
+<!-- QUESTION EDITOR MODAL -->
+<div class="modal" id="editorModal">
+  <div class="modal-content">
+    <h3>Question</h3>
+    <div id="questionEditor" style="height:180px"></div>
+
+    <h3 style="margin-top:14px">Answer / Mark Scheme</h3>
+    <div id="answerEditor" style="height:160px"></div>
+
+    <div class="modal-actions">
+      <button onclick="closeEditor()">Cancel</button>
+      <button class="primary">Save Question</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal" id="importModal">
+  <div class="modal-content">
+    <h3>Import questions from library</h3>
+
+    <p><em>Filter UI goes here (Grade / Subject / Topic / LO)</em></p>
+
+    <div class="modal-actions">
+      <button onclick="closeImport()">Close</button>
+      <button class="primary">Import Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quill -->
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script>
+const questionQuill = new Quill("#questionEditor", {
+  theme: "snow",
+  modules: { toolbar: [["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}]] }
+});
+
+const answerQuill = new Quill("#answerEditor", {
+  theme: "snow",
+  modules: { toolbar: [["bold","italic"],[{list:"ordered"}]] }
+});
+
+function openEditor() {
+  document.getElementById("editorModal").classList.add("active");
+}
+function closeEditor() {
+  document.getElementById("editorModal").classList.remove("active");
+}
+
+function openImport() {
+  document.getElementById("importModal").classList.add("active");
+}
+function closeImport() {
+  document.getElementById("importModal").classList.remove("active");
+}
+</script>
 
 </body>
 </html>
