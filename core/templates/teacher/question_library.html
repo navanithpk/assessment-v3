@@ -3,6 +3,13 @@
 {% block title %}Question Library{% endblock %}
 
 {% block content %}
+<!-- DIAGNOSTIC (REMOVE AFTER TESTING) -->
+<div style="background:#fff3cd;padding:10px;border-radius:6px;margin-bottom:12px;">
+  Grades: {{ grades|length }} |
+  Subjects: {{ subjects|length }} |
+  Topics: {{ topics|length }} |
+  Questions: {{ questions|length }}
+</div>
 
 <style>
 h1 { margin-top: 0; }

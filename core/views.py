@@ -162,8 +162,14 @@ def question_library(request):
     return render(
         request,
         "teacher/question_library.html",
-        {"questions": questions}
+        {
+            "questions": questions,
+            "grades": Grade.objects.all(),
+            "subjects": Subject.objects.all(),
+            "topics": Topic.objects.all(),
+        }
     )
+
 
 @login_required
 def add_edit_question(request, question_id=None):
