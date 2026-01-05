@@ -32,7 +32,7 @@ from django.shortcuts import redirect
 
 def root_redirect(request):
     if request.user.is_authenticated:
-        return redirect("tests_list")  # ✅ CHANGE HERE
+        return redirect("teacher_dashboard")  # ✅ CHANGE HERE
     return redirect("login")
 
 

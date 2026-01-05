@@ -1,3 +1,14 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block content %}
+<h1>Teacher Dashboard</h1>
+
+<div class="cards">
+  <!-- your dashboard cards and graphs -->
+</div>
+
 <h1>My Tests</h1>
 
 <a href="{% url 'create_test' %}">➕ Create Test</a>
@@ -25,3 +36,4 @@
 </tr>
 {% endfor %}
 </table>
+{% endblock %}

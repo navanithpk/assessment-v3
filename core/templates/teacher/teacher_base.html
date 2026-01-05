@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{% block title %}Teacher{% endblock %}</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: #f4f6f8;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100vh;
+}
+
+/* SIDEBAR */
+.sidebar {
+  background: #2f2f2f;
+  color: white;
+  padding: 24px;
+}
+
+.sidebar h2 {
+  margin-top: 0;
+}
+
+.sidebar a {
+  display: block;
+  color: white;
+  text-decoration: none;
+  margin: 12px 0;
+}
+
+.sidebar a:hover {
+  text-decoration: underline;
+}
+
+/* MAIN */
+.main {
+  padding: 30px;
+  overflow-y: auto;
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h2>Teacher</h2>
+
+    <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
+    <a href="{% url 'tests_list' %}">📝 My Tests</a>
+    <a href="{% url 'question_library' %}">📚 Question Library</a>
+
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit">Logout</button>
+    </form>
+  </aside>
+
+  <!-- PAGE CONTENT -->
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+</div>
+
+</body>
+</html>
