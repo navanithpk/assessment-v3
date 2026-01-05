@@ -1,0 +1,34 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Root
+    path("", views.root_redirect, name="root"),
+
+    # Auth
+    path("accounts/login/", views.custom_login, name="login"),
+    path("teacher/", views.teacher_dashboard, name="teacher_dashboard"),
+    path("teacher/tests/", views.tests_list, name="tests_list"),
+    path("teacher/tests/create/", views.test_editor, name="create_test"),
+    path("teacher/tests/<int:test_id>/edit/", views.test_editor, name="edit_test"),
+    path("teacher/tests/<int:test_id>/delete/", views.delete_test, name="delete_test"),
+    path("teacher/tests/<int:test_id>/toggle/", views.toggle_publish, name="toggle_test"),
+    path("teacher/tests/<int:test_id>/duplicate/", views.duplicate_test, name="duplicate_test"),
+
+
+    # Questions
+    path("questions/", views.question_library, name="question_library"),
+    path("questions/add/", views.add_edit_question, name="add_question"),
+    path(
+        "questions/edit/<int:question_id>/",
+        views.add_edit_question,
+        name="edit_question"
+    ),
+    
+    # AJAX
+    path("ajax/los/", views.ajax_learning_objectives, name="ajax_los"),
+    
+    #tests
+    path("student/dashboard/", views.student_dashboard, name="student_dashboard"),
+
+]
