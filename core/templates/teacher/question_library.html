@@ -1,116 +1,116 @@
 {% extends "teacher/teacher_base.html" %}
-
 {% block title %}Question Library{% endblock %}
-
 {% block content %}
-<!-- DIAGNOSTIC (REMOVE AFTER TESTING) -->
-<div style="background:#fff3cd;padding:10px;border-radius:6px;margin-bottom:12px;">
-  Grades: {{ grades|length }} |
-  Subjects: {{ subjects|length }} |
-  Topics: {{ topics|length }} |
-  Questions: {{ questions|length }}
-</div>
 
 <style>
 h1 { margin-top: 0; }
 
-/* ACTION BAR */
 .action-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:18px;
 }
 
 .btn {
-  border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 14px;
+  border:none;
+  padding:10px 16px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:14px;
 }
 
-.btn.green { background: #7cb342; color: white; }
-.btn.red { background: #d32f2f; color: white; }
-.btn.gray { background: #9e9e9e; color: white; }
+.btn.green{background:#7cb342;color:white}
+.btn.red{background:#d32f2f;color:white}
+.btn.gray{background:#9e9e9e;color:white}
 
-/* FILTER PANEL */
 .filters {
-  background: white;
-  border-radius: 14px;
-  padding: 18px;
-  margin-bottom: 20px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+  background:white;
+  border-radius:14px;
+  padding:18px;
+  margin-bottom:20px;
+  box-shadow:0 6px 20px rgba(0,0,0,.08);
 }
 
 .filter-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-
-.filters label {
-  font-weight: 600;
-  font-size: 13px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
 }
 
 .filters select,
 .filters input {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  width:100%;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #ccc;
 }
 
-/* TOPICS */
-.topics {
-  margin-top: 12px;
-  max-height: 140px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 10px;
-  background: #fafafa;
+.topics, .lo-box {
+  margin-top:12px;
+  max-height:160px;
+  overflow-y:auto;
+  border:1px solid #ccc;
+  border-radius:8px;
+  padding:10px;
+  background:#fafafa;
 }
 
-/* SORT BAR */
-.sort-bar {
-  margin: 12px 0;
+/* ✅ checkbox alignment fix */
+/* Container: vertical stack */
+.topics,
+.lo-box {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-/* TABLE */
+/* Each checkbox row */
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* Checkbox alignment */
+.check-item input[type="checkbox"] {
+  margin-top: 3px;   /* aligns with text baseline */
+  flex-shrink: 0;
+}
+
+/* Text wraps nicely */
+.check-item span,
+.check-item strong {
+  line-height: 1.4;
+}
+
 .table-wrap {
-  background: white;
-  border-radius: 14px;
-  padding: 18px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+  background:white;
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 6px 20px rgba(0,0,0,.08);
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 
 th, td {
-  text-align: left;
-  padding: 10px;
-  font-size: 14px;
+  padding:10px;
+  font-size:14px;
 }
 
-th { background: #f1f1f1; }
+th { background:#f1f1f1; }
+tr:not(:last-child) td { border-bottom:1px solid #e0e0e0; }
 
-tr:not(:last-child) td {
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.bulk-actions { margin-bottom: 12px; }
+.sort-bar { margin:12px 0; display:flex; gap:12px; }
 </style>
 
 <div class="action-bar">
   <h1>Question Library</h1>
-
   <a href="{% url 'add_question' %}" target="_blank">
     <button class="btn green">➕ Add Question to Library</button>
   </a>
@@ -120,7 +120,6 @@ tr:not(:last-child) td {
 <div class="filters">
 
   <div class="filter-grid">
-
     <div>
       <label>Grade *</label>
       <select id="gradeFilter">
@@ -156,158 +155,177 @@ tr:not(:last-child) td {
       <label>Marks</label>
       <input type="number" id="marksFilter">
     </div>
-
-    <div>
-      <label>Exam Year</label>
-      <input type="number" id="yearFilter">
-    </div>
-
   </div>
 
-  <div class="topics">
-    <strong>Topics *</strong><br>
-    {% for t in topics %}
-      <label>
-        <input type="checkbox" class="topicFilter" value="{{ t.id }}">
-        {{ t.name }}
-      </label><br>
-    {% endfor %}
+  <!-- TOPICS -->
+  <div class="topics" id="topicsBox">
+    <strong>Topics *</strong>
+    <div id="topicsList"><em>Select grade & subject</em></div>
+  </div>
+
+  <!-- LOs -->
+  <div class="lo-box">
+    <strong>Learning Objectives</strong>
+    <div id="loList"><em>Select topic</em></div>
   </div>
 
 </div>
 
-<!-- SORT -->
 <div class="sort-bar">
   <a href="#" data-sort="marks">Sort by Marks</a>
   <a href="#" data-sort="latest">Latest</a>
   <a href="#" data-sort="oldest">Oldest</a>
 </div>
 
-<!-- TABLE -->
-<form method="post">
-{% csrf_token %}
-
 <div class="table-wrap">
-
-  <div class="bulk-actions">
-    <button class="btn red" name="action" value="delete">Delete Selected</button>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th><input type="checkbox" id="selectAll"></th>
-        <th>Question</th>
-        <th>Marks</th>
-        <th>Type</th>
-        <th>Topic</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-
-    <tbody id="questionsBody">
-      {% for q in questions %}
-      <tr>
-        <td><input type="checkbox" name="selected_questions" value="{{ q.id }}"></td>
-        <td>{{ q.question_text|striptags|truncatewords:18 }}</td>
-        <td>{{ q.marks }}</td>
-        <td>{{ q.question_type }}</td>
-        <td>{{ q.topic.name }}</td>
-        <td>
-          <a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6"><em>No questions found</em></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
+<table>
+<thead>
+<tr>
+  <th></th>
+  <th>Question</th>
+  <th>Marks</th>
+  <th>Type</th>
+  <th>Grade</th>
+  <th>Subject</th>
+  <th>Topic</th>
+  <th>Actions</th>
+</tr>
+</thead>
+<tbody id="questionsBody">
+{% for q in questions %}
+<tr>
+  <td><input type="checkbox"></td>
+  <td>{{ q.question_text|striptags|truncatewords:16 }}</td>
+  <td>{{ q.marks }}</td>
+  <td>{{ q.question_type }}</td>
+  <td>{{ q.grade.name }}</td>
+  <td>{{ q.subject.name }}</td>
+  <td>{{ q.topic.name }}</td>
+  <td><a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 </div>
-</form>
 
-<script>
-document.getElementById("selectAll").onclick = function() {
-  document.querySelectorAll('input[name="selected_questions"]').forEach(cb => {
-    cb.checked = this.checked;
-  });
-};
-</script>
-
-<!-- AJAX FILTERING -->
 <script>
 const gradeFilter = document.getElementById("gradeFilter");
 const subjectFilter = document.getElementById("subjectFilter");
-const typeFilter = document.getElementById("typeFilter");
-const marksFilter = document.getElementById("marksFilter");
-const yearFilter = document.getElementById("yearFilter");
-const topicFilters = document.querySelectorAll(".topicFilter");
-const questionsBody = document.getElementById("questionsBody");
+const topicsList = document.getElementById("topicsList");
+const loList = document.getElementById("loList");
 
+const selectedTopics = new Set();
+const selectedLOs = new Set();
 let currentSort = null;
 
+/* ---------------- Topics ---------------- */
+function loadTopics() {
+  topicsList.innerHTML = "<em>Loading topics…</em>";
+  loList.innerHTML = "<em>Select topic</em>";
+
+  if (!gradeFilter.value || !subjectFilter.value) return;
+
+  fetch(`/ajax/topics/?grade_id=${gradeFilter.value}&subject_id=${subjectFilter.value}`)
+    .then(r => r.json())
+    .then(data => {
+      topicsList.innerHTML = "";
+      data.topics.forEach(t => {
+        const row = document.createElement("div");
+        row.className = "check-item";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.checked = selectedTopics.has(t.id);
+
+        cb.onchange = () => {
+          cb.checked ? selectedTopics.add(t.id) : selectedTopics.delete(t.id);
+          loadLOs(t.id);
+          fetchQuestions();
+        };
+
+        row.append(cb, document.createTextNode(t.name));
+        topicsList.appendChild(row);
+      });
+    });
+}
+
+/* ---------------- LOs ---------------- */
+function loadLOs(topicId) {
+  if (!topicId) return;
+  fetch(`/ajax/los/?topic_id=${topicId}`)
+    .then(r => r.json())
+    .then(data => {
+      data.los.forEach(lo => {
+        if (document.getElementById(`lo-${lo.id}`)) return;
+
+        const row = document.createElement("div");
+        row.className = "check-item";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.id = `lo-${lo.id}`;
+        cb.checked = selectedLOs.has(lo.id);
+
+        cb.onchange = () =>
+          cb.checked ? selectedLOs.add(lo.id) : selectedLOs.delete(lo.id);
+
+        row.append(cb);
+        row.insertAdjacentHTML("beforeend",
+          `<strong>${lo.code}</strong> — ${lo.description}`
+        );
+        loList.appendChild(row);
+      });
+    });
+}
+
+/* ---------------- Questions ---------------- */
 function fetchQuestions() {
   const params = new URLSearchParams();
 
   if (gradeFilter.value) params.append("grade", gradeFilter.value);
   if (subjectFilter.value) params.append("subject", subjectFilter.value);
-  if (typeFilter.value) params.append("question_type", typeFilter.value);
-  if (marksFilter.value) params.append("marks", marksFilter.value);
-  if (yearFilter.value) params.append("year", yearFilter.value);
   if (currentSort) params.append("sort", currentSort);
 
-  topicFilters.forEach(cb => {
-    if (cb.checked) params.append("topics[]", cb.value);
-  });
+  selectedTopics.forEach(t => params.append("topics[]", t));
+  selectedLOs.forEach(lo => params.append("los[]", lo));
 
-  fetch(`/ajax/questions/?${params.toString()}`)
-    .then(res => res.json())
+  fetch(`/ajax/questions/?${params}`)
+    .then(r => r.json())
     .then(data => {
-      questionsBody.innerHTML = "";
+      const body = document.getElementById("questionsBody");
+      body.innerHTML = "";
 
       if (!data.questions.length) {
-        questionsBody.innerHTML =
-          `<tr><td colspan="6"><em>No questions found</em></td></tr>`;
+        body.innerHTML = `<tr><td colspan="8"><em>No results</em></td></tr>`;
         return;
       }
 
       data.questions.forEach(q => {
-        questionsBody.innerHTML += `
+        body.innerHTML += `
           <tr>
-            <td><input type="checkbox" name="selected_questions" value="${q.id}"></td>
-            <td>${q.text.replace(/<[^>]*>?/gm, "").slice(0, 120)}...</td>
+            <td><input type="checkbox"></td>
+            <td>${q.text}</td>
             <td>${q.marks}</td>
             <td>${q.type}</td>
+            <td>${q.grade}</td>
+            <td>${q.subject}</td>
             <td>${q.topic}</td>
-            <td>
-              <a href="/questions/edit/${q.id}/" target="_blank">Edit</a>
-            </td>
-          </tr>
-        `;
+            <td><a href="/questions/edit/${q.id}/" target="_blank">Edit</a></td>
+          </tr>`;
       });
     });
 }
 
-/* Filter triggers */
-[
-  gradeFilter,
-  subjectFilter,
-  typeFilter,
-  marksFilter,
-  yearFilter,
-  ...topicFilters
-].forEach(el => el.addEventListener("change", fetchQuestions));
+gradeFilter.onchange = loadTopics;
+subjectFilter.onchange = loadTopics;
 
-/* Sort triggers */
-document.querySelectorAll(".sort-bar a").forEach(link => {
-  link.addEventListener("click", e => {
+document.querySelectorAll(".sort-bar a").forEach(a =>
+  a.onclick = e => {
     e.preventDefault();
-    currentSort = link.dataset.sort;
+    currentSort = a.dataset.sort;
     fetchQuestions();
-  });
-});
+  }
+);
 </script>
 
 {% endblock %}
