@@ -1,28 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Question Library</title>
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Question Library{% endblock %}
+
+{% block content %}
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f4f4f4;
-}
-
-.page {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  height: 100vh;
-}
-
-/* MAIN */
-.main {
-  padding: 28px;
-  overflow-y: auto;
-}
-
 h1 {
   margin-top: 0;
 }
@@ -125,20 +107,10 @@ tr:not(:last-child) td {
   margin-bottom: 12px;
 }
 </style>
-</head>
-
-<body>
-
-<div class="page">
-
-{% include "teacher/teacher_sidebar.html" %}
-
-<main class="main">
 
 <div class="action-bar">
   <h1>Question Library</h1>
 
-  <!-- OPEN QUESTION EDITOR IN NEW TAB -->
   <a href="{% url 'add_question' %}" target="_blank">
     <button class="btn green">➕ Add Question to Library</button>
   </a>
@@ -147,64 +119,64 @@ tr:not(:last-child) td {
 <!-- FILTERS -->
 <form method="get" class="filters">
 
-<div class="filter-grid">
+  <div class="filter-grid">
 
-<div>
-  <label>Grade *</label>
-  <select name="grade" required>
-    <option value="">Select</option>
-    {% for g in grades %}
-      <option value="{{ g.id }}">{{ g.name }}</option>
+    <div>
+      <label>Grade *</label>
+      <select name="grade" required>
+        <option value="">Select</option>
+        {% for g in grades %}
+          <option value="{{ g.id }}">{{ g.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Subject *</label>
+      <select name="subject" required>
+        <option value="">Select</option>
+        {% for s in subjects %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label>Question Type</label>
+      <select name="question_type">
+        <option value="">Any</option>
+        <option value="mcq">MCQ</option>
+        <option value="theory">Theory</option>
+        <option value="structured">Structured</option>
+        <option value="practical">Practical</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Marks</label>
+      <input type="number" name="marks">
+    </div>
+
+    <div>
+      <label>Exam Year</label>
+      <input type="number" name="year">
+    </div>
+
+  </div>
+
+  <div class="topics">
+    <strong>Topics *</strong><br>
+    {% for t in topics %}
+      <label>
+        <input type="checkbox" name="topics" value="{{ t.id }}">
+        {{ t.name }}
+      </label><br>
     {% endfor %}
-  </select>
-</div>
+  </div>
 
-<div>
-  <label>Subject *</label>
-  <select name="subject" required>
-    <option value="">Select</option>
-    {% for s in subjects %}
-      <option value="{{ s.id }}">{{ s.name }}</option>
-    {% endfor %}
-  </select>
-</div>
-
-<div>
-  <label>Question Type</label>
-  <select name="question_type">
-    <option value="">Any</option>
-    <option value="mcq">MCQ</option>
-    <option value="theory">Theory</option>
-    <option value="structured">Structured</option>
-    <option value="practical">Practical</option>
-  </select>
-</div>
-
-<div>
-  <label>Marks</label>
-  <input type="number" name="marks">
-</div>
-
-<div>
-  <label>Exam Year</label>
-  <input type="number" name="year">
-</div>
-
-</div>
-
-<div class="topics">
-  <strong>Topics *</strong><br>
-  {% for t in topics %}
-    <label>
-      <input type="checkbox" name="topics" value="{{ t.id }}">
-      {{ t.name }}
-    </label><br>
-  {% endfor %}
-</div>
-
-<div style="margin-top:14px;">
-  <button class="btn gray" type="submit">Apply Filters</button>
-</div>
+  <div style="margin-top:14px;">
+    <button class="btn gray" type="submit">Apply Filters</button>
+  </div>
 
 </form>
 
@@ -221,47 +193,44 @@ tr:not(:last-child) td {
 
 <div class="table-wrap">
 
-<div class="bulk-actions">
-  <button class="btn red" name="action" value="delete">Delete Selected</button>
-</div>
+  <div class="bulk-actions">
+    <button class="btn red" name="action" value="delete">Delete Selected</button>
+  </div>
 
-<table>
-<thead>
-<tr>
-  <th><input type="checkbox" id="selectAll"></th>
-  <th>Question</th>
-  <th>Marks</th>
-  <th>Type</th>
-  <th>Topic</th>
-  <th>Actions</th>
-</tr>
-</thead>
+  <table>
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll"></th>
+        <th>Question</th>
+        <th>Marks</th>
+        <th>Type</th>
+        <th>Topic</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
 
-<tbody>
-{% for q in questions %}
-<tr>
-  <td><input type="checkbox" name="selected_questions" value="{{ q.id }}"></td>
-  <td>{{ q.question_text|striptags|truncatewords:18 }}</td>
-  <td>{{ q.marks }}</td>
-  <td>{{ q.question_type }}</td>
-  <td>{{ q.topic.name }}</td>
-  <td>
-    <a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a>
-  </td>
-</tr>
-{% empty %}
-<tr>
-  <td colspan="6"><em>No questions found</em></td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
+    <tbody>
+      {% for q in questions %}
+      <tr>
+        <td><input type="checkbox" name="selected_questions" value="{{ q.id }}"></td>
+        <td>{{ q.question_text|striptags|truncatewords:18 }}</td>
+        <td>{{ q.marks }}</td>
+        <td>{{ q.question_type }}</td>
+        <td>{{ q.topic.name }}</td>
+        <td>
+          <a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6"><em>No questions found</em></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
 </div>
 </form>
-
-</main>
-</div>
 
 <script>
 document.getElementById("selectAll").onclick = function() {
@@ -271,5 +240,4 @@ document.getElementById("selectAll").onclick = function() {
 };
 </script>
 
-</body>
-</html>
+{% endblock %}
