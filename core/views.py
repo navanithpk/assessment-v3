@@ -6,6 +6,15 @@ from core.models import Topic
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import Group
 from .models import Test, TestQuestion, Question
+from django.contrib.admin.views.decorators import staff_member_required
+
+@staff_member_required
+def admin_dashboard(request):
+    """
+    Admin dashboard wrapper.
+    Loads Django admin inside an iframe.
+    """
+    return render(request, "admin_panel/admin_dashboard.html")
 
 @login_required
 @require_GET
@@ -155,20 +164,73 @@ def list_learning_objectives(request):
 
 @login_required
 def question_library(request):
-    questions = Question.objects.filter(
+    qs = Question.objects.filter(
         created_by=request.user
     ).select_related("grade", "subject", "topic")
+
+    # ------------------
+    # APPLY FILTERS
+    # ------------------
+    grade = request.GET.get("grade")
+    subject = request.GET.get("subject")
+    qtype = request.GET.get("question_type")
+    marks = request.GET.get("marks")
+    year = request.GET.get("year")
+    topics = request.GET.getlist("topics")
+    los = request.GET.getlist("los")
+
+    if grade:
+        qs = qs.filter(grade_id=grade)
+
+    if subject:
+        qs = qs.filter(subject_id=subject)
+
+    if qtype:
+        qs = qs.filter(question_type=qtype)
+
+    if marks:
+        qs = qs.filter(marks=marks)
+
+    if year:
+        qs = qs.filter(exam_year=year)
+
+    if topics:
+        qs = qs.filter(topic_id__in=topics)
+
+    if los:
+        qs = qs.filter(learning_objectives__id__in=los).distinct()
+
+    # ------------------
+    # SORTING
+    # ------------------
+    sort = request.GET.get("sort")
+    if sort == "marks":
+        qs = qs.order_by("marks")
+    elif sort == "latest":
+        qs = qs.order_by("-id")
+    elif sort == "oldest":
+        qs = qs.order_by("id")
 
     return render(
         request,
         "teacher/question_library.html",
         {
-            "questions": questions,
+            "questions": qs,
             "grades": Grade.objects.all(),
             "subjects": Subject.objects.all(),
-            "topics": Topic.objects.all(),
         }
     )
+    # ------------------
+    # BULK DELETE
+    # ------------------
+    if request.method == "POST":
+        ids = request.POST.getlist("selected_questions")
+        if ids:
+            Question.objects.filter(
+                id__in=ids,
+                created_by=request.user
+            ).delete()
+        return redirect("question_library")
 
 
 @login_required

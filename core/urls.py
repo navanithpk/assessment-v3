@@ -4,6 +4,8 @@ from . import views
 urlpatterns = [
     # Root
     path("", views.root_redirect, name="root"),
+    path("admin/dashboard/", views.admin_dashboard, name="admin_dashboard"),
+
 
     # Auth
     path("accounts/login/", views.custom_login, name="login"),

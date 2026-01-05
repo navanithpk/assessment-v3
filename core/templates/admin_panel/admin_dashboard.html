@@ -1,0 +1,34 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+
+<style>
+.admin-frame-wrap {
+  background: white;
+  border-radius: 14px;
+  padding: 0;
+  height: calc(100vh - 120px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+  overflow: hidden;
+}
+
+.admin-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+</style>
+
+<h1>Admin Panel</h1>
+
+<div class="admin-frame-wrap">
+  <iframe
+    src="/admin/"
+    class="admin-frame"
+    loading="lazy">
+  </iframe>
+</div>
+
+{% endblock %}
