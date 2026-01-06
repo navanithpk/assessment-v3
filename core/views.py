@@ -335,7 +335,6 @@ def duplicate_test(request, test_id):
 
     return redirect("tests_list")
 
-
 @login_required
 def test_editor(request, test_id=None):
     test = None
@@ -343,8 +342,10 @@ def test_editor(request, test_id=None):
     if test_id:
         test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
+    # CREATE or UPDATE test
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
+        is_published = bool(request.POST.get("is_published"))
 
         if not title:
             return JsonResponse({"error": "Title required"}, status=400)
@@ -353,14 +354,15 @@ def test_editor(request, test_id=None):
             test = Test.objects.create(
                 title=title,
                 created_by=request.user,
-                is_published=False
+                is_published=is_published
             )
             return redirect("edit_test", test_id=test.id)
 
         test.title = title
+        test.is_published = is_published
         test.save()
 
-    questions = (
+    test_questions = (
         TestQuestion.objects
         .filter(test=test)
         .select_related("question")
@@ -373,9 +375,10 @@ def test_editor(request, test_id=None):
         "teacher/create_test.html",
         {
             "test": test,
-            "questions": questions,
+            "test_questions": test_questions,
         }
     )
+
 
     
 @login_required
@@ -392,27 +395,23 @@ def tests_list(request):
 from core.models import Test, TestQuestion
 
 @login_required
-def test_editor(request, test_id=None):
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
-    test_questions = (
-        TestQuestion.objects
-        .filter(test=test)
-        .select_related("question")
-        .order_by("order")
-    )
+def create_test(request):
+    if request.method == "POST":
+        test = Test.objects.create(
+            title=request.POST.get("title", "Untitled Test"),
+            created_by=request.user,
+            is_published=bool(request.POST.get("is_published")),
+        )
+        return redirect("edit_test", test_id=test.id)
 
     return render(
         request,
         "teacher/create_test.html",
         {
-            "test": test,
-            "test_questions": test_questions,
+            "test": None,
+            "questions": [],
         }
     )
-
-
-
 
 def custom_login(request):
     error = None
@@ -438,3 +437,25 @@ def custom_login(request):
                 return redirect("/admin/")
 
     return render(request, "registration/login.html", {"error": error})
+    
+@login_required
+def edit_test(request, test_id):
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+
+    if request.method == "POST":
+        test.title = request.POST.get("title", test.title)
+        test.is_published = bool(request.POST.get("is_published"))
+        test.save()
+
+    questions = Question.objects.filter(
+        testquestion__test=test
+    )
+
+    return render(
+        request,
+        "teacher/create_test.html",
+        {
+            "test": test,
+            "questions": questions,
+        }
+    )

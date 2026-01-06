@@ -17,7 +17,7 @@ urlpatterns = [
     # Tests (teacher)
     # Tests
     path("teacher/tests/", views.tests_list, name="tests_list"),
-    path("teacher/tests/create/", views.test_editor, name="create_test"),
+    path("teacher/tests/create/", views.create_test, name="create_test"),
     path("teacher/tests/<int:test_id>/edit/", views.test_editor, name="edit_test"),
     path("teacher/tests/<int:test_id>/delete/", views.delete_test, name="delete_test"),
     path("teacher/tests/<int:test_id>/toggle/", views.toggle_publish, name="toggle_publish"),
