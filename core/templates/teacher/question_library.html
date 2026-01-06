@@ -3,12 +3,9 @@
 {% block title %}Question Library{% endblock %}
 
 {% block content %}
+{% with test_id=request.GET.import_to_test %}
 
 <style>
-/* ==============================
-   HEADER & ACTIONS
-============================== */
-
 h1 { margin-top: 0; }
 
 .action-bar {
@@ -20,19 +17,14 @@ h1 { margin-top: 0; }
 
 .btn {
   border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .btn.green { background: #7cb342; color: white; }
-.btn.red { background: #d32f2f; color: white; }
 .btn.gray { background: #9e9e9e; color: white; }
-
-/* ==============================
-   FILTER PANEL
-============================== */
 
 .filters {
   background: white;
@@ -61,10 +53,6 @@ h1 { margin-top: 0; }
   border: 1px solid #ccc;
 }
 
-/* ==============================
-   TOPICS & LO CONTAINERS
-============================== */
-
 .topics,
 .lo-box {
   margin-top: 12px;
@@ -72,57 +60,19 @@ h1 { margin-top: 0; }
   overflow-y: auto;
   border: 1px solid #ccc;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 12px;
   background: #fafafa;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
 }
-
-/* ==============================
-   CHECKBOX ROW (FIX)
-============================== */
 
 .check-item {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  width: 100%;
-  line-height: 1.4;
-}
-
-.check-item input[type="checkbox"] {
-  margin: 0;
-  margin-top: 3px;
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-}
-
-.check-item span {
   font-size: 14px;
-  color: #222;
 }
 
-.check-item strong {
-  font-weight: 600;
-}
-
-.check-item:hover {
-  background: rgba(0,0,0,.03);
-  border-radius: 4px;
-}
-
-/* ==============================
-   SORT BAR & TABLE
-============================== */
-
-.sort-bar {
-  margin: 12px 0;
-  display: flex;
-  gap: 12px;
+.check-item input {
+  margin-top: 3px;
 }
 
 .table-wrap {
@@ -148,8 +98,52 @@ th { background: #f1f1f1; }
 tr:not(:last-child) td {
   border-bottom: 1px solid #e0e0e0;
 }
+/* ==============================
+   LEFT-ALIGN CHECKBOX FIX
+============================== */
 
-.bulk-actions { margin-bottom: 12px; }
+/* Remove any internal padding pushing content right */
+.topics,
+.lo-box {
+  padding-left: 12px;
+}
+
+/* Force every checkbox row to align left */
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+
+  padding: 4px 0;
+  margin: 0;
+
+  width: 100%;
+}
+
+/* Normalize checkbox position */
+.check-item input[type="checkbox"] {
+  margin: 0;
+  margin-top: 2px;
+  flex-shrink: 0;
+
+  width: 16px;
+  height: 16px;
+}
+
+/* Text always starts at same x-position */
+.check-item span,
+.check-item strong {
+  display: inline-block;
+  line-height: 1.4;
+}
+
+/* Remove accidental browser indentation */
+.topics div,
+.lo-box div {
+  padding-left: 0;
+}
+
 </style>
 
 <div class="action-bar">
@@ -160,11 +154,12 @@ tr:not(:last-child) td {
   </a>
 </div>
 
-<!-- FILTERS -->
-<form method="get" class="filters">
+<form method="get" class="filters" id="filterForm">
+  {% if test_id %}
+    <input type="hidden" name="import_to_test" value="{{ test_id }}">
+  {% endif %}
 
   <div class="filter-grid">
-
     <div>
       <label>Grade *</label>
       <select id="gradeSelect" name="grade" required>
@@ -200,21 +195,13 @@ tr:not(:last-child) td {
       <label>Marks</label>
       <input type="number" name="marks">
     </div>
-
-    <div>
-      <label>Exam Year</label>
-      <input type="number" name="year">
-    </div>
-
   </div>
 
-  <!-- TOPICS -->
   <div class="topics" id="topicsBox">
     <strong>Topics *</strong>
     <em>Select grade & subject</em>
   </div>
 
-  <!-- LEARNING OBJECTIVES -->
   <div class="lo-box" id="loBox">
     <strong>Learning Objectives</strong>
     <em>Select topic</em>
@@ -223,35 +210,12 @@ tr:not(:last-child) td {
   <div style="margin-top:14px;">
     <button class="btn gray" type="submit">Apply Filters</button>
   </div>
-
 </form>
 
-<!-- SORT -->
-<div class="sort-bar">
-  <a href="?sort=marks">Sort by Marks</a>
-  <a href="?sort=latest">Latest</a>
-  <a href="?sort=oldest">Oldest</a>
-</div>
-
-<!-- TABLE -->
-<form method="post">
-{% csrf_token %}
-
 <div class="table-wrap">
-
-  <div class="bulk-actions">
-<button class="btn red"
-        name="action"
-        value="delete"
-        onclick="return confirm('Delete selected questions permanently?')">
-  Delete Selected
-</button>
-  </div>
-
   <table>
     <thead>
       <tr>
-        <th><input type="checkbox" id="selectAll"></th>
         <th>Question</th>
         <th>Marks</th>
         <th>Type</th>
@@ -265,7 +229,6 @@ tr:not(:last-child) td {
     <tbody>
       {% for q in questions %}
       <tr>
-        <td><input type="checkbox" name="selected_questions" value="{{ q.id }}"></td>
         <td>{{ q.question_text|striptags|truncatewords:18 }}</td>
         <td>{{ q.marks }}</td>
         <td>{{ q.question_type }}</td>
@@ -274,39 +237,33 @@ tr:not(:last-child) td {
         <td>{{ q.topic.name }}</td>
         <td>
           <a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a>
+          {% if test_id %}
+            |
+            <button type="button" class="btn gray"
+              onclick="addToTest({{ q.id }})">
+              ➕ Add to Test
+            </button>
+          {% endif %}
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="8"><em>No questions found</em></td>
+        <td colspan="7"><em>No questions found</em></td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
-
 </div>
-</form>
 
-<script>
-document.getElementById("selectAll").onclick = function() {
-  document.querySelectorAll('input[name="selected_questions"]').forEach(cb => {
-    cb.checked = this.checked;
-  });
-};
-</script>
-
-<!-- AJAX LOGIC -->
 <script>
 const gradeSelect = document.getElementById("gradeSelect");
 const subjectSelect = document.getElementById("subjectSelect");
 const topicsBox = document.getElementById("topicsBox");
 const loBox = document.getElementById("loBox");
 
-/* persistent stores */
 const selectedTopics = new Set();
 const selectedLOs = new Set();
 
-/* load topics */
 function loadTopics() {
   topicsBox.innerHTML = "<em>Loading topics…</em>";
   loBox.innerHTML = "<em>Select topic</em>";
@@ -322,24 +279,19 @@ function loadTopics() {
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.value = t.id;
-        cb.checked = selectedTopics.has(t.id);
 
         cb.onchange = () => {
           cb.checked ? selectedTopics.add(t.id) : selectedTopics.delete(t.id);
           loadLOs(t.id);
         };
 
-        const span = document.createElement("span");
-        span.textContent = t.name;
-
         div.appendChild(cb);
-        div.appendChild(span);
+        div.appendChild(document.createTextNode(t.name));
         topicsBox.appendChild(div);
       });
     });
 }
 
-/* load LOs */
 function loadLOs(topicId) {
   fetch(`/ajax/los/?topic_id=${topicId}`)
     .then(r => r.json())
@@ -352,17 +304,17 @@ function loadLOs(topicId) {
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.value = lo.id;
-        cb.checked = selectedLOs.has(lo.id);
 
         cb.onchange = () => {
           cb.checked ? selectedLOs.add(lo.id) : selectedLOs.delete(lo.id);
         };
 
-        const span = document.createElement("span");
-        span.innerHTML = `<strong>${lo.code}</strong> — ${lo.description}`;
-
         div.appendChild(cb);
-        div.appendChild(span);
+        div.insertAdjacentHTML(
+          "beforeend",
+          `<strong>${lo.code}</strong> — ${lo.description}`
+        );
+
         loBox.appendChild(div);
       });
     });
@@ -370,6 +322,37 @@ function loadLOs(topicId) {
 
 gradeSelect.onchange = loadTopics;
 subjectSelect.onchange = loadTopics;
+
+document.getElementById("filterForm").addEventListener("submit", e => {
+  selectedTopics.forEach(t => {
+    const i = document.createElement("input");
+    i.type = "hidden";
+    i.name = "topics[]";
+    i.value = t;
+    e.target.appendChild(i);
+  });
+
+  selectedLOs.forEach(lo => {
+    const i = document.createElement("input");
+    i.type = "hidden";
+    i.name = "los[]";
+    i.value = lo;
+    e.target.appendChild(i);
+  });
+});
+
+function addToTest(qid) {
+  fetch(`/teacher/tests/{{ test_id }}/add-question/`, {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ question_id: qid })
+  })
+  .then(r => r.ok ? alert("Added to test") : alert("Error adding question"));
+}
 </script>
 
+{% endwith %}
 {% endblock %}

@@ -121,7 +121,6 @@ class Question(models.Model):
 from django.db import models
 from django.contrib.auth.models import User
 
-
 class Test(models.Model):
     title = models.CharField(max_length=255)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -132,22 +131,24 @@ class Test(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    questions = models.ManyToManyField(
+        "Question",
+        through="TestQuestion",
+        blank=True,
+        related_name="tests"
+    )
+
     def __str__(self):
         return self.title
 
-
 class TestQuestion(models.Model):
-    """
-    SNAPSHOT of a library question.
-    Editing here must NOT affect Question library.
-    """
-    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name="questions")
+    test = models.ForeignKey("Test", on_delete=models.CASCADE)
+    question = models.ForeignKey("Question", on_delete=models.CASCADE)
+    order = models.PositiveIntegerField(default=0)
 
-    question_text = models.TextField()
-    answer_text = models.TextField(blank=True)
-    
-    marks = models.PositiveIntegerField()
-    order = models.PositiveIntegerField()
-    
+    class Meta:
+        ordering = ["order"]
+        unique_together = ("test", "question")
+
     def __str__(self):
-        return f"{self.test.title} – Q{self.order}"
+        return f"{self.test.title} → Q{self.order}"

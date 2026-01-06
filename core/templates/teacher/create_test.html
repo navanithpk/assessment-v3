@@ -1,286 +1,205 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{% if test %}Edit Test{% else %}Create Test{% endif %}</title>
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
 
-<!-- Quill -->
-<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+{% block title %}
+  {{ test.title|default:"Create Test" }}
+{% endblock %}
+
+{% block content %}
 
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f4f6f8;
-  color: #1f2937;
+.test-editor {
+  max-width: 1200px;
+  margin: auto;
 }
 
-.page {
-  display: grid;
-  grid-template-columns: 220px 1fr 320px;
-  height: 100vh;
+.test-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-/* MAIN */
-.main {
-  padding: 28px;
-  overflow-y: auto;
+.test-header input {
+  font-size: 20px;
+  padding: 10px 14px;
+  width: 60%;
+  border-radius: 10px;
+  border: 1px solid #ccc;
 }
 
-/* HEADER */
-.header {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+.status {
+  display: flex;
   gap: 16px;
-  margin-bottom: 22px;
-}
-
-.header input {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  font-size: 15px;
-}
-
-/* ACTIONS */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.actions button {
-  border-radius: 10px;
-  padding: 10px;
+  align-items: center;
   font-size: 14px;
-  cursor: pointer;
-  border: 1px solid #d1d5db;
-  background: #f9fafb;
 }
 
-.actions .primary {
-  background: #2563eb;
-  color: white;
-  border: none;
+#autosaveStatus {
+  color: #4caf50;
 }
 
-/* QUESTIONS */
-.questions {
+.question-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .question-card {
   background: white;
   border-radius: 14px;
-  padding: 16px 18px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 14px rgba(0,0,0,.05);
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+  border: 1px solid #e0e0e0;
   position: relative;
 }
 
-.question-text {
-  font-weight: 500;
-  margin-bottom: 6px;
-}
-
-.answer-text {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-/* Question actions */
-.q-actions {
+.drag-handle {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  gap: 8px;
+  left: 12px;
+  top: 18px;
+  cursor: grab;
+  color: #777;
 }
 
-.q-btn {
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d1d5db;
+.question-body {
+  margin-left: 26px;
+}
+
+.q-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.q-actions a,
+.q-actions button {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.right-panel {
+  position: fixed;
+  right: 30px;
+  top: 140px;
+  width: 260px;
+}
+
+.right-panel .btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
   background: white;
   cursor: pointer;
 }
-
-/* RIGHT PANEL */
-.side-panel {
-  background: #fafafa;
-  border-left: 1px solid #e5e7eb;
-  padding: 20px;
-}
-
-.side-panel h3 {
-  margin-top: 0;
-  font-size: 16px;
-}
-
-/* MODAL */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.4);
-  display: none;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal.active {
-  display: flex;
-}
-
-.modal-content {
-  background: white;
-  width: 900px;
-  max-height: 90vh;
-  overflow-y: auto;
-  border-radius: 14px;
-  padding: 20px;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
-}
 </style>
-</head>
 
-<body>
+<div class="test-editor">
 
-<div class="page">
+  <!-- HEADER -->
+  <div class="test-header">
+    <input
+      id="testTitle"
+      placeholder="Test title"
+      value="{{ test.title|default_if_none:'' }}"
+    >
 
-{% include "teacher/sidebar_teacher.html" %}
-
-<!-- MAIN -->
-<main class="main">
-
-<form method="post">
-{% csrf_token %}
-
-<!-- HEADER -->
-<div class="header">
-  <input name="title" placeholder="Test name" value="{{ test.title|default_if_none:'' }}" required>
-  <input name="schedule" placeholder="Duration / start time" value="{{ test.schedule|default_if_none:'' }}">
-  <div class="actions">
-    <button type="button" onclick="openEditor()">➕ New Question</button>
-    <button type="button" onclick="openImport()">📚 Import from Library</button>
-    <button type="submit" class="primary">Save Test</button>
-  </div>
-</div>
-
-<!-- QUESTIONS -->
-<div class="questions">
-
-{% if questions %}
-  {% for q in questions %}
-  <div class="question-card">
-    <div class="q-actions">
-      <button type="button" class="q-btn">✎</button>
-      <button type="button" class="q-btn">✕</button>
-    </div>
-
-    <div class="question-text">
-      {{ q.question_text|striptags|truncatechars:120 }}
-    </div>
-
-    <div class="answer-text">
-      {{ q.answer_text|striptags|truncatechars:120 }}
+    <div class="status">
+      <label>
+        <input type="checkbox" id="publishToggle"
+               {% if test.is_published %}checked{% endif %}>
+        Published
+      </label>
+      <span id="autosaveStatus">Saved</span>
     </div>
   </div>
-  {% endfor %}
-{% else %}
-  <p><em>No questions added yet.</em></p>
-{% endif %}
 
-</div>
+  <!-- QUESTIONS -->
+  <div id="questionList" class="question-list">
+    {% for tq in questions %}
+    <div class="question-card" data-id="{{ tq.id }}">
+      <span class="drag-handle">☰</span>
 
-</form>
-</main>
+      <div class="question-body">
+        {{ tq.question.question_text|safe }}
+      </div>
 
-<!-- SIDE PANEL -->
-<aside class="side-panel">
-  <h3>Test settings</h3>
-
-  <label>
-    <input type="checkbox" name="is_published"
-      {% if test and test.is_published %}checked{% endif %}>
-    Published
-  </label>
-
-  <hr>
-
-  <h3>Assign test</h3>
-  <label><input type="checkbox"> Class 8A</label>
-  <label><input type="checkbox"> Class 8B</label>
-  <label><input type="checkbox"> Student – Rahul</label>
-</aside>
-
-</div>
-
-<!-- QUESTION EDITOR MODAL -->
-<div class="modal" id="editorModal">
-  <div class="modal-content">
-    <h3>Question</h3>
-    <div id="questionEditor" style="height:180px"></div>
-
-    <h3 style="margin-top:14px">Answer / Mark Scheme</h3>
-    <div id="answerEditor" style="height:160px"></div>
-
-    <div class="modal-actions">
-      <button onclick="closeEditor()">Cancel</button>
-      <button class="primary">Save Question</button>
+      <div class="q-actions">
+        <a href="{% url 'edit_question' tq.question.id %}" target="_blank">
+          Edit
+        </a>
+        <button data-remove="{{ tq.id }}">Remove</button>
+      </div>
     </div>
+    {% empty %}
+      <p><em>No questions added yet.</em></p>
+    {% endfor %}
   </div>
+
 </div>
 
-<!-- IMPORT MODAL -->
-<div class="modal" id="importModal">
-  <div class="modal-content">
-    <h3>Import questions from library</h3>
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+  <a href="/questions/?mode=import&test_id={{ test.id }}"
+     target="_blank"
+     class="btn">
+     Import from Library
+  </a>
 
-    <p><em>Filter UI goes here (Grade / Subject / Topic / LO)</em></p>
-
-    <div class="modal-actions">
-      <button onclick="closeImport()">Close</button>
-      <button class="primary">Import Selected</button>
-    </div>
-  </div>
+  <a href="{% url 'add_question' %}"
+     target="_blank"
+     class="btn">
+     Type New Question
+  </a>
 </div>
 
-<!-- Quill -->
-<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
-const questionQuill = new Quill("#questionEditor", {
-  theme: "snow",
-  modules: { toolbar: [["bold","italic","underline"],[{list:"ordered"},{list:"bullet"}]] }
+/* ================= DRAG TO SORT ================= */
+new Sortable(document.getElementById("questionList"), {
+  handle: ".drag-handle",
+  animation: 150,
+  onEnd: saveOrder
 });
 
-const answerQuill = new Quill("#answerEditor", {
-  theme: "snow",
-  modules: { toolbar: [["bold","italic"],[{list:"ordered"}]] }
-});
+/* ================= AUTOSAVE ================= */
+setInterval(autoSave, 10000);
 
-function openEditor() {
-  document.getElementById("editorModal").classList.add("active");
-}
-function closeEditor() {
-  document.getElementById("editorModal").classList.remove("active");
+function autoSave() {
+  fetch("{% url 'autosave_test' test.id %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({
+      title: document.getElementById("testTitle").value,
+      published: document.getElementById("publishToggle").checked
+    })
+  }).then(() => {
+    document.getElementById("autosaveStatus").textContent =
+      "Saved " + new Date().toLocaleTimeString();
+  });
 }
 
-function openImport() {
-  document.getElementById("importModal").classList.add("active");
-}
-function closeImport() {
-  document.getElementById("importModal").classList.remove("active");
+function saveOrder() {
+  const ids = [...document.querySelectorAll(".question-card")]
+    .map(q => q.dataset.id);
+
+  fetch("{% url 'reorder_test' test.id %}", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({ order: ids })
+  });
 }
 </script>
 
-</body>
-</html>
+{% endblock %}

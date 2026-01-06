@@ -1,39 +1,29 @@
-{% extends "teacher/teacher_base.html" %}
-
-{% block title %}Teacher Dashboard{% endblock %}
-
-{% block content %}
-<h1>Teacher Dashboard</h1>
-
-<div class="cards">
-  <!-- your dashboard cards and graphs -->
-</div>
-
 <h1>My Tests</h1>
 
-<a href="{% url 'create_test' %}">➕ Create Test</a>
+<a href="{% url 'create_test' %}" class="btn green">
+  ➕ Create Test
+</a>
 
-<table border="1" cellpadding="8">
-<tr>
-  <th>Title</th>
-  <th>Status</th>
-  <th>Actions</th>
-</tr>
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Status</th>
+    <th>Actions</th>
+  </tr>
 
-{% for test in tests %}
-<tr>
-  <td>{{ test.title }}</td>
-  <td>{{ test.is_published|yesno:"Published,Draft" }}</td>
-  <td>
-    <a href="{% url 'edit_test' test.id %}">Edit</a> |
-    <a href="{% url 'toggle_test' test.id %}">
-      {% if test.is_published %}Unpublish{% else %}Publish{% endif %}
-    </a> |
-    <a href="{% url 'duplicate_test' test.id %}">Duplicate</a> |
-    <a href="{% url 'delete_test' test.id %}"
-       onclick="return confirm('Delete test?')">Delete</a>
-  </td>
-</tr>
-{% endfor %}
+  {% for test in tests %}
+  <tr>
+    <td>{{ test.title }}</td>
+    <td>
+      {% if test.is_published %}Published{% else %}Draft{% endif %}
+    </td>
+    <td>
+      <a href="{% url 'edit_test' test.id %}">Edit</a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="3"><em>No tests yet</em></td>
+  </tr>
+  {% endfor %}
 </table>
-{% endblock %}

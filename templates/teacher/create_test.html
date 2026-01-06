@@ -1,251 +1,276 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{% if test %}Edit Test{% else %}Create Test{% endif %}</title>
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if test %}Edit Test{% else %}Create Test{% endif %}
+{% endblock %}
+
+{% block content %}
+
 <style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f4f6f8;
-  color: #1f2937;
-}
-
-.page {
+/* ================= LAYOUT ================= */
+.test-page {
   display: grid;
-  grid-template-columns: 220px 1fr 320px;
-  height: 100vh;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
 }
 
-/* MAIN */
-.main {
-  padding: 30px;
-  overflow-y: auto;
-}
-
-/* HEADER */
-.header {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.header input {
-  padding: 14px 16px;
-  font-size: 16px;
-  border-radius: 12px;
-  border: 1px solid #d1d5db;
-  background: white;
-}
-
-/* ACTION BUTTONS */
-.actions {
+/* ================= HEADER ================= */
+.test-header {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
 }
 
-.actions button {
+.test-title {
+  font-size: 22px;
+  padding: 10px 14px;
+  width: 100%;
+  max-width: 520px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+/* ================= TOGGLE ================= */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+/* ================= ACTIONS ================= */
+.test-actions {
+  margin-bottom: 18px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border-radius: 10px;
   border: none;
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 14px;
   cursor: pointer;
-  font-weight: 500;
+  font-size: 14px;
 }
 
-/* Muted primary */
-.btn-purple {
-  background: #e5e7eb;
-  color: #111827;
-}
-
-.btn-purple:hover {
-  background: #d1d5db;
-}
-
-/* Positive action */
-.btn-green {
-  background: #e6f4ea;
-  color: #1b5e20;
-}
-
-.btn-green:hover {
-  background: #d4edda;
-}
-
-/* Save / primary CTA */
-.btn-red {
+.btn.primary {
   background: #2563eb;
   color: white;
 }
 
-.btn-red:hover {
-  background: #1d4ed8;
+.btn.muted {
+  background: #e5e7eb;
 }
 
-/* QUESTIONS */
+/* ================= QUESTIONS ================= */
 .questions {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
 .question-card {
   background: white;
-  border-radius: 16px;
-  padding: 20px 22px;
-  position: relative;
-  box-shadow: 0 6px 18px rgba(0,0,0,.06);
-  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #ddd;
+  cursor: grab;
 }
 
-.question-text {
-  font-size: 16px;
-  margin-bottom: 8px;
-  font-weight: 500;
+.question-card:active {
+  cursor: grabbing;
 }
 
-.answer-options {
-  font-size: 14px;
-  color: #6b7280;
-}
-
-/* QUESTION ACTIONS */
 .q-actions {
-  position: absolute;
-  right: 14px;
-  top: 14px;
+  margin-top: 10px;
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
-.q-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #374151;
+.q-actions a,
+.q-actions button {
+  font-size: 13px;
+  background: none;
+  border: none;
   cursor: pointer;
-  font-size: 12px;
+  color: #2563eb;
 }
 
-.q-btn:hover {
-  background: #f3f4f6;
-}
-
-/* ASSIGN PANEL */
+/* ================= ASSIGN ================= */
 .assign-panel {
-  background: #ffffff;
-  border-left: 1px solid #e5e7eb;
-  padding: 24px;
-  overflow-y: auto;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  padding: 18px;
 }
 
-.assign-panel h2 {
+.assign-panel h3 {
   margin-top: 0;
-  font-size: 18px;
-}
-
-.assign-panel label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  font-size: 14px;
-  color: #374151;
-}
-
-.assign-panel input[type="checkbox"] {
-  transform: scale(1.05);
 }
 </style>
-</head>
 
-<body>
-
-<div class="page">
-
-<!-- MAIN -->
-<main class="main">
-
-<form method="post">
+<form method="post" id="testForm">
 {% csrf_token %}
 
-<!-- HEADER -->
-<div class="header">
-  <input
-    type="text"
-    name="title"
-    placeholder="Test name"
-    required
-    value="{{ test.title|default_if_none:'' }}"
-  >
+<div class="test-page">
 
-  <input
-    type="text"
-    name="schedule"
-    placeholder="Test duration and start time"
-    value="{{ test.schedule|default_if_none:'' }}"
-  >
+  <!-- ================= MAIN ================= -->
+  <main>
 
-  <div class="actions">
-    <button type="button" class="btn-purple">
-      Type new question
-    </button>
+    <!-- HEADER -->
+    <div class="test-header">
+      <input
+        type="text"
+        name="title"
+        class="test-title"
+        placeholder="Test name"
+        value="{{ test.title|default:'' }}"
+        required
+      >
 
-    <button type="button" class="btn-green">
-      Import questions from library
-    </button>
-
-    <button type="submit" class="btn-red">
-      Save test
-    </button>
-  </div>
-</div>
-
-<!-- QUESTIONS -->
-<div class="questions">
-
-  {% if questions %}
-    {% for q in questions %}
-    <div class="question-card">
-      <div class="q-actions">
-        <button type="button" class="q-btn">Edit</button>
-        <button type="button" class="q-btn">✕</button>
-      </div>
-
-      <div class="question-text">
-        {{ q.question_text|truncatechars:120 }}
-      </div>
-
-      <div class="answer-options">
-        {{ q.answer_text|truncatechars:120 }}
-      </div>
+      <label class="toggle">
+        <input
+          type="checkbox"
+          name="is_published"
+          {% if test.is_published %}checked{% endif %}
+        >
+        Published
+      </label>
     </div>
-    {% endfor %}
-  {% else %}
-    <p><em>No questions yet.</em></p>
-  {% endif %}
+
+    <!-- ACTIONS -->
+    <div class="test-actions">
+      <a
+        href="{% url 'question_library' %}?mode=import&test_id={{ test.id }}"
+        target="_blank"
+        class="btn primary"
+      >
+        ➕ Import from Question Library
+      </a>
+    </div>
+
+    <!-- QUESTIONS -->
+    <section class="questions" id="questionsArea">
+      {% if test_questions %}
+        {% for tq in test_questions %}
+          <div
+            class="question-card"
+            draggable="true"
+            data-id="{{ tq.id }}"
+          >
+
+            <!-- FULL QUESTION CONTENT -->
+            <div class="question-body">
+              {{ tq.question.question_text|safe }}
+            </div>
+
+            <div class="q-actions">
+              <a
+                href="{% url 'edit_question' tq.question.id %}"
+                target="_blank"
+              >
+                Edit
+              </a>
+
+              <button
+                type="button"
+                data-remove="{{ tq.id }}"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No questions yet.</p>
+      {% endif %}
+    </section>
+
+  </main>
+
+  <!-- ================= ASSIGN ================= -->
+  <aside class="assign-panel">
+    <h3>Assign test</h3>
+
+    <label><input type="checkbox"> Class 8A</label><br>
+    <label><input type="checkbox"> Class 8B</label><br>
+    <label><input type="checkbox"> Student – Rahul</label><br>
+    <label><input type="checkbox"> Student – Ananya</label>
+  </aside>
 
 </div>
 
 </form>
-</main>
 
-<!-- ASSIGN PANEL -->
-<aside class="assign-panel">
-  <h2>Assign test</h2>
+<!-- ================= AUTOSAVE ================= -->
+<script>
+setInterval(() => {
+  const form = document.getElementById("testForm");
+  const data = new FormData(form);
 
-  <label><input type="checkbox"> Class 8A</label>
-  <label><input type="checkbox"> Class 8B</label>
-  <label><input type="checkbox"> Student – Rahul</label>
-  <label><input type="checkbox"> Student – Ananya</label>
-</aside>
+  fetch("", {
+    method: "POST",
+    headers: { "X-CSRFToken": "{{ csrf_token }}" },
+    body: data
+  }).then(() => {
+    console.log("Auto-saved test");
+  });
+}, 10000);
+</script>
 
-</div>
+<!-- ================= REMOVE QUESTION ================= -->
+<script>
+document.querySelectorAll("[data-remove]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const tqid = btn.dataset.remove;
 
-</body>
-</html>
+    fetch("/teacher/tests/remove-question/", {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": "{{ csrf_token }}",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        test_id: {{ test.id }},
+        test_question_id: tqid
+      })
+    }).then(() => location.reload());
+  });
+});
+</script>
+
+<!-- ================= DRAG SORT ================= -->
+<script>
+let dragged;
+
+document.querySelectorAll(".question-card").forEach(card => {
+  card.addEventListener("dragstart", () => dragged = card);
+  card.addEventListener("dragover", e => e.preventDefault());
+  card.addEventListener("drop", e => {
+    e.preventDefault();
+    if (dragged !== card) {
+      card.before(dragged);
+      saveOrder();
+    }
+  });
+});
+
+function saveOrder() {
+  const ids = [...document.querySelectorAll(".question-card")]
+    .map(c => c.dataset.id);
+
+  fetch("/teacher/tests/reorder/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": "{{ csrf_token }}",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      test_id: {{ test.id }},
+      order: ids
+    })
+  });
+}
+</script>
+
+{% endblock %}

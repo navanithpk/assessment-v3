@@ -7,7 +7,19 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import Group
 from .models import Test, TestQuestion, Question
 from django.contrib.admin.views.decorators import staff_member_required
+import json
 
+
+@login_required
+def autosave_test(request, test_id):
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    data = json.loads(request.body)
+
+    test.title = data.get("title", test.title)
+    test.is_published = data.get("published", test.is_published)
+    test.save()
+
+    return JsonResponse({"status": "ok"})
 @staff_member_required
 def admin_dashboard(request):
     """
@@ -166,50 +178,35 @@ def list_learning_objectives(request):
 def question_library(request):
     qs = Question.objects.filter(
         created_by=request.user
-    ).select_related("grade", "subject", "topic")
+    ).select_related("grade", "subject", "topic").prefetch_related("learning_objectives")
 
-    # ------------------
-    # APPLY FILTERS
-    # ------------------
+    # ---------- BASIC FILTERS ----------
     grade = request.GET.get("grade")
     subject = request.GET.get("subject")
     qtype = request.GET.get("question_type")
     marks = request.GET.get("marks")
     year = request.GET.get("year")
-    topics = request.GET.getlist("topics")
-    los = request.GET.getlist("los")
 
     if grade:
         qs = qs.filter(grade_id=grade)
-
     if subject:
         qs = qs.filter(subject_id=subject)
-
     if qtype:
         qs = qs.filter(question_type=qtype)
-
     if marks:
         qs = qs.filter(marks=marks)
-
     if year:
-        qs = qs.filter(exam_year=year)
+        qs = qs.filter(year=year)
 
+    # ---------- TOPIC FILTER ----------
+    topics = request.GET.getlist("topics[]")
     if topics:
         qs = qs.filter(topic_id__in=topics)
 
+    # ---------- LO FILTER ----------
+    los = request.GET.getlist("los[]")
     if los:
         qs = qs.filter(learning_objectives__id__in=los).distinct()
-
-    # ------------------
-    # SORTING
-    # ------------------
-    sort = request.GET.get("sort")
-    if sort == "marks":
-        qs = qs.order_by("marks")
-    elif sort == "latest":
-        qs = qs.order_by("-id")
-    elif sort == "oldest":
-        qs = qs.order_by("id")
 
     return render(
         request,
@@ -218,19 +215,10 @@ def question_library(request):
             "questions": qs,
             "grades": Grade.objects.all(),
             "subjects": Subject.objects.all(),
+            "topics": Topic.objects.all(),
         }
     )
-    # ------------------
-    # BULK DELETE
-    # ------------------
-    if request.method == "POST":
-        ids = request.POST.getlist("selected_questions")
-        if ids:
-            Question.objects.filter(
-                id__in=ids,
-                created_by=request.user
-            ).delete()
-        return redirect("question_library")
+
 
 
 @login_required
@@ -356,35 +344,39 @@ def test_editor(request, test_id=None):
         test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
     if request.method == "POST":
-        title = request.POST["title"]
-        duration = request.POST.get("duration") or None
-        start_time = request.POST.get("start_time") or None
+        title = request.POST.get("title", "").strip()
+
+        if not title:
+            return JsonResponse({"error": "Title required"}, status=400)
 
         if not test:
             test = Test.objects.create(
                 title=title,
                 created_by=request.user,
-                duration_minutes=duration,
-                start_time=start_time
+                is_published=False
             )
-        else:
-            test.title = title
-            test.duration_minutes = duration
-            test.start_time = start_time
-            test.save()
+            return redirect("edit_test", test_id=test.id)
 
-        return redirect("edit_test", test_id=test.id)
+        test.title = title
+        test.save()
 
-    questions = test.questions.order_by("order") if test else []
+    questions = (
+        TestQuestion.objects
+        .filter(test=test)
+        .select_related("question")
+        .order_by("order")
+        if test else []
+    )
 
     return render(
         request,
-        "teacher/test_editor.html",
+        "teacher/create_test.html",
         {
             "test": test,
             "questions": questions,
         }
     )
+
     
 @login_required
 def tests_list(request):
@@ -397,51 +389,28 @@ def tests_list(request):
     )
 
 
+from core.models import Test, TestQuestion
+
 @login_required
 def test_editor(request, test_id=None):
-    """
-    Handles BOTH create and edit.
-    Uses teacher/create_test.html
-    """
-    test = None
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
-    if test_id:
-        test = get_object_or_404(
-            Test,
-            id=test_id,
-            created_by=request.user
-        )
-
-    if request.method == "POST":
-        title = request.POST.get("title")
-        duration = request.POST.get("duration_minutes")
-        start_time = request.POST.get("start_time")
-
-        if not test:
-            test = Test.objects.create(
-                title=title,
-                duration_minutes=duration,
-                start_time=start_time,
-                created_by=request.user
-            )
-        else:
-            test.title = title
-            test.duration_minutes = duration
-            test.start_time = start_time
-            test.save()
-
-        return redirect("tests_list")
-
-    questions = test.questions.order_by("order") if test else []
+    test_questions = (
+        TestQuestion.objects
+        .filter(test=test)
+        .select_related("question")
+        .order_by("order")
+    )
 
     return render(
         request,
         "teacher/create_test.html",
         {
             "test": test,
-            "questions": questions,
+            "test_questions": test_questions,
         }
     )
+
 
 
 
