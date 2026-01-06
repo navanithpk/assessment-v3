@@ -69,9 +69,10 @@ class QuestionAdmin(admin.ModelAdmin):
         "topic",
         "question_type",
         "marks",
+        "year",
         "created_by",
     )
-    list_filter = ("grade", "subject", "topic", "question_type")
+    list_filter = ("grade", "subject", "topic", "question_type", "question_text",)
     search_fields = ("question_text", "answer_text")
     ordering = ("-id",)
 

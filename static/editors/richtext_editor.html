@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Rich Text Editor</title>
+
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #111827;
+  --toolbar: #f3f4f6;
+  --border: #d1d5db;
+  --accent: #2563eb;
+  --editor: #ffffff;
+}
+
+[data-theme="charcoal"] {
+  --bg: #1f2937;
+  --fg: #e5e7eb;
+  --toolbar: #111827;
+  --border: #374151;
+  --accent: #60a5fa;
+  --editor: #1f2937;
+}
+
+[data-theme="earth"] {
+  --bg: #faf7f2;
+  --fg: #3f2d20;
+  --toolbar: #efe6d8;
+  --border: #d6c3a5;
+  --accent: #8b5e34;
+  --editor: #fffdf9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* TOOLBAR */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar button,
+.toolbar select {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.toolbar button:hover {
+  background: var(--accent);
+  color: white;
+}
+
+/* EDITOR */
+.editor {
+  min-height: 280px;
+  padding: 16px;
+  background: var(--editor);
+  outline: none;
+}
+
+/* TABLE */
+.editor table {
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.editor td {
+  border: 1px solid var(--border);
+  padding: 8px;
+  min-width: 60px;
+}
+
+/* TABLE PICKER */
+#tablePicker {
+  position: absolute;
+  display: none;
+  grid-template-columns: repeat(10, 22px);
+  gap: 4px;
+  padding: 8px;
+  background: var(--toolbar);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  z-index: 9999;
+}
+
+#tablePicker div {
+  width: 22px;
+  height: 22px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+#tablePicker div.active {
+  background: var(--accent);
+}
+
+/* FOOTER */
+.footer {
+  font-family: monospace;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--toolbar);
+}
+</style>
+</head>
+
+<body data-theme="snow">
+
+<div class="toolbar">
+  <button onclick="cmd('bold')"><b>B</b></button>
+  <button onclick="cmd('italic')"><i>I</i></button>
+  <button onclick="cmd('underline')"><u>U</u></button>
+
+  <button onclick="cmd('subscript')">x₂</button>
+  <button onclick="cmd('superscript')">x²</button>
+
+  <button onclick="cmd('insertUnorderedList')">UL</button>
+  <button onclick="cmd('insertOrderedList')">1.2.3</button>
+
+  <button onclick="setList('lower-roman')">i.ii</button>
+  <button onclick="setList('upper-alpha')">A.B</button>
+
+  <button onclick="cmd('justifyLeft')">⟸</button>
+  <button onclick="cmd('justifyCenter')">≡</button>
+  <button onclick="cmd('justifyRight')">⟹</button>
+
+  <button onclick="showTablePicker(event)">Table</button>
+  <button onclick="cmd('removeFormat')">Clear</button>
+
+  <select onchange="setTheme(this.value)">
+    <option value="snow">Snow</option>
+    <option value="charcoal">Charcoal</option>
+    <option value="earth">Earth</option>
+  </select>
+</div>
+
+<div id="editor" class="editor" contenteditable="true"></div>
+<div id="tablePicker"></div>
+<div class="footer" id="pathBar">&lt;editor&gt;</div>
+
+<script>
+const editor = document.getElementById("editor");
+
+/* FORCE FOCUS */
+editor.addEventListener("mousedown", () => editor.focus());
+
+function cmd(c) {
+  editor.focus();
+  document.execCommand(c, false, null);
+}
+
+function setList(style) {
+  cmd('insertOrderedList');
+  const sel = window.getSelection();
+  const li = sel.anchorNode?.closest?.('li');
+  if (li && li.parentElement) {
+    li.parentElement.style.listStyleType = style;
+  }
+}
+
+/* THEME */
+function setTheme(t) {
+  document.body.dataset.theme = t;
+}
+
+/* PATH BAR */
+function updatePath() {
+  let n = window.getSelection().anchorNode;
+  const path = [];
+  while (n && n !== editor) {
+    if (n.nodeType === 1) path.push(`<${n.tagName.toLowerCase()}>`);
+    n = n.parentNode;
+  }
+  document.getElementById("pathBar").textContent =
+    path.reverse().join("") || "<editor>";
+}
+
+editor.addEventListener("keyup", updatePath);
+editor.addEventListener("click", updatePath);
+
+/* TABLE PICKER */
+const picker = document.getElementById("tablePicker");
+const MAX = 10;
+
+picker.innerHTML = "";
+for (let i = 0; i < MAX * MAX; i++) {
+  const d = document.createElement("div");
+  d.dataset.index = i;
+  picker.appendChild(d);
+}
+
+function showTablePicker(e) {
+  picker.style.display = "grid";
+  picker.style.left = e.clientX + "px";
+  picker.style.top = (e.clientY + 10) + "px";
+}
+
+picker.addEventListener("mousemove", e => {
+  if (!e.target.dataset.index) return;
+  const idx = Number(e.target.dataset.index);
+  const cols = (idx % MAX) + 1;
+  const rows = Math.floor(idx / MAX) + 1;
+  picker.dataset.rows = rows;
+  picker.dataset.cols = cols;
+
+  [...picker.children].forEach((c, i) => {
+    const r = Math.floor(i / MAX) + 1;
+    const col = (i % MAX) + 1;
+    c.classList.toggle("active", r <= rows && col <= cols);
+  });
+});
+
+picker.addEventListener("click", () => {
+  insertTable(+picker.dataset.rows, +picker.dataset.cols);
+  picker.style.display = "none";
+});
+
+/* SAFE TABLE INSERT */
+function insertTable(rows, cols) {
+  editor.focus();
+
+  const sel = window.getSelection();
+  if (!sel.rangeCount) {
+    const r = document.createRange();
+    r.selectNodeContents(editor);
+    r.collapse(false);
+    sel.addRange(r);
+  }
+
+  const range = sel.getRangeAt(0);
+  const table = document.createElement("table");
+
+  for (let r = 0; r < rows; r++) {
+    const tr = document.createElement("tr");
+    for (let c = 0; c < cols; c++) {
+      const td = document.createElement("td");
+      td.innerHTML = "&nbsp;";
+      tr.appendChild(td);
+    }
+    table.appendChild(tr);
+  }
+
+  range.insertNode(table);
+}
+
+/* IFRAME API (Django uses these) */
+window.setEditorHTML = function (html) {
+  editor.innerHTML = html || "";
+  editor.focus();
+  updatePath();
+};
+
+window.getEditorHTML = function () {
+  return editor.innerHTML || "";
+};
+</script>
+
+</body>
+</html>

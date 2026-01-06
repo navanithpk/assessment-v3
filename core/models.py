@@ -91,6 +91,7 @@ class Question(models.Model):
     grade = models.ForeignKey(Grade, on_delete=models.PROTECT)
     subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
     topic = models.ForeignKey(Topic, on_delete=models.PROTECT)
+    year = models.PositiveIntegerField(null=True, blank=True)
 
     learning_objectives = models.ManyToManyField(
         LearningObjective,
@@ -144,9 +145,9 @@ class TestQuestion(models.Model):
 
     question_text = models.TextField()
     answer_text = models.TextField(blank=True)
-
+    
     marks = models.PositiveIntegerField()
     order = models.PositiveIntegerField()
-
+    
     def __str__(self):
         return f"{self.test.title} – Q{self.order}"

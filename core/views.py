@@ -250,17 +250,28 @@ def add_edit_question(request, question_id=None):
 
     grades = Grade.objects.all()
     subjects = Subject.objects.all()
+    topics = Topic.objects.all()
 
+    # -----------------------
+    # HANDLE FORM SUBMISSION
+    # -----------------------
     if request.method == "POST":
         data = request.POST
+
+        question_text = data.get("question_text", "").strip()
+        answer_text = data.get("answer_text", "").strip()
+
+        if not question_text:
+            raise ValueError("Question text is empty — editor not wired")
 
         if not question:
             question = Question.objects.create(
                 grade_id=data["grade"],
                 subject_id=data["subject"],
                 topic_id=data["topic"],
-                question_text=data["question_text"],
-                answer_text=data.get("answer_text", ""),
+                year=data.get("year") or None,
+                question_text=question_text,
+                answer_text=answer_text,
                 marks=data["marks"],
                 question_type=data["question_type"],
                 created_by=request.user,
@@ -269,18 +280,24 @@ def add_edit_question(request, question_id=None):
             question.grade_id = data["grade"]
             question.subject_id = data["subject"]
             question.topic_id = data["topic"]
-            question.question_text = data["question_text"]
-            question.answer_text = data.get("answer_text", "")
+            question.year = data.get("year") or None
+            question.question_text = question_text
+            question.answer_text = answer_text
             question.marks = data["marks"]
             question.question_type = data["question_type"]
             question.save()
 
-        # ✅ FIXED: AJAX-compatible LO saving
-        los_selected = data.get("los_selected", "")
-        lo_ids = [int(x) for x in los_selected.split(",") if x]
+        # Learning Objectives (from Quill-safe hidden input)
+        los_raw = data.get("los_selected", "")
+        lo_ids = [int(x) for x in los_raw.split(",") if x]
         question.learning_objectives.set(lo_ids)
 
         return redirect("question_library")
+
+    # -----------------------
+    # GET REQUEST (PAGE LOAD)
+    # -----------------------
+    years = list(range(2026, 1999, -1))
 
     return render(
         request,
@@ -289,10 +306,11 @@ def add_edit_question(request, question_id=None):
             "question": question,
             "grades": grades,
             "subjects": subjects,
+            "topics": topics,
             "selected_lo_ids": selected_lo_ids,
+            "years":years,
         }
     )
-
 
 @login_required
 def toggle_publish(request, test_id):
