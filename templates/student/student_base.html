@@ -1,0 +1,233 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Student Portal{% endblock %}</title>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: var(--gray-800);
+    }
+
+    /* ===================== NAVIGATION ===================== */
+    .navbar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .navbar-brand {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .navbar-links {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .nav-link {
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--gray-700);
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      background: var(--gray-100);
+      color: var(--primary);
+    }
+
+    .nav-link.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background: var(--gray-100);
+      border-radius: 8px;
+    }
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* ===================== MAIN CONTENT ===================== */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .page-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: white;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .page-subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* ===================== CONTENT WRAPPER ===================== */
+    .content-wrapper {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      min-height: 400px;
+    }
+
+    /* ===================== FOOTER ===================== */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+    }
+
+    /* ===================== RESPONSIVE ===================== */
+    @media (max-width: 768px) {
+      .navbar-links {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .page-title {
+        font-size: 24px;
+      }
+
+      .main-container {
+        padding: 20px 16px;
+      }
+    }
+  </style>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <!-- NAVIGATION -->
+  <nav class="navbar">
+    <div class="navbar-container">
+      <a href="{% url 'student_dashboard' %}" class="navbar-brand">
+        📚 EduTest
+      </a>
+
+      <div class="navbar-links">
+        <a href="{% url 'student_dashboard' %}" class="nav-link {% if request.path == '/student/' %}active{% endif %}">
+          🏠 Dashboard
+        </a>
+        <a href="{% url 'student_test_list' %}" class="nav-link {% if 'tests' in request.path %}active{% endif %}">
+          📝 My Tests
+        </a>
+        <a href="{% url 'student_results' %}" class="nav-link {% if 'results' in request.path %}active{% endif %}">
+          📊 Results
+        </a>
+        
+        <div class="user-info">
+          <div class="user-avatar">
+            {{ request.user.username|first|upper }}
+          </div>
+          <span style="font-weight: 500;">{{ request.user.username }}</span>
+        </div>
+        
+        <a href="/logout/" class="nav-link" style="color: var(--danger);">
+          🚪 Logout
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-container">
+    {% block page_header %}
+    <div class="page-header">
+      <h1 class="page-title">{% block header_title %}Student Portal{% endblock %}</h1>
+      <p class="page-subtitle">{% block header_subtitle %}Welcome back!{% endblock %}</p>
+    </div>
+    {% endblock %}
+
+    <div class="content-wrapper">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>© 2025 EduTest Platform • Made with ❤️ for better learning</p>
+  </div>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

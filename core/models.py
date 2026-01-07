@@ -259,3 +259,32 @@ class StudentAnswer(models.Model):
     
     def __str__(self):
         return f"{self.student.full_name} - {self.test.title} - Q{self.question.id}"
+        
+class StudentTestAttempt(models.Model):
+    """
+    Tracks when a student starts a test and their overall progress
+    """
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="test_attempts"
+    )
+    
+    test = models.ForeignKey(
+        Test,
+        on_delete=models.CASCADE,
+        related_name="attempts"
+    )
+    
+    started_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    time_remaining_seconds = models.IntegerField(null=True, blank=True)
+    
+    is_submitted = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ("student", "test")
+        ordering = ["-started_at"]
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.test.title}"

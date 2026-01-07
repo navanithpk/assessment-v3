@@ -1,0 +1,191 @@
+{% extends "student/student_base.html" %}
+
+{% block title %}My Results{% endblock %}
+
+{% block header_title %}My Results{% endblock %}
+{% block header_subtitle %}View your test performance and scores{% endblock %}
+
+{% block extra_css %}
+<style>
+  .results-container {
+    padding: 32px;
+  }
+
+  .results-grid {
+    display: grid;
+    gap: 24px;
+  }
+
+  .result-card {
+    background: white;
+    border: 2px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s;
+  }
+
+  .result-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.1);
+  }
+
+  .result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 20px;
+  }
+
+  .result-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 8px;
+  }
+
+  .result-date {
+    font-size: 13px;
+    color: var(--gray-500);
+  }
+
+  .score-badge {
+    font-size: 32px;
+    font-weight: 700;
+    padding: 12px 24px;
+    border-radius: 12px;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .score-badge.excellent {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .score-badge.good {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .score-badge.average {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .score-badge.poor {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .result-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .stat-box {
+    background: var(--gray-50);
+    padding: 16px;
+    border-radius: 12px;
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--primary);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .view-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .view-btn:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+  }
+
+  .empty-icon {
+    font-size: 80px;
+    margin-bottom: 24px;
+    opacity: 0.3;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+  {% if results %}
+    <div class="results-grid">
+      {% for result in results %}
+      <div class="result-card">
+        <div class="result-header">
+          <div>
+            <h3 class="result-title">{{ result.test.title }}</h3>
+            <p class="result-date">Submitted: {{ result.attempt.submitted_at|date:"M d, Y - g:i A" }}</p>
+          </div>
+          <div class="score-badge {% if result.percentage >= 80 %}excellent{% elif result.percentage >= 60 %}good{% elif result.percentage >= 40 %}average{% else %}poor{% endif %}">
+            {{ result.percentage }}%
+          </div>
+        </div>
+
+        <div class="result-stats">
+          <div class="stat-box">
+            <span class="stat-value">{{ result.scored_marks }}</span>
+            <span class="stat-label">Scored</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value">{{ result.total_marks }}</span>
+            <span class="stat-label">Total</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-value">{{ result.percentage }}%</span>
+            <span class="stat-label">Percentage</span>
+          </div>
+        </div>
+
+        <a href="{% url 'student_test_review' result.test.id %}" class="view-btn">
+          View Detailed Results
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <h2 style="font-size: 24px; font-weight: 700; color: var(--gray-700); margin-bottom: 12px;">
+        No Results Yet
+      </h2>
+      <p style="font-size: 16px; color: var(--gray-500);">
+        Complete some tests to see your results here.
+      </p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -760,3 +760,336 @@ def inline_add_question(request, test_id):
             "status": "error",
             "error": str(e)
         }, status=500)
+
+from django.utils import timezone
+from datetime import timedelta
+
+@login_required
+def student_test_list(request):
+    """
+    Show all tests assigned to the logged-in student
+    """
+    # Get the student object for the logged-in user
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        # If no student profile exists, show empty page
+        return render(request, "student/test_list.html", {"tests": []})
+    
+    # Get all published tests assigned to this student
+    # Either directly or through class groups
+    assigned_tests = Test.objects.filter(
+        is_published=True
+    ).filter(
+        models.Q(assigned_students=student) |
+        models.Q(assigned_groups__students=student)
+    ).exclude(
+        excluded_students=student
+    ).distinct().order_by('start_time')
+    
+    test_data = []
+    now = timezone.now()
+    
+    for test in assigned_tests:
+        # Get attempt if exists
+        try:
+            attempt = StudentTestAttempt.objects.get(student=student, test=test)
+        except StudentTestAttempt.DoesNotExist:
+            attempt = None
+        
+        # Calculate test status
+        status = 'upcoming'
+        can_start = False
+        time_until_start = None
+        
+        if test.start_time:
+            if test.duration_minutes:
+                end_time = test.start_time + timedelta(minutes=test.duration_minutes)
+                
+                if now < test.start_time:
+                    status = 'upcoming'
+                    delta = test.start_time - now
+                    hours = delta.seconds // 3600
+                    minutes = (delta.seconds % 3600) // 60
+                    if delta.days > 0:
+                        time_until_start = f"{delta.days} day{'s' if delta.days > 1 else ''}"
+                    elif hours > 0:
+                        time_until_start = f"{hours} hour{'s' if hours > 1 else ''}"
+                    else:
+                        time_until_start = f"{minutes} minute{'s' if minutes > 1 else ''}"
+                elif now >= test.start_time and now <= end_time:
+                    status = 'live'
+                    can_start = True
+                else:
+                    status = 'completed'
+            else:
+                # No duration means it's always available after start time
+                if now >= test.start_time:
+                    status = 'live'
+                    can_start = True
+        else:
+            # No start time means always available
+            status = 'live'
+            can_start = True
+        
+        # Override if submitted
+        if attempt and attempt.is_submitted:
+            status = 'completed'
+            can_start = False
+        
+        # Get question count and total marks
+        test_questions = TestQuestion.objects.filter(test=test).select_related('question')
+        question_count = test_questions.count()
+        total_marks = sum(tq.question.marks for tq in test_questions)
+        
+        # Count answered questions
+        answered_count = 0
+        if attempt:
+            answered_count = StudentAnswer.objects.filter(
+                student=student,
+                test=test,
+                answer_text__isnull=False
+            ).exclude(answer_text='').count()
+        
+        progress = int((answered_count / question_count * 100)) if question_count > 0 else 0
+        
+        test_data.append({
+            'test': test,
+            'status': status,
+            'can_start': can_start,
+            'time_until_start': time_until_start,
+            'attempt': attempt,
+            'question_count': question_count,
+            'total_marks': total_marks,
+            'answered_count': answered_count,
+            'progress': progress,
+        })
+    
+    return render(request, "student/test_list.html", {
+        "tests": test_data
+    })
+
+
+@login_required
+def student_test_attempt(request, test_id):
+    """
+    Main test-taking interface for students
+    """
+    # Get student
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        return redirect('student_test_list')
+    
+    # Get test
+    test = get_object_or_404(Test, id=test_id, is_published=True)
+    
+    # Verify student has access
+    has_access = (
+        test.assigned_students.filter(id=student.id).exists() or
+        test.assigned_groups.filter(students=student).exists()
+    ) and not test.excluded_students.filter(id=student.id).exists()
+    
+    if not has_access:
+        return redirect('student_test_list')
+    
+    # Check if test is available
+    now = timezone.now()
+    if test.start_time and now < test.start_time:
+        return redirect('student_test_list')
+    
+    if test.start_time and test.duration_minutes:
+        end_time = test.start_time + timedelta(minutes=test.duration_minutes)
+        if now > end_time:
+            return redirect('student_test_list')
+    
+    # Get or create attempt
+    attempt, created = StudentTestAttempt.objects.get_or_create(
+        student=student,
+        test=test
+    )
+    
+    # Check if already submitted
+    if attempt.is_submitted:
+        return redirect('student_test_review', test_id=test.id)
+    
+    # Calculate time remaining
+    if test.duration_minutes and test.start_time:
+        end_time = test.start_time + timedelta(minutes=test.duration_minutes)
+        time_remaining_seconds = int((end_time - now).total_seconds())
+        if time_remaining_seconds < 0:
+            time_remaining_seconds = 0
+    else:
+        time_remaining_seconds = test.duration_minutes * 60 if test.duration_minutes else 3600
+    
+    # Get questions with saved answers
+    test_questions = TestQuestion.objects.filter(test=test).select_related(
+        'question', 'question__topic'
+    ).order_by('order')
+    
+    # Attach saved answers to each question
+    for tq in test_questions:
+        try:
+            saved = StudentAnswer.objects.get(
+                student=student,
+                test=test,
+                question=tq.question
+            )
+            tq.saved_answer = saved.answer_text
+        except StudentAnswer.DoesNotExist:
+            tq.saved_answer = ''
+    
+    total_marks = sum(tq.question.marks for tq in test_questions)
+    
+    # Format time remaining
+    hours = time_remaining_seconds // 3600
+    minutes = (time_remaining_seconds % 3600) // 60
+    seconds = time_remaining_seconds % 60
+    time_remaining = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    
+    return render(request, "student/test_attempt.html", {
+        "test": test,
+        "attempt": attempt,
+        "test_questions": test_questions,
+        "total_marks": total_marks,
+        "time_remaining": time_remaining,
+        "time_remaining_seconds": time_remaining_seconds,
+    })
+
+
+@login_required
+def student_save_answer(request, test_id):
+    """
+    AJAX endpoint to save individual answers during test
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        return JsonResponse({"error": "Student not found"}, status=403)
+    
+    test = get_object_or_404(Test, id=test_id)
+    
+    data = json.loads(request.body)
+    question_id = data.get('question_id')
+    answer_text = data.get('answer_text', '')
+    
+    question = get_object_or_404(Question, id=question_id)
+    
+    # Save or update answer
+    answer, created = StudentAnswer.objects.update_or_create(
+        student=student,
+        test=test,
+        question=question,
+        defaults={'answer_text': answer_text}
+    )
+    
+    return JsonResponse({"status": "ok", "saved_at": answer.submitted_at})
+
+
+@login_required
+def student_submit_test(request, test_id):
+    """
+    Submit the test and mark attempt as complete
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        return JsonResponse({"error": "Student not found"}, status=403)
+    
+    test = get_object_or_404(Test, id=test_id)
+    
+    try:
+        attempt = StudentTestAttempt.objects.get(student=student, test=test)
+        attempt.is_submitted = True
+        attempt.submitted_at = timezone.now()
+        attempt.save()
+        
+        return JsonResponse({
+            "status": "ok",
+            "redirect": f"/student/tests/{test.id}/review/"
+        })
+    except StudentTestAttempt.DoesNotExist:
+        return JsonResponse({"error": "Attempt not found"}, status=404)
+
+
+@login_required
+def student_test_review(request, test_id):
+    """
+    Show submitted test with answers (results view)
+    """
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        return redirect('student_test_list')
+    
+    test = get_object_or_404(Test, id=test_id)
+    attempt = get_object_or_404(StudentTestAttempt, student=student, test=test)
+    
+    # Get all answers
+    answers = StudentAnswer.objects.filter(
+        student=student,
+        test=test
+    ).select_related('question')
+    
+    test_questions = TestQuestion.objects.filter(test=test).select_related(
+        'question'
+    ).order_by('order')
+    
+    # Attach answers to questions
+    answer_dict = {a.question_id: a for a in answers}
+    for tq in test_questions:
+        tq.student_answer = answer_dict.get(tq.question.id)
+    
+    return render(request, "student/test_review.html", {
+        "test": test,
+        "attempt": attempt,
+        "test_questions": test_questions,
+    })
+
+
+@login_required
+def student_results(request):
+    """
+    Show all completed tests and their results
+    """
+    try:
+        student = Student.objects.get(created_by=request.user)
+    except Student.DoesNotExist:
+        return render(request, "student/results.html", {"results": []})
+    
+    attempts = StudentTestAttempt.objects.filter(
+        student=student,
+        is_submitted=True
+    ).select_related('test').order_by('-submitted_at')
+    
+    results = []
+    for attempt in attempts:
+        answers = StudentAnswer.objects.filter(
+            student=student,
+            test=attempt.test
+        )
+        
+        total_marks = sum(
+            tq.question.marks 
+            for tq in TestQuestion.objects.filter(test=attempt.test).select_related('question')
+        )
+        
+        scored_marks = sum(a.marks_awarded or 0 for a in answers)
+        
+        results.append({
+            'test': attempt.test,
+            'attempt': attempt,
+            'total_marks': total_marks,
+            'scored_marks': scored_marks,
+            'percentage': int((scored_marks / total_marks * 100)) if total_marks > 0 else 0,
+        })
+    
+    return render(request, "student/results.html", {
+        "results": results
+    })
