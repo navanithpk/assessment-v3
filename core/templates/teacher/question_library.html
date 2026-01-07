@@ -327,16 +327,12 @@ document.getElementById("selectAll").onclick = function () {
 
 // Import selected questions
 function importSelected() {
-  const ids = [...document.querySelectorAll(".q-check:checked")].map(cb => cb.value);
+  const ids = [...document.querySelectorAll(".q-check:checked")]
+    .map(cb => cb.value);
 
-  if (!ids.length) {
-    alert("No questions selected");
-    return;
-  }
+  if (!ids.length) return alert("No questions selected");
 
-  const testId = "{{ test_id }}";
-  
-  fetch(`/teacher/tests/${testId}/add-questions/`, {
+  fetch(`/teacher/tests/{{ test_id }}/add-questions/`, {
     method: "POST",
     headers: {
       "X-CSRFToken": "{{ csrf_token }}",
@@ -344,25 +340,28 @@ function importSelected() {
     },
     body: JSON.stringify({ question_ids: ids })
   })
-  .then(response => {
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return response.json();
-  })
-  .then(data => {
-    if (data.status === 'ok') {
-      alert(`Successfully added ${ids.length} question(s) to the test!`);
-      // Clear selections
-      document.querySelectorAll(".q-check:checked").forEach(cb => cb.checked = false);
-      document.getElementById("selectAll").checked = false;
+  .then(r => {
+    if (r.ok) {
+      alert(`${ids.length} question(s) added to test successfully!`);
+      
+      // If opened in a new window, notify parent and close
+      if (window.opener) {
+        // Tell the parent window to reload
+        window.opener.location.reload();
+        window.close();
+      } else {
+        // If not in popup, redirect to test editor
+        window.location.href = `/teacher/tests/{{ test_id }}/edit/`;
+      }
     } else {
-      alert("Error: " + (data.error || "Unknown error"));
+      return r.json().then(data => {
+        alert("Error importing questions: " + (data.error || "Unknown error"));
+      });
     }
   })
-  .catch(error => {
-    console.error("Import error:", error);
-    alert("Error importing questions. Please check the console and try again.");
+  .catch(err => {
+    console.error(err);
+    alert("Failed to import questions. Please try again.");
   });
 }
 {% endif %}

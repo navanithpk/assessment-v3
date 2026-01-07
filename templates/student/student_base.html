@@ -12,120 +12,143 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f9fafb;
-            color: #111827;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f3f4f6;
         }
 
-        /* Navigation */
         .navbar {
             background: white;
-            border-bottom: 1px solid #e5e7eb;
-            padding: 16px 0;
-        }
-
-        .navbar-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            padding: 16px 32px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .navbar-brand {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
             color: #2563eb;
-            text-decoration: none;
         }
 
         .navbar-menu {
             display: flex;
-            gap: 24px;
-            align-items: center;
+            gap: 8px;
+            list-style: none;
         }
 
-        .navbar-link {
-            color: #6b7280;
+        .navbar-menu a {
             text-decoration: none;
+            color: #374151;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all .2s;
             font-weight: 500;
-            transition: color .2s;
         }
 
-        .navbar-link:hover {
+        .navbar-menu a:hover {
+            background: #f3f4f6;
             color: #2563eb;
         }
 
-        .navbar-link.active {
-            color: #2563eb;
+        .navbar-menu a.active {
+            background: #dbeafe;
+            color: #1e40af;
         }
 
-        .user-info {
+        .navbar-menu a.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .user-menu {
             display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .user-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #e0e7ff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .user-name {
             font-weight: 600;
-            color: #4f46e5;
+            color: #111827;
         }
 
         .logout-btn {
             padding: 8px 16px;
-            background: #f3f4f6;
+            background: #ef4444;
+            color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            font-size: 14px;
             font-weight: 500;
-            color: #374151;
-            text-decoration: none;
         }
 
         .logout-btn:hover {
-            background: #e5e7eb;
+            background: #dc2626;
         }
 
-        /* Main Content */
-        .main-content {
+        .content {
+            padding: 32px;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 32px 24px;
         }
     </style>
 </head>
 <body>
     <nav class="navbar">
-        <div class="navbar-content">
-            <a href="{% url 'student_dashboard' %}" class="navbar-brand">📚 Student Portal</a>
-            <div class="navbar-menu">
-                <a href="{% url 'student_dashboard' %}" class="navbar-link">Dashboard</a>
-                <a href="{% url 'student_test_list' %}" class="navbar-link">Tests</a>
-                <a href="{% url 'student_results' %}" class="navbar-link">Results</a>
-                
-                <div class="user-info">
-                    <div class="user-avatar">
-                        {{ user.first_name.0|default:user.username.0|upper }}
-                    </div>
-                    <span style="color: #6b7280; font-size: 14px;">{{ user.first_name|default:user.username }}</span>
-                    <a href="/accounts/logout/" class="logout-btn">Logout</a>
-                </div>
-            </div>
+        <div class="navbar-brand">
+            📚 Student Portal
+        </div>
+
+        <!-- STUDENT-ONLY NAVIGATION -->
+        <ul class="navbar-menu">
+            <li>
+                <a href="{% url 'student_dashboard' %}" 
+                   class="{% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}">
+                    🏠 Dashboard
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'student_tests_list' %}"
+                   class="{% if request.resolver_match.url_name == 'student_tests_list' %}active{% endif %}">
+                    📝 My Tests
+                </a>
+            </li>
+            <li>
+                <!-- FIXED: Using # placeholder since route doesn't exist yet -->
+                <a href="#" class="disabled" title="Coming soon">
+                    📊 My Results
+                </a>
+            </li>
+            <li>
+                <!-- FIXED: Using # placeholder since route doesn't exist yet -->
+                <a href="#" class="disabled" title="Coming soon">
+                    👤 Profile
+                </a>
+            </li>
+        </ul>
+
+        <div class="user-menu">
+            <span class="user-name">👨‍🎓 {{ request.user.get_full_name|default:request.user.username }}</span>
+            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn">Logout</button>
+            </form>
         </div>
     </nav>
 
-    <main class="main-content">
-        {% block content %}
-        {% endblock %}
-    </main>
+    <div class="content">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- 
+    ⚠️ IMPORTANT: Students should NEVER see these links:
+    - Create Test
+    - Question Library
+    - Import Questions
+    - Manage Students
+    - Create Users
+    
+    These are ONLY in teacher_base.html
+    -->
 </body>
 </html>

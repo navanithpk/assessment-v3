@@ -29,9 +29,14 @@ urlpatterns = [
     path("teacher/tests/<int:test_id>/inline-add-question/",
          views.inline_add_question, name="inline_add_question"),
     
-    path("teacher/import-questions/",
-         views.import_questions_review,
-         name="import_questions_review"),
+    path(
+        "teacher/import-questions/",
+        views.import_questions_review,
+        name="import_questions_review"
+    ),
+
+    # Tests (student) - NEW
+    path("student/tests/", views.student_tests_list, name="student_tests_list"),
 
     # Questions
     path("questions/", views.question_library, name="question_library"),
@@ -43,12 +48,10 @@ urlpatterns = [
     path("ajax/los/", views.ajax_learning_objectives, name="ajax_los"),
     path("ajax/questions/", views.ajax_questions, name="ajax_questions"),
     
-    # Students (UPDATED)
+    # Students
     path("teacher/students/", views.students_list, name="students_list"),
     path("teacher/students/add/", views.add_student, name="add_student"),
-    path("teacher/students/<int:student_id>/get/", views.get_student, name="get_student"),
     path("teacher/students/<int:student_id>/edit/", views.edit_student, name="edit_student"),
-    path("teacher/students/<int:student_id>/delete/", views.delete_student, name="delete_student"),
 
     # Groups
     path("teacher/groups/", views.groups_list, name="groups_list"),
@@ -57,10 +60,4 @@ urlpatterns = [
     # Performance
     path("teacher/performance/class/", views.class_performance, name="class_performance"),
     path("teacher/performance/student/<int:student_id>/", views.student_performance, name="student_performance"),
-    
-    #student
-    path("student/tests/", views.student_test_list, name="student_test_list"),
-    path("student/tests/<int:test_id>/take/", views.student_take_test, name="student_take_test"),
-    path("student/tests/<int:test_id>/submitted/", views.student_test_submitted, name="student_test_submitted"),
-    path("student/results/", views.student_results, name="student_results"),
 ]

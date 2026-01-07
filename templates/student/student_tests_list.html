@@ -1,0 +1,280 @@
+{% extends "student/student_base.html" %}
+
+{% block title %}My Tests{% endblock %}
+
+{% block content %}
+<style>
+.tests-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 32px;
+}
+
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.tests-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.test-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  transition: all .3s;
+  border: 2px solid transparent;
+}
+
+.test-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  border-color: #2563eb;
+}
+
+.test-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.test-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.completed {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.test-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.meta-icon {
+  font-size: 16px;
+}
+
+.test-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all .2s;
+  flex: 1;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.08);
+}
+
+.empty-state-icon {
+  font-size: 72px;
+  margin-bottom: 20px;
+  opacity: .3;
+}
+
+.empty-state h2 {
+  font-size: 24px;
+  color: #374151;
+  margin: 0 0 12px 0;
+}
+
+.empty-state p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.question-count {
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 16px 0;
+}
+</style>
+
+<div class="tests-container">
+  <div class="page-header">
+    <h1>📝 My Tests</h1>
+    <p>View and attempt your assigned tests</p>
+  </div>
+
+  {% if error %}
+    <div class="error-message">
+      <span style="font-size: 20px;">⚠️</span>
+      <span>{{ error }}</span>
+    </div>
+  {% endif %}
+
+  {% if tests_with_status %}
+    <div class="tests-grid">
+      {% for item in tests_with_status %}
+        {% with test=item.test %}
+        <div class="test-card">
+          <div class="test-header">
+            <div>
+              <h3 class="test-title">{{ test.title }}</h3>
+            </div>
+            <span class="status-badge {% if item.attempted %}completed{% else %}pending{% endif %}">
+              {% if item.attempted %}Completed{% else %}Pending{% endif %}
+            </span>
+          </div>
+
+          <div class="test-meta">
+            {% if test.start_time %}
+            <div class="meta-row">
+              <span class="meta-icon">🕐</span>
+              <span><strong>Start:</strong> {{ test.start_time|date:"M d, Y g:i A" }}</span>
+            </div>
+            {% endif %}
+
+            {% if test.duration_minutes %}
+            <div class="meta-row">
+              <span class="meta-icon">⏱️</span>
+              <span><strong>Duration:</strong> {{ test.duration_minutes }} minutes</span>
+            </div>
+            {% endif %}
+
+            <div class="meta-row">
+              <span class="meta-icon">📋</span>
+              <span><strong>Questions:</strong> <span class="question-count">{{ test.questions.count }}</span></span>
+            </div>
+
+            {% if item.attempted %}
+            <div class="meta-row">
+              <span class="meta-icon">✅</span>
+              <span><strong>Attempts:</strong> {{ item.attempt_count }}</span>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="test-actions">
+            {% if item.attempted %}
+              <a href="#" class="btn secondary">
+                📊 View Results
+              </a>
+              <a href="#" class="btn primary">
+                🔄 Retake Test
+              </a>
+            {% else %}
+              <a href="#" class="btn primary">
+                ▶️ Start Test
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <h2>No Tests Assigned</h2>
+      <p>You don't have any tests assigned yet. Check back later!</p>
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}
