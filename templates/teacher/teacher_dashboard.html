@@ -1,0 +1,707 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Teacher Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  .welcome-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 40px;
+    color: white;
+    margin-bottom: 32px;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  }
+
+  .welcome-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .welcome-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+  }
+
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+
+  .action-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s;
+    border: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+  }
+
+  .action-icon {
+    font-size: 40px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+    border-radius: 12px;
+  }
+
+  .action-content h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #111827;
+  }
+
+  .action-content p {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+
+  /* Student Management Widget */
+  .widget {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .widget-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .btn-sm {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  /* Table Styles */
+  .students-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .students-table thead {
+    background: #f9fafb;
+  }
+
+  .students-table th {
+    padding: 12px;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .students-table td {
+    padding: 16px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+  }
+
+  .students-table tbody tr {
+    transition: all 0.2s;
+  }
+
+  .students-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .student-name {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .badge-grade {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.3;
+  }
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-50px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #6b7280;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .close-btn:hover {
+    background: #f3f4f6;
+    color: #111827;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #374151;
+    font-size: 14px;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    justify-content: flex-end;
+  }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .alert-success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+  }
+
+  .alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  @media (max-width: 768px) {
+    .form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .quick-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .students-table {
+      font-size: 13px;
+    }
+
+    .students-table th,
+    .students-table td {
+      padding: 10px 8px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <!-- Welcome Section -->
+  <div class="welcome-section">
+    <h1 class="welcome-title">Welcome back, {{ request.user.first_name|default:request.user.username }}! 👋</h1>
+    <p class="welcome-subtitle">Manage your tests, students, and track their performance</p>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <a href="{% url 'tests_list' %}" class="action-card">
+      <div class="action-icon">📝</div>
+      <div class="action-content">
+        <h3>My Tests</h3>
+        <p>Create and manage tests</p>
+      </div>
+    </a>
+
+    <a href="{% url 'question_library' %}" class="action-card">
+      <div class="action-icon">📚</div>
+      <div class="action-content">
+        <h3>Question Library</h3>
+        <p>Browse and add questions</p>
+      </div>
+    </a>
+
+    <a href="{% url 'groups_list' %}" class="action-card">
+      <div class="action-icon">👥</div>
+      <div class="action-content">
+        <h3>Class Groups</h3>
+        <p>Manage student groups</p>
+      </div>
+    </a>
+
+    <a href="{% url 'class_performance' %}" class="action-card">
+      <div class="action-icon">📊</div>
+      <div class="action-content">
+        <h3>Performance</h3>
+        <p>View student results</p>
+      </div>
+    </a>
+  </div>
+
+  <!-- Student Management Widget -->
+  <div class="widget">
+    <div class="widget-header">
+      <h2 class="widget-title">👨‍🎓 Student Management</h2>
+      <button class="btn btn-primary" onclick="openAddModal()">
+        ➕ Add Student
+      </button>
+    </div>
+
+    <div id="alertContainer"></div>
+
+    {% if students %}
+    <div style="overflow-x: auto;">
+      <table class="students-table" id="studentsTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Grade</th>
+            <th>Section</th>
+            <th>Roll No.</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="studentsTableBody">
+          {% for student in students %}
+          <tr data-student-id="{{ student.id }}">
+            <td class="student-name">{{ student.full_name }}</td>
+            <td>{{ student.user.email|default:"—" }}</td>
+            <td><span class="badge badge-grade">{{ student.grade.name }}</span></td>
+            <td>{{ student.section }}</td>
+            <td>{{ student.roll_number|default:"—" }}</td>
+            <td>
+              <div class="action-buttons">
+                <button class="btn btn-secondary btn-sm" onclick="openEditModal({{ student.id }})">
+                  ✏️ Edit
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteStudent({{ student.id }})">
+                  🗑️ Delete
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">👨‍🎓</div>
+      <h3 style="margin-bottom: 8px; color: #374151;">No Students Yet</h3>
+      <p>Click the "Add Student" button to add your first student</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Add/Edit Student Modal -->
+<div class="modal" id="studentModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">Add New Student</h3>
+      <button class="close-btn" onclick="closeModal()">&times;</button>
+    </div>
+
+    <form id="studentForm">
+      {% csrf_token %}
+      <input type="hidden" id="studentId" name="student_id">
+
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="fullName" name="full_name" required placeholder="John Doe">
+      </div>
+
+      <div class="form-group">
+        <label>Email (Login Username) *</label>
+        <input type="email" id="email" name="email" required placeholder="student@school.com">
+      </div>
+
+      <div class="form-group">
+        <label>Password * <span style="font-weight: 400; color: #6b7280;" id="passwordHint">(Min 8 characters)</span></label>
+        <input type="password" id="password" name="password" required placeholder="••••••••" minlength="8">
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Grade *</label>
+          <select id="grade" name="grade" required>
+            <option value="">Select Grade</option>
+            {% for grade in grades %}
+              <option value="{{ grade.id }}">{{ grade.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Section *</label>
+          <input type="text" id="section" name="section" required placeholder="A" maxlength="10">
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Roll Number</label>
+          <input type="text" id="rollNumber" name="roll_number" placeholder="001">
+        </div>
+
+        <div class="form-group">
+          <label>Admission ID</label>
+          <input type="text" id="admissionId" name="admission_id" placeholder="ADM2024001">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          💾 Save Student
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+let editingStudentId = null;
+const studentsData = {{ students|safe|default:"[]" }};
+
+// Convert Django queryset to JSON for JS
+const students = [
+  {% for student in students %}
+  {
+    id: {{ student.id }},
+    full_name: "{{ student.full_name|escapejs }}",
+    email: "{{ student.user.email|default:''|escapejs }}",
+    grade: {{ student.grade.id }},
+    section: "{{ student.section|escapejs }}",
+    roll_number: "{{ student.roll_number|default:''|escapejs }}",
+    admission_id: "{{ student.admission_id|default:''|escapejs }}"
+  }{% if not forloop.last %},{% endif %}
+  {% endfor %}
+];
+
+function openAddModal() {
+  editingStudentId = null;
+  document.getElementById('modalTitle').textContent = 'Add New Student';
+  document.getElementById('studentForm').reset();
+  document.getElementById('studentId').value = '';
+  document.getElementById('password').required = true;
+  document.getElementById('passwordHint').textContent = '(Min 8 characters)';
+  document.getElementById('submitBtn').innerHTML = '💾 Save Student';
+  document.getElementById('studentModal').classList.add('active');
+}
+
+function openEditModal(studentId) {
+  editingStudentId = studentId;
+  const student = students.find(s => s.id === studentId);
+  
+  if (!student) return;
+  
+  document.getElementById('modalTitle').textContent = 'Edit Student';
+  document.getElementById('studentId').value = studentId;
+  document.getElementById('fullName').value = student.full_name;
+  document.getElementById('email').value = student.email;
+  document.getElementById('grade').value = student.grade;
+  document.getElementById('section').value = student.section;
+  document.getElementById('rollNumber').value = student.roll_number;
+  document.getElementById('admissionId').value = student.admission_id;
+  document.getElementById('password').value = '';
+  document.getElementById('password').required = false;
+  document.getElementById('passwordHint').textContent = '(Leave blank to keep current password)';
+  document.getElementById('submitBtn').innerHTML = '💾 Update Student';
+  document.getElementById('studentModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('studentModal').classList.remove('active');
+  editingStudentId = null;
+}
+
+function showAlert(message, type) {
+  const alertContainer = document.getElementById('alertContainer');
+  const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+  
+  alertContainer.innerHTML = `
+    <div class="alert ${alertClass}">
+      ${message}
+    </div>
+  `;
+  
+  setTimeout(() => {
+    alertContainer.innerHTML = '';
+  }, 5000);
+}
+
+// Form submission
+document.getElementById('studentForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const url = editingStudentId 
+    ? `/teacher/students/${editingStudentId}/edit/`
+    : `/teacher/students/add/`;
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: formData
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'ok') {
+      showAlert(data.message, 'success');
+      closeModal();
+      
+      // Reload page after short delay
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
+    } else {
+      showAlert(data.message || 'An error occurred', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showAlert('Failed to save student. Please try again.', 'error');
+  }
+});
+
+async function deleteStudent(studentId) {
+  const student = students.find(s => s.id === studentId);
+  if (!student) return;
+  
+  if (!confirm(`Are you sure you want to delete ${student.full_name}? This will also delete their login account and cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/teacher/students/${studentId}/delete/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'ok') {
+      showAlert(data.message, 'success');
+      
+      // Remove row from table
+      const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+      if (row) {
+        row.style.opacity = '0';
+        setTimeout(() => {
+          row.remove();
+          
+          // Show empty state if no students left
+          if (document.querySelectorAll('#studentsTableBody tr').length === 0) {
+            location.reload();
+          }
+        }, 300);
+      }
+    } else {
+      showAlert('Failed to delete student', 'error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    showAlert('Failed to delete student. Please try again.', 'error');
+  }
+}
+
+// Close modal on outside click
+document.getElementById('studentModal').addEventListener('click', (e) => {
+  if (e.target.id === 'studentModal') {
+    closeModal();
+  }
+});
+</script>
+{% endblock %}

@@ -182,13 +182,20 @@ class TestQuestion(models.Model):
 
 
 class Student(models.Model):
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='student_profile',
+        null=True,
+        blank=True
+    )
     full_name = models.CharField(max_length=200)
     roll_number = models.CharField(max_length=50, blank=True)
     admission_id = models.CharField(max_length=50, blank=True)
 
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     section = models.CharField(max_length=10)  # A, B, C
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_students')
 
     created_at = models.DateTimeField(auto_now_add=True)
 

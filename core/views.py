@@ -19,6 +19,8 @@ from .models import (
     ClassGroup,
     StudentAnswer,
 )
+from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 
 
 @login_required
@@ -100,8 +102,14 @@ def ajax_questions(request):
 
 @login_required
 def teacher_dashboard(request):
-    return render(request, "teacher/teacher_dashboard.html")
-
+    """Teacher dashboard with student management widget"""
+    students = Student.objects.filter(created_by=request.user).select_related('grade', 'user')
+    grades = Grade.objects.all()
+    
+    return render(request, "teacher/teacher_dashboard.html", {
+        "students": students,
+        "grades": grades,
+    })
 
 @login_required
 def student_dashboard(request):
@@ -349,8 +357,6 @@ def duplicate_test(request, test_id):
 
     return redirect("tests_list")
 
-
-
 def custom_login(request):
     error = None
 
@@ -368,14 +374,31 @@ def custom_login(request):
 
             # Force landing pages by role
             if role == "teacher":
-                return redirect("teacher_dashboard")
+                # Check if user is staff/teacher
+                if user.is_staff or not hasattr(user, 'student_profile'):
+                    return redirect("teacher_dashboard")
+                else:
+                    error = "You don't have teacher access"
+                    from django.contrib.auth import logout
+                    logout(request)
             elif role == "student":
-                return redirect("student_dashboard")
+                # Check if user has student profile
+                if hasattr(user, 'student_profile'):
+                    return redirect("student_dashboard")
+                else:
+                    error = "No student profile found for this account"
+                    from django.contrib.auth import logout
+                    logout(request)
             elif role == "admin":
-                return redirect("/admin/")
+                if user.is_superuser:
+                    return redirect("/admin/")
+                else:
+                    error = "You don't have admin access"
+                    from django.contrib.auth import logout
+                    logout(request)
 
     return render(request, "registration/login.html", {"error": error})
-
+    
 # TEMP staging (replace later with JSON / session)
 STAGING_QUESTIONS = [
     {
@@ -530,20 +553,53 @@ def import_questions_review(request):
 
 @login_required
 def add_student(request):
+    """Add a new student with user account"""
     if request.method == "POST":
-        Student.objects.create(
-            full_name=request.POST["full_name"],
+        email = request.POST.get("email", "").strip()
+        password = request.POST.get("password")
+        full_name = request.POST.get("full_name")
+        
+        # Check if email already exists
+        if User.objects.filter(username=email).exists():
+            return JsonResponse({
+                "status": "error",
+                "message": "A student with this email already exists."
+            }, status=400)
+        
+        # Create user account
+        user = User.objects.create(
+            username=email,
+            email=email,
+            first_name=full_name.split()[0] if full_name else "",
+            password=make_password(password)
+        )
+        
+        # Create student profile
+        student = Student.objects.create(
+            user=user,
+            full_name=full_name,
             roll_number=request.POST.get("roll_number", ""),
             admission_id=request.POST.get("admission_id", ""),
             grade_id=request.POST["grade"],
             section=request.POST["section"],
             created_by=request.user
         )
-        return redirect("students_list")
+        
+        return JsonResponse({
+            "status": "ok",
+            "message": "Student added successfully!",
+            "student": {
+                "id": student.id,
+                "full_name": student.full_name,
+                "email": email,
+                "grade": str(student.grade),
+                "section": student.section,
+                "roll_number": student.roll_number,
+            }
+        })
+    
+    return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
 
-    return render(request, "teacher/students/add_student.html", {
-        "grades": Grade.objects.all()
-    })
 
 
 @login_required
@@ -629,29 +685,92 @@ def student_performance(request, student_id):
         "attempts": attempts,
     })
 
-
 @login_required
 def edit_student(request, student_id):
+    """Edit existing student"""
     student = get_object_or_404(Student, id=student_id, created_by=request.user)
-
+    
     if request.method == "POST":
-        student.full_name = request.POST.get("full_name")
+        email = request.POST.get("email", "").strip()
+        full_name = request.POST.get("full_name")
+        password = request.POST.get("password", "").strip()
+        
+        # Update user account
+        if student.user:
+            user = student.user
+            # Check if email is being changed and if it's already taken
+            if email != user.username and User.objects.filter(username=email).exists():
+                return JsonResponse({
+                    "status": "error",
+                    "message": "This email is already in use."
+                }, status=400)
+            
+            user.username = email
+            user.email = email
+            user.first_name = full_name.split()[0] if full_name else ""
+            
+            # Update password only if provided
+            if password:
+                user.password = make_password(password)
+            
+            user.save()
+        else:
+            # Create user if doesn't exist
+            if User.objects.filter(username=email).exists():
+                return JsonResponse({
+                    "status": "error",
+                    "message": "This email is already in use."
+                }, status=400)
+            
+            user = User.objects.create(
+                username=email,
+                email=email,
+                first_name=full_name.split()[0] if full_name else "",
+                password=make_password(password) if password else make_password("changeme123")
+            )
+            student.user = user
+        
+        # Update student profile
+        student.full_name = full_name
         student.roll_number = request.POST.get("roll_number", "")
         student.admission_id = request.POST.get("admission_id", "")
-        student.grade_id = request.POST.get("grade")
-        student.section = request.POST.get("section")
+        student.grade_id = request.POST["grade"]
+        student.section = request.POST["section"]
         student.save()
-        return redirect("students_list")
+        
+        return JsonResponse({
+            "status": "ok",
+            "message": "Student updated successfully!",
+            "student": {
+                "id": student.id,
+                "full_name": student.full_name,
+                "email": email,
+                "grade": str(student.grade),
+                "section": student.section,
+                "roll_number": student.roll_number,
+            }
+        })
+    
+    return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
 
-    return render(
-        request,
-        "teacher/students/edit_student.html",
-        {
-            "student": student,
-            "grades": Grade.objects.all(),
-        }
-    )
-
+@login_required
+def delete_student(request, student_id):
+    """Delete a student"""
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    student = get_object_or_404(Student, id=student_id, created_by=request.user)
+    
+    # Delete associated user account
+    if student.user:
+        student.user.delete()
+    
+    student.delete()
+    
+    return JsonResponse({
+        "status": "ok",
+        "message": "Student deleted successfully!"
+    })
 
 @login_required
 def add_questions_to_test(request, test_id):
@@ -771,8 +890,8 @@ def student_test_list(request):
     """
     # Get the student object for the logged-in user
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         # If no student profile exists, show empty page
         return render(request, "student/test_list.html", {"tests": []})
     
@@ -877,8 +996,8 @@ def student_test_attempt(request, test_id):
     """
     # Get student
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         return redirect('student_test_list')
     
     # Get test
@@ -956,7 +1075,6 @@ def student_test_attempt(request, test_id):
         "time_remaining_seconds": time_remaining_seconds,
     })
 
-
 @login_required
 def student_save_answer(request, test_id):
     """
@@ -966,8 +1084,8 @@ def student_save_answer(request, test_id):
         return JsonResponse({"error": "POST required"}, status=405)
     
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         return JsonResponse({"error": "Student not found"}, status=403)
     
     test = get_object_or_404(Test, id=test_id)
@@ -988,7 +1106,6 @@ def student_save_answer(request, test_id):
     
     return JsonResponse({"status": "ok", "saved_at": answer.submitted_at})
 
-
 @login_required
 def student_submit_test(request, test_id):
     """
@@ -998,8 +1115,8 @@ def student_submit_test(request, test_id):
         return JsonResponse({"error": "POST required"}, status=405)
     
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         return JsonResponse({"error": "Student not found"}, status=403)
     
     test = get_object_or_404(Test, id=test_id)
@@ -1017,15 +1134,14 @@ def student_submit_test(request, test_id):
     except StudentTestAttempt.DoesNotExist:
         return JsonResponse({"error": "Attempt not found"}, status=404)
 
-
 @login_required
 def student_test_review(request, test_id):
     """
     Show submitted test with answers (results view)
     """
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         return redirect('student_test_list')
     
     test = get_object_or_404(Test, id=test_id)
@@ -1059,8 +1175,8 @@ def student_results(request):
     Show all completed tests and their results
     """
     try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
+        student = request.user.student_profile
+    except (Student.DoesNotExist, AttributeError):
         return render(request, "student/results.html", {"results": []})
     
     attempts = StudentTestAttempt.objects.filter(

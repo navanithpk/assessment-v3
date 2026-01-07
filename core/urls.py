@@ -39,6 +39,7 @@ from .views import (
     student_submit_test,
     student_test_review,
     student_results,
+    delete_student,
 )
 
 urlpatterns = [
@@ -85,6 +86,7 @@ urlpatterns = [
     path("teacher/students/", students_list, name="students_list"),
     path("teacher/students/add/", add_student, name="add_student"),
     path("teacher/students/<int:student_id>/edit/", edit_student, name="edit_student"),
+    path("teacher/students/<int:student_id>/delete/", delete_student, name="delete_student"),
     
     # Groups
     path("teacher/groups/", groups_list, name="groups_list"),
