@@ -1,0 +1,113 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}Import Questions{% endblock %}
+
+{% block content %}
+
+<style>
+.import-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr 320px;
+  gap: 24px;
+}
+
+.progress {
+  font-weight: 600;
+  padding-top: 10px;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+}
+
+.options label {
+  display: block;
+  padding: 6px 0;
+}
+
+textarea {
+  width: 100%;
+  min-height: 120px;
+}
+
+.btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+</style>
+
+<div class="import-layout">
+
+  <!-- LEFT -->
+  <div class="progress">
+    Question {{ index }} / {{ total }}
+  </div>
+
+  <!-- CENTER -->
+  <div class="card">
+    <h3>Question {{ q.number }}</h3>
+
+    <form method="post">
+      {% csrf_token %}
+
+      <label><strong>Question Text</strong></label>
+      <textarea name="question_text">{{ q.question_html }}</textarea>
+
+      <label style="margin-top:14px;"><strong>Options</strong></label>
+      <div class="options">
+        {% for opt in q.options %}
+          <label>
+            <input type="radio" name="correct" {% if forloop.counter0|stringformat:"ABCDEFGHIJKLMNOPQRSTUVWXYZ"|slice:":1" == q.answer %}checked{% endif %}>
+            {{ opt }}
+          </label>
+        {% endfor %}
+      </div>
+
+      <input type="hidden" name="answer_text" value="{{ q.answer }}">
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="card">
+      <label>Grade</label>
+      <select name="grade" required>
+        {% for g in grades %}
+          <option value="{{ g.id }}">{{ g.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Subject</label>
+      <select name="subject" required>
+        {% for s in subjects %}
+          <option value="{{ s.id }}">{{ s.name }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Topic</label>
+      <select name="topic" required></select>
+
+      <label>Exam Year</label>
+      <input type="number" name="year" value="2025">
+
+      <div style="margin-top:16px;">
+        <button class="btn primary" type="submit">
+          Save & Next →
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+{% endblock %}

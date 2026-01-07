@@ -13,33 +13,73 @@ body {
 
 .page {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 240px 1fr;
   height: 100vh;
 }
 
-/* SIDEBAR */
+/* ================= SIDEBAR ================= */
 .sidebar {
   background: #2f2f2f;
   color: white;
-  padding: 24px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar h2 {
-  margin-top: 0;
+  margin: 0 0 18px 0;
+  font-size: 18px;
+  font-weight: 600;
 }
 
 .sidebar a {
   display: block;
-  color: white;
+  color: #e5e7eb;
   text-decoration: none;
-  margin: 12px 0;
+  margin: 8px 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 .sidebar a:hover {
-  text-decoration: underline;
+  background: rgba(255,255,255,0.08);
+  color: white;
 }
 
-/* MAIN */
+/* Section label */
+.sidebar .section {
+  margin-top: 18px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #9ca3af;
+}
+
+/* Push logout to bottom */
+.sidebar .spacer {
+  flex: 1;
+}
+
+/* Logout button */
+.sidebar button {
+  margin-top: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sidebar button:hover {
+  background: #dc2626;
+}
+
+/* ================= MAIN ================= */
 .main {
   padding: 30px;
   overflow-y: auto;
@@ -51,13 +91,25 @@ body {
 
 <div class="page">
 
-  <!-- SIDEBAR -->
+  <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
     <h2>Teacher</h2>
 
     <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
+
+    <div class="section">Assessments</div>
     <a href="{% url 'tests_list' %}">📝 My Tests</a>
     <a href="{% url 'question_library' %}">📚 Question Library</a>
+
+    <div class="section">Students</div>
+    <a href="{% url 'students_list' %}">👨‍🎓 Students List</a>
+    <a href="{% url 'add_student' %}">➕ Add Student</a>
+    <a href="{% url 'groups_list' %}">🧩 Class Groups</a>
+
+    <div class="section">Performance</div>
+    <a href="{% url 'class_performance' %}">📊 Class Performance</a>
+
+    <div class="spacer"></div>
 
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
@@ -65,7 +117,7 @@ body {
     </form>
   </aside>
 
-  <!-- PAGE CONTENT -->
+  <!-- ================= PAGE CONTENT ================= -->
   <main class="main">
     {% block content %}{% endblock %}
   </main>

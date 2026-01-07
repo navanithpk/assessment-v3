@@ -8,14 +8,12 @@
 {% block content %}
 
 <style>
-/* ================= LAYOUT ================= */
 .test-page {
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: 24px;
 }
 
-/* ================= HEADER ================= */
 .test-header {
   display: flex;
   justify-content: space-between;
@@ -32,7 +30,6 @@
   border: 1px solid #ccc;
 }
 
-/* ================= TOGGLE ================= */
 .toggle {
   display: flex;
   align-items: center;
@@ -40,7 +37,6 @@
   font-weight: 600;
 }
 
-/* ================= ACTIONS ================= */
 .test-actions {
   margin-bottom: 18px;
 }
@@ -62,7 +58,6 @@
   background: #e5e7eb;
 }
 
-/* ================= QUESTIONS ================= */
 .questions {
   display: flex;
   flex-direction: column;
@@ -96,21 +91,20 @@
   color: #2563eb;
 }
 
-/* ================= ASSIGN ================= */
 .assign-panel {
   background: #fafafa;
   border: 1px solid #ddd;
   border-radius: 14px;
   padding: 18px;
 }
-
-.assign-panel h3 {
-  margin-top: 0;
-}
 </style>
 
 <form method="post" id="testForm">
 {% csrf_token %}
+
+{% if test %}
+<input type="hidden" name="test_id" value="{{ test.id }}">
+{% endif %}
 
 <div class="test-page">
 
@@ -140,41 +134,36 @@
 
     <!-- ACTIONS -->
     <div class="test-actions">
+      {% if test %}
       <a
-        href="{% url 'question_library' %}?mode=import&test_id={{ test.id }}"
+        href="{% url 'question_library' %}?import_to_test={{ test.id }}"
         target="_blank"
         class="btn primary"
       >
         ➕ Import from Question Library
       </a>
+      {% endif %}
     </div>
 
     <!-- QUESTIONS -->
     <section class="questions" id="questionsArea">
-      {% if test_questions %}
-        {% for tq in test_questions %}
+      {% if questions %}
+        {% for tq in questions %}
           <div
             class="question-card"
             draggable="true"
-            data-id="{{ tq.id }}"
+            data-id="{{ tq.question.id }}"
           >
-
-            <!-- FULL QUESTION CONTENT -->
-            <div class="question-body">
-              {{ tq.question.question_text|safe }}
-            </div>
+            {{ tq.question.question_text|safe }}
 
             <div class="q-actions">
-              <a
-                href="{% url 'edit_question' tq.question.id %}"
-                target="_blank"
-              >
+              <a href="{% url 'edit_question' tq.question.id %}" target="_blank">
                 Edit
               </a>
 
               <button
                 type="button"
-                data-remove="{{ tq.id }}"
+                data-remove="{{ tq.question.id }}"
               >
                 Remove
               </button>
@@ -191,7 +180,6 @@
   <!-- ================= ASSIGN ================= -->
   <aside class="assign-panel">
     <h3>Assign test</h3>
-
     <label><input type="checkbox"> Class 8A</label><br>
     <label><input type="checkbox"> Class 8B</label><br>
     <label><input type="checkbox"> Student – Rahul</label><br>
@@ -204,7 +192,27 @@
 
 <!-- ================= AUTOSAVE ================= -->
 <script>
+let isDirty = false;
+
+function markDirty() {
+  isDirty = true;
+}
+
+function clearDirty() {
+  isDirty = false;
+}
+
+/* Title typing */
+document.querySelector(".test-title").addEventListener("input", markDirty);
+
+/* Published toggle */
+document.querySelector("input[name='is_published']")
+  ?.addEventListener("change", markDirty);
+
+/* Autosave loop */
 setInterval(() => {
+  if (!isDirty) return;
+
   const form = document.getElementById("testForm");
   const data = new FormData(form);
 
@@ -212,19 +220,20 @@ setInterval(() => {
     method: "POST",
     headers: { "X-CSRFToken": "{{ csrf_token }}" },
     body: data
-  }).then(() => {
-    console.log("Auto-saved test");
+  }).then(r => {
+    if (r.ok) {
+      console.log("Autosaved");
+      clearDirty();
+    }
   });
-}, 10000);
+}, 5000);
 </script>
 
 <!-- ================= REMOVE QUESTION ================= -->
 <script>
 document.querySelectorAll("[data-remove]").forEach(btn => {
   btn.addEventListener("click", () => {
-    const tqid = btn.dataset.remove;
-
-    fetch("/teacher/tests/remove-question/", {
+    fetch(`/teacher/tests/remove-question/`, {
       method: "POST",
       headers: {
         "X-CSRFToken": "{{ csrf_token }}",
@@ -232,9 +241,12 @@ document.querySelectorAll("[data-remove]").forEach(btn => {
       },
       body: JSON.stringify({
         test_id: {{ test.id }},
-        test_question_id: tqid
+        question_id: btn.dataset.remove
       })
-    }).then(() => location.reload());
+    }).then(() => {
+      markDirty();
+      location.reload();
+    });
   });
 });
 </script>
@@ -256,6 +268,8 @@ document.querySelectorAll(".question-card").forEach(card => {
 });
 
 function saveOrder() {
+  markDirty();
+
   const ids = [...document.querySelectorAll(".question-card")]
     .map(c => c.dataset.id);
 

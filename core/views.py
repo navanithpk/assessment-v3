@@ -2,12 +2,22 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.contrib.auth.decorators import login_required
-from core.models import Topic
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import Group
-from .models import Test, TestQuestion, Question
 from django.contrib.admin.views.decorators import staff_member_required
 import json
+
+from .models import (
+    Grade,
+    Subject,
+    Topic,
+    LearningObjective,
+    Question,
+    Test,
+    TestQuestion,
+    Student,
+    ClassGroup,
+    StudentAnswer,
+)
 
 
 @login_required
@@ -20,6 +30,8 @@ def autosave_test(request, test_id):
     test.save()
 
     return JsonResponse({"status": "ok"})
+
+
 @staff_member_required
 def admin_dashboard(request):
     """
@@ -27,6 +39,7 @@ def admin_dashboard(request):
     Loads Django admin inside an iframe.
     """
     return render(request, "admin_panel/admin_dashboard.html")
+
 
 @login_required
 @require_GET
@@ -86,34 +99,30 @@ def ajax_questions(request):
 
 @login_required
 def teacher_dashboard(request):
-    return render(request, "teacher/teacher_dashboard.html")  
+    return render(request, "teacher/teacher_dashboard.html")
+
 
 @login_required
 def student_dashboard(request):
     return render(request, "student/student_dashboard.html")
 
-from .models import (
-    LearningObjective,
-    Question,
-    Grade,
-    Subject,
-    Topic,
-)  
 
 def root_redirect(request):
     if request.user.is_authenticated:
-        return redirect("teacher_dashboard")  # ✅ CHANGE HERE
+        return redirect("teacher_dashboard")
     return redirect("login")
+
 
 @login_required
 def tests_list(request):
-    tests = Test.objects.filter(created_by=request.user)
+    tests = Test.objects.filter(created_by=request.user).order_by("-id")
 
     return render(
         request,
         "teacher/tests_list.html",
         {"tests": tests}
-    ) 
+    )
+
 
 @login_required
 def ajax_topics(request):
@@ -162,6 +171,7 @@ def ajax_learning_objectives(request):
         ]
     })
 
+
 @login_required
 def list_learning_objectives(request):
     los = LearningObjective.objects.select_related(
@@ -173,6 +183,7 @@ def list_learning_objectives(request):
         "admin_panel/lo_list.html",
         {"learning_objectives": los}
     )
+
 
 @login_required
 def question_library(request):
@@ -218,7 +229,6 @@ def question_library(request):
             "topics": Topic.objects.all(),
         }
     )
-
 
 
 @login_required
@@ -296,9 +306,10 @@ def add_edit_question(request, question_id=None):
             "subjects": subjects,
             "topics": topics,
             "selected_lo_ids": selected_lo_ids,
-            "years":years,
+            "years": years,
         }
     )
+
 
 @login_required
 def toggle_publish(request, test_id):
@@ -307,11 +318,13 @@ def toggle_publish(request, test_id):
     test.save()
     return redirect("tests_list")
 
+
 @login_required
 def delete_test(request, test_id):
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
     test.delete()
     return redirect("tests_list")
+
 
 @login_required
 def duplicate_test(request, test_id):
@@ -324,16 +337,17 @@ def duplicate_test(request, test_id):
         start_time=test.start_time,
     )
 
-    for q in test.questions.all():
+    # Copy test questions properly
+    test_questions = TestQuestion.objects.filter(test=test).order_by('order')
+    for tq in test_questions:
         TestQuestion.objects.create(
             test=new_test,
-            question_text=q.question_text,
-            answer_text=q.answer_text,
-            marks=q.marks,
-            order=q.order,
+            question=tq.question,
+            order=tq.order,
         )
 
     return redirect("tests_list")
+
 
 @login_required
 def test_editor(request, test_id=None):
@@ -376,23 +390,11 @@ def test_editor(request, test_id=None):
         {
             "test": test,
             "test_questions": test_questions,
+            "sections": [],  # Add empty sections list to prevent template errors
+            "active_section": None,
         }
     )
 
-
-    
-@login_required
-def tests_list(request):
-    tests = Test.objects.filter(created_by=request.user).order_by("-id")
-
-    return render(
-        request,
-        "teacher/tests_list.html",
-        {"tests": tests}
-    )
-
-
-from core.models import Test, TestQuestion
 
 @login_required
 def create_test(request):
@@ -410,8 +412,11 @@ def create_test(request):
         {
             "test": None,
             "questions": [],
+            "sections": [],
+            "active_section": None,
         }
     )
+
 
 def custom_login(request):
     error = None
@@ -428,7 +433,7 @@ def custom_login(request):
         else:
             login(request, user)
 
-            # ✅ FORCE landing pages by role
+            # Force landing pages by role
             if role == "teacher":
                 return redirect("teacher_dashboard")
             elif role == "student":
@@ -437,7 +442,8 @@ def custom_login(request):
                 return redirect("/admin/")
 
     return render(request, "registration/login.html", {"error": error})
-    
+
+
 @login_required
 def edit_test(request, test_id):
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
@@ -447,15 +453,229 @@ def edit_test(request, test_id):
         test.is_published = bool(request.POST.get("is_published"))
         test.save()
 
-    questions = Question.objects.filter(
-        testquestion__test=test
-    )
+    test_questions = TestQuestion.objects.filter(
+        test=test
+    ).select_related("question").order_by("order")
 
     return render(
         request,
         "teacher/create_test.html",
         {
             "test": test,
-            "questions": questions,
+            "test_questions": test_questions,
+            "sections": [],
+            "active_section": None,
         }
     )
+
+
+# TEMP staging (replace later with JSON / session)
+STAGING_QUESTIONS = [
+    {
+        "number": 1,
+        "question_html": "<p>The diagram shows a measuring cylinder...</p>",
+        "options": ["13.0 cm³", "13.5 cm³", "16.0 cm³", "17.0 cm³"],
+        "answer": "C"
+    },
+]
+
+
+@login_required
+def import_questions_review(request):
+    index = int(request.GET.get("i", 0))
+
+    if index >= len(STAGING_QUESTIONS):
+        return render(request, "teacher/import_done.html")
+
+    q = STAGING_QUESTIONS[index]
+
+    if request.method == "POST":
+        Question.objects.create(
+            question_text=request.POST["question_text"],
+            answer_text=request.POST["answer_text"],
+            marks=1,
+            question_type="mcq",
+            year=request.POST.get("year"),
+            grade_id=request.POST["grade"],
+            subject_id=request.POST["subject"],
+            topic_id=request.POST["topic"],
+            created_by=request.user,
+        )
+        return redirect(f"?i={index+1}")
+
+    context = {
+        "q": q,
+        "index": index + 1,
+        "total": len(STAGING_QUESTIONS),
+        "grades": Grade.objects.all(),
+        "subjects": Subject.objects.all(),
+    }
+
+    return render(request, "teacher/import_questions.html", context)
+
+
+@login_required
+def add_student(request):
+    if request.method == "POST":
+        Student.objects.create(
+            full_name=request.POST["full_name"],
+            roll_number=request.POST.get("roll_number", ""),
+            admission_id=request.POST.get("admission_id", ""),
+            grade_id=request.POST["grade"],
+            section=request.POST["section"],
+            created_by=request.user
+        )
+        return redirect("students_list")
+
+    return render(request, "teacher/students/add_student.html", {
+        "grades": Grade.objects.all()
+    })
+
+
+@login_required
+def students_list(request):
+    students = Student.objects.filter(created_by=request.user)
+
+    return render(request, "teacher/students/students_list.html", {
+        "students": students,
+    })
+
+
+@login_required
+def add_group(request):
+    if request.method == "POST":
+        group = ClassGroup.objects.create(
+            name=request.POST["name"],
+            grade_id=request.POST["grade"],
+            section=request.POST["section"],
+            subject_id=request.POST["subject"],
+            created_by=request.user
+        )
+
+        student_ids = request.POST.getlist("students")
+        group.students.set(student_ids)
+
+        return redirect("groups_list")
+
+    return render(request, "teacher/groups/add_group.html", {
+        "grades": Grade.objects.all(),
+        "subjects": Subject.objects.all(),
+        "students": Student.objects.filter(created_by=request.user),
+    })
+
+
+@login_required
+def groups_list(request):
+    groups = ClassGroup.objects.filter(created_by=request.user)
+    return render(
+        request,
+        "teacher/groups/groups_list.html",
+        {"groups": groups}
+    )
+
+
+@login_required
+def class_performance(request):
+    test_id = request.GET.get("test")
+    group_id = request.GET.get("group")
+
+    results = []
+
+    if test_id and group_id:
+        test = get_object_or_404(Test, id=test_id)
+        group = get_object_or_404(ClassGroup, id=group_id)
+
+        for student in group.students.all():
+            attempts = StudentAnswer.objects.filter(
+                student=student,
+                test=test
+            )
+
+            total = sum(a.marks_awarded or 0 for a in attempts)
+            results.append({
+                "student": student,
+                "score": total,
+            })
+
+    return render(request, "teacher/performance/class_performance.html", {
+        "tests": Test.objects.filter(created_by=request.user),
+        "groups": ClassGroup.objects.filter(created_by=request.user),
+        "results": results,
+    })
+
+
+@login_required
+def student_performance(request, student_id):
+    student = get_object_or_404(Student, id=student_id)
+
+    attempts = StudentAnswer.objects.filter(student=student).select_related('test', 'question')
+
+    return render(request, "teacher/performance/student_performance.html", {
+        "student": student,
+        "attempts": attempts,
+    })
+
+
+@login_required
+def edit_student(request, student_id):
+    student = get_object_or_404(Student, id=student_id, created_by=request.user)
+
+    if request.method == "POST":
+        student.full_name = request.POST.get("full_name")
+        student.roll_number = request.POST.get("roll_number", "")
+        student.admission_id = request.POST.get("admission_id", "")
+        student.grade_id = request.POST.get("grade")
+        student.section = request.POST.get("section")
+        student.save()
+        return redirect("students_list")
+
+    return render(
+        request,
+        "teacher/students/edit_student.html",
+        {
+            "student": student,
+            "grades": Grade.objects.all(),
+        }
+    )
+
+
+@login_required
+def add_questions_to_test(request, test_id):
+    """
+    AJAX endpoint to add questions to a test from the question library
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    try:
+        data = json.loads(request.body)
+        question_ids = data.get("question_ids", [])
+        
+        if not question_ids:
+            return JsonResponse({"error": "No questions selected"}, status=400)
+        
+        # Get the current max order
+        max_order = TestQuestion.objects.filter(test=test).aggregate(
+            models.Max('order')
+        )['order__max'] or 0
+        
+        # Add questions to test
+        for idx, question_id in enumerate(question_ids):
+            question = get_object_or_404(Question, id=question_id)
+            
+            # Check if already added
+            if not TestQuestion.objects.filter(test=test, question=question).exists():
+                TestQuestion.objects.create(
+                    test=test,
+                    question=question,
+                    order=max_order + idx + 1
+                )
+        
+        return JsonResponse({"status": "ok", "message": "Questions added successfully"})
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 # Create your models here.
 class Grade(models.Model):
@@ -78,7 +79,7 @@ class LearningObjective(models.Model):
     def __str__(self):
         return f"{self.grade}.{self.subject}.{self.topic}.{self.code}"
 
-from django.contrib.auth.models import User
+
 class Question(models.Model):
 
     QUESTION_TYPES = [
@@ -118,8 +119,6 @@ class Question(models.Model):
     def __str__(self):
         return f"Q{self.id} | {self.grade}.{self.subject}.{self.topic}"
 
-from django.db import models
-from django.contrib.auth.models import User
 
 class Test(models.Model):
     title = models.CharField(max_length=255)
@@ -141,6 +140,7 @@ class Test(models.Model):
     def __str__(self):
         return self.title
 
+
 class TestQuestion(models.Model):
     test = models.ForeignKey(
         Test,
@@ -161,5 +161,84 @@ class TestQuestion(models.Model):
         ordering = ["order"]
 
     def __str__(self):
-        return f"{self.test.title} – Q{self.order}"
+        return f"{self.test.title} — Q{self.order}"
 
+
+class Student(models.Model):
+    full_name = models.CharField(max_length=200)
+    roll_number = models.CharField(max_length=50, blank=True)
+    admission_id = models.CharField(max_length=50, blank=True)
+
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
+    section = models.CharField(max_length=10)  # A, B, C
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("grade", "section", "roll_number")
+        ordering = ["grade", "section", "roll_number"]
+
+    def __str__(self):
+        return f"{self.full_name} ({self.grade}-{self.section})"
+
+
+class ClassGroup(models.Model):
+    name = models.CharField(max_length=100)  # "Grade 8A Physics"
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
+    section = models.CharField(max_length=10)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+
+    students = models.ManyToManyField(Student, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
+
+
+class StudentAnswer(models.Model):
+    """
+    Stores student answers/attempts for test questions
+    """
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="answers"
+    )
+    
+    test = models.ForeignKey(
+        Test,
+        on_delete=models.CASCADE,
+        related_name="student_answers"
+    )
+    
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE
+    )
+    
+    answer_text = models.TextField(blank=True)
+    
+    marks_awarded = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    evaluated_at = models.DateTimeField(null=True, blank=True)
+    evaluated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="evaluated_answers"
+    )
+    
+    class Meta:
+        unique_together = ("student", "test", "question")
+        ordering = ["test", "student", "question"]
+    
+    def __str__(self):
+        return f"{self.student.full_name} - {self.test.title} - Q{self.question.id}"
