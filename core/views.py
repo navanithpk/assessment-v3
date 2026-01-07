@@ -21,7 +21,8 @@ from .models import (
 )
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-
+from django.http import JsonResponse
+from django.db.models import Count, Q
 
 @login_required
 def autosave_test(request, test_id):
@@ -102,13 +103,31 @@ def ajax_questions(request):
 
 @login_required
 def teacher_dashboard(request):
-    """Teacher dashboard with student management widget"""
-    students = Student.objects.filter(created_by=request.user).select_related('grade', 'user')
+    """
+    Updated dashboard with student management and stats
+    """
+    from core.models import Test, Question, Student, ClassGroup, Grade
+    
+    tests_count = Test.objects.filter(created_by=request.user).count()
+    questions_count = Question.objects.filter(created_by=request.user).count()
+    students_count = Student.objects.filter(created_by=request.user).count()
+    groups_count = ClassGroup.objects.filter(created_by=request.user).count()
+    
+    # Get recent students (last 10)
+    recent_students = Student.objects.filter(
+        created_by=request.user
+    ).select_related('grade').order_by('-created_at')[:10]
+    
+    # Get all grades for the form
     grades = Grade.objects.all()
     
-    return render(request, "teacher/teacher_dashboard.html", {
-        "students": students,
-        "grades": grades,
+    return render(request, 'teacher/teacher_dashboard.html', {
+        'tests_count': tests_count,
+        'questions_count': questions_count,
+        'students_count': students_count,
+        'groups_count': groups_count,
+        'recent_students': recent_students,
+        'grades': grades,
     })
 
 @login_required
@@ -553,64 +572,100 @@ def import_questions_review(request):
 
 @login_required
 def add_student(request):
-    """Add a new student with user account"""
+    """
+    Handle adding a new student - returns JSON for AJAX or redirects for regular form
+    """
     if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password")
-        full_name = request.POST.get("full_name")
-        
-        # Check if email already exists
-        if User.objects.filter(username=email).exists():
-            return JsonResponse({
-                "status": "error",
-                "message": "A student with this email already exists."
-            }, status=400)
-        
-        # Create user account
-        user = User.objects.create(
-            username=email,
-            email=email,
-            first_name=full_name.split()[0] if full_name else "",
-            password=make_password(password)
-        )
-        
-        # Create student profile
-        student = Student.objects.create(
-            user=user,
-            full_name=full_name,
-            roll_number=request.POST.get("roll_number", ""),
-            admission_id=request.POST.get("admission_id", ""),
-            grade_id=request.POST["grade"],
-            section=request.POST["section"],
-            created_by=request.user
-        )
-        
-        return JsonResponse({
-            "status": "ok",
-            "message": "Student added successfully!",
-            "student": {
-                "id": student.id,
-                "full_name": student.full_name,
-                "email": email,
-                "grade": str(student.grade),
-                "section": student.section,
-                "roll_number": student.roll_number,
-            }
-        })
+        try:
+            # Check if it's JSON (AJAX) or form data
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+            
+            # Create student
+            student = Student.objects.create(
+                full_name=data.get("full_name"),
+                roll_number=data.get("roll_number", ""),
+                admission_id=data.get("admission_id", ""),
+                grade_id=data.get("grade"),
+                section=data.get("section"),
+                created_by=request.user
+            )
+            
+            # Return JSON for AJAX requests
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'success',
+                    'student': {
+                        'id': student.id,
+                        'full_name': student.full_name,
+                        'roll_number': student.roll_number,
+                        'admission_id': student.admission_id,
+                        'grade': student.grade.name,
+                        'section': student.section,
+                    }
+                })
+            else:
+                # Regular form submission - redirect
+                return redirect("students_list")
+                
+        except Exception as e:
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'error',
+                    'error': str(e)
+                }, status=400)
+            else:
+                # Handle error for regular form
+                return render(request, "teacher/students/add_student.html", {
+                    "grades": Grade.objects.all(),
+                    "error": str(e)
+                })
     
-    return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
-
-
+    # GET request - show form
+    return render(request, "teacher/students/add_student.html", {
+        "grades": Grade.objects.all()
+    })
 
 @login_required
 def students_list(request):
-    students = Student.objects.filter(created_by=request.user)
-
+    """
+    Display list of all students with filtering
+    """
+    students = Student.objects.filter(
+        created_by=request.user
+    ).select_related('grade').order_by('grade', 'section', 'roll_number')
+    
+    # Apply filters
+    search = request.GET.get('search')
+    if search:
+        students = students.filter(
+            Q(full_name__icontains=search) |
+            Q(roll_number__icontains=search) |
+            Q(admission_id__icontains=search)
+        )
+    
+    grade_filter = request.GET.get('grade')
+    if grade_filter:
+        students = students.filter(grade_id=grade_filter)
+    
+    section_filter = request.GET.get('section')
+    if section_filter:
+        students = students.filter(section__iexact=section_filter)
+    
+    # Get stats
+    all_students = Student.objects.filter(created_by=request.user)
+    grades_count = all_students.values('grade').distinct().count()
+    sections_count = all_students.values('section').distinct().count()
+    
     return render(request, "teacher/students/students_list.html", {
         "students": students,
+        "all_grades": Grade.objects.all(),
+        "grades_count": grades_count,
+        "sections_count": sections_count,
     })
-
-
+    
 @login_required
 def add_group(request):
     if request.method == "POST":
@@ -686,91 +741,125 @@ def student_performance(request, student_id):
     })
 
 @login_required
-def edit_student(request, student_id):
-    """Edit existing student"""
-    student = get_object_or_404(Student, id=student_id, created_by=request.user)
-    
-    if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        full_name = request.POST.get("full_name")
-        password = request.POST.get("password", "").strip()
-        
-        # Update user account
-        if student.user:
-            user = student.user
-            # Check if email is being changed and if it's already taken
-            if email != user.username and User.objects.filter(username=email).exists():
-                return JsonResponse({
-                    "status": "error",
-                    "message": "This email is already in use."
-                }, status=400)
-            
-            user.username = email
-            user.email = email
-            user.first_name = full_name.split()[0] if full_name else ""
-            
-            # Update password only if provided
-            if password:
-                user.password = make_password(password)
-            
-            user.save()
-        else:
-            # Create user if doesn't exist
-            if User.objects.filter(username=email).exists():
-                return JsonResponse({
-                    "status": "error",
-                    "message": "This email is already in use."
-                }, status=400)
-            
-            user = User.objects.create(
-                username=email,
-                email=email,
-                first_name=full_name.split()[0] if full_name else "",
-                password=make_password(password) if password else make_password("changeme123")
-            )
-            student.user = user
-        
-        # Update student profile
-        student.full_name = full_name
-        student.roll_number = request.POST.get("roll_number", "")
-        student.admission_id = request.POST.get("admission_id", "")
-        student.grade_id = request.POST["grade"]
-        student.section = request.POST["section"]
-        student.save()
+def get_student(request, student_id):
+    """
+    Get student data for editing (AJAX endpoint)
+    """
+    try:
+        student = get_object_or_404(
+            Student, 
+            id=student_id, 
+            created_by=request.user
+        )
         
         return JsonResponse({
-            "status": "ok",
-            "message": "Student updated successfully!",
-            "student": {
-                "id": student.id,
-                "full_name": student.full_name,
-                "email": email,
-                "grade": str(student.grade),
-                "section": student.section,
-                "roll_number": student.roll_number,
+            'status': 'success',
+            'student': {
+                'id': student.id,
+                'full_name': student.full_name,
+                'roll_number': student.roll_number or '',
+                'admission_id': student.admission_id or '',
+                'grade_id': student.grade_id,
+                'section': student.section,
             }
         })
-    
-    return JsonResponse({"status": "error", "message": "Invalid request"}, status=405)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=404)
+
+
+@login_required
+def edit_student(request, student_id):
+    """
+    Edit student details
+    """
+    student = get_object_or_404(
+        Student, 
+        id=student_id, 
+        created_by=request.user
+    )
+
+    if request.method == "POST":
+        try:
+            # Check if it's JSON (AJAX) or form data
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = request.POST
+            
+            # Update student
+            student.full_name = data.get("full_name", student.full_name)
+            student.roll_number = data.get("roll_number", "")
+            student.admission_id = data.get("admission_id", "")
+            student.grade_id = data.get("grade", student.grade_id)
+            student.section = data.get("section", student.section)
+            student.save()
+            
+            # Return JSON for AJAX
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'success',
+                    'student': {
+                        'id': student.id,
+                        'full_name': student.full_name,
+                        'roll_number': student.roll_number,
+                        'grade': student.grade.name,
+                        'section': student.section,
+                    }
+                })
+            else:
+                return redirect("students_list")
+                
+        except Exception as e:
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'error',
+                    'error': str(e)
+                }, status=400)
+            else:
+                return render(request, "teacher/students/edit_student.html", {
+                    "student": student,
+                    "grades": Grade.objects.all(),
+                    "error": str(e)
+                })
+
+    # GET request
+    return render(request, "teacher/students/edit_student.html", {
+        "student": student,
+        "grades": Grade.objects.all(),
+    })
+
 
 @login_required
 def delete_student(request, student_id):
-    """Delete a student"""
+    """
+    Delete a student
+    """
     if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
+        return JsonResponse({
+            'status': 'error',
+            'error': 'POST required'
+        }, status=405)
     
-    student = get_object_or_404(Student, id=student_id, created_by=request.user)
-    
-    # Delete associated user account
-    if student.user:
-        student.user.delete()
-    
-    student.delete()
-    
-    return JsonResponse({
-        "status": "ok",
-        "message": "Student deleted successfully!"
-    })
+    try:
+        student = get_object_or_404(
+            Student, 
+            id=student_id, 
+            created_by=request.user
+        )
+        student.delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Student deleted successfully'
+        })
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=400)
 
 @login_required
 def add_questions_to_test(request, test_id):
