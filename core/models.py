@@ -136,7 +136,24 @@ class Test(models.Model):
         blank=True,
         related_name="tests"
     )
+    
+    assigned_students = models.ManyToManyField(
+        "Student",
+        blank=True,
+        related_name="assigned_tests"
+    )
 
+    assigned_groups = models.ManyToManyField(
+        "ClassGroup",
+        blank=True,
+        related_name="assigned_tests"
+    )
+
+    excluded_students = models.ManyToManyField(
+        "Student",
+        blank=True,
+        related_name="excluded_from_tests"
+    )
     def __str__(self):
         return self.title
 

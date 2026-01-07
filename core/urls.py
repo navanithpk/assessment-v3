@@ -33,6 +33,11 @@ urlpatterns = [
     path("questions/", views.question_library, name="question_library"),
     path("questions/add/", views.add_edit_question, name="add_question"),
     path("questions/edit/<int:question_id>/", views.add_edit_question, name="edit_question"),
+    path(
+    "teacher/tests/<int:test_id>/inline-add-question/",
+    views.inline_add_question,
+    name="inline_add_question"),
+
 
     # AJAX
     path("ajax/topics/", views.ajax_topics, name="ajax_topics"),

@@ -129,7 +129,7 @@ tr:not(:last-child) td {
       <select id="gradeSelect" name="grade" required>
         <option value="">Select</option>
         {% for g in grades %}
-          <option value="{{ g.id }}">{{ g.name }}</option>
+          <option value="{{ g.id }}" {% if request.GET.grade == g.id|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -139,7 +139,7 @@ tr:not(:last-child) td {
       <select id="subjectSelect" name="subject" required>
         <option value="">Select</option>
         {% for s in subjects %}
-          <option value="{{ s.id }}">{{ s.name }}</option>
+          <option value="{{ s.id }}" {% if request.GET.subject == s.id|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -148,16 +148,16 @@ tr:not(:last-child) td {
       <label>Question Type</label>
       <select name="question_type">
         <option value="">Any</option>
-        <option value="mcq">MCQ</option>
-        <option value="theory">Theory</option>
-        <option value="structured">Structured</option>
-        <option value="practical">Practical</option>
+        <option value="mcq" {% if request.GET.question_type == "mcq" %}selected{% endif %}>MCQ</option>
+        <option value="theory" {% if request.GET.question_type == "theory" %}selected{% endif %}>Theory</option>
+        <option value="structured" {% if request.GET.question_type == "structured" %}selected{% endif %}>Structured</option>
+        <option value="practical" {% if request.GET.question_type == "practical" %}selected{% endif %}>Practical</option>
       </select>
     </div>
 
     <div>
       <label>Marks</label>
-      <input type="number" name="marks">
+      <input type="number" name="marks" value="{{ request.GET.marks }}">
     </div>
   </div>
 
@@ -230,6 +230,12 @@ const selectedTopics = new Set();
 const selectedLOs = new Set();
 
 function loadTopics() {
+  if (!gradeSelect.value || !subjectSelect.value) {
+    topicsBox.innerHTML = "<strong>Topics *</strong><em>Select grade & subject</em>";
+    loBox.innerHTML = "<strong>Learning Objectives</strong><em>Select topic</em>";
+    return;
+  }
+
   topicsBox.innerHTML = "<em>Loading topics…</em>";
   loBox.innerHTML = "<em>Select topic</em>";
 
@@ -254,6 +260,10 @@ function loadTopics() {
         div.appendChild(document.createTextNode(t.name));
         topicsBox.appendChild(div);
       });
+    })
+    .catch(error => {
+      console.error('Error loading topics:', error);
+      topicsBox.innerHTML = "<strong>Topics *</strong><em>Error loading topics</em>";
     });
 }
 
@@ -277,11 +287,14 @@ function loadLOs(topicId) {
         div.appendChild(cb);
         div.insertAdjacentHTML(
           "beforeend",
-          `<strong>${lo.code}</strong> — ${lo.description}`
+          `<strong>${lo.code}</strong> – ${lo.description}`
         );
 
         loBox.appendChild(div);
       });
+    })
+    .catch(error => {
+      console.error('Error loading LOs:', error);
     });
 }
 
@@ -307,26 +320,49 @@ document.getElementById("filterForm").addEventListener("submit", e => {
 });
 
 {% if import_mode %}
+// Select all checkbox
 document.getElementById("selectAll").onclick = function () {
   document.querySelectorAll(".q-check").forEach(cb => cb.checked = this.checked);
 };
 
+// Import selected questions
 function importSelected() {
-  const ids = [...document.querySelectorAll(".q-check:checked")]
-    .map(cb => cb.value);
+  const ids = [...document.querySelectorAll(".q-check:checked")].map(cb => cb.value);
 
-  if (!ids.length) return alert("No questions selected");
+  if (!ids.length) {
+    alert("No questions selected");
+    return;
+  }
 
-  fetch(`/teacher/tests/{{ test_id }}/add-questions/`, {
+  const testId = "{{ test_id }}";
+  
+  fetch(`/teacher/tests/${testId}/add-questions/`, {
     method: "POST",
     headers: {
       "X-CSRFToken": "{{ csrf_token }}",
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ question_ids: ids })
-  }).then(r => {
-    if (r.ok) alert("Questions added to test");
-    else alert("Error importing questions");
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.status === 'ok') {
+      alert(`Successfully added ${ids.length} question(s) to the test!`);
+      // Clear selections
+      document.querySelectorAll(".q-check:checked").forEach(cb => cb.checked = false);
+      document.getElementById("selectAll").checked = false;
+    } else {
+      alert("Error: " + (data.error || "Unknown error"));
+    }
+  })
+  .catch(error => {
+    console.error("Import error:", error);
+    alert("Error importing questions. Please check the console and try again.");
   });
 }
 {% endif %}

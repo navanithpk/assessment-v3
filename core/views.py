@@ -5,7 +5,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.admin.views.decorators import staff_member_required
 import json
-
+from django.template.loader import render_to_string
+from django.db import models
 from .models import (
     Grade,
     Subject,
@@ -385,52 +386,31 @@ STAGING_QUESTIONS = [
     },
 ]
 
+from .models import Student, ClassGroup
+
 @login_required
-def test_editor(request, test_id=None):
-    test = None
+def test_editor(request, test_id):
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
-    if test_id:
-        test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
-    # CREATE or UPDATE test
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
-        is_published = bool(request.POST.get("is_published"))
-        start_time = request.POST.get("start_time") or None
-        duration_minutes = request.POST.get("duration_minutes") or None
-
-        if not title:
-            return JsonResponse({"error": "Title required"}, status=400)
-
-        if not test:
-            test = Test.objects.create(
-                title=title,
-                created_by=request.user,
-                is_published=is_published,
-                start_time=start_time,
-                duration_minutes=duration_minutes
-            )
-            return redirect("edit_test", test_id=test.id)
-
-        test.title = title
-        test.is_published = is_published
-        test.start_time = start_time
-        test.duration_minutes = duration_minutes
+        # basic test save
+        test.title = request.POST.get("title", test.title)
+        test.start_time = request.POST.get("start_time") or None
+        test.duration_minutes = request.POST.get("duration_minutes") or None
+        test.is_published = bool(request.POST.get("is_published"))
         test.save()
-        
-        return redirect("edit_test", test_id=test.id)
 
-    test_questions = (
-        TestQuestion.objects
-        .filter(test=test)
-        .select_related("question__grade", "question__subject", "question__topic")
-        .order_by("order")
-        if test else []
-    )
-    
-    # Load students and groups for assignment
-    students = Student.objects.filter(created_by=request.user).select_related("grade")
-    groups = ClassGroup.objects.filter(created_by=request.user).select_related("grade", "subject")
+        # assignments
+        test.assigned_students.set(request.POST.getlist("assigned_students"))
+        test.assigned_groups.set(request.POST.getlist("assigned_groups"))
+        test.excluded_students.set(request.POST.getlist("excluded_students"))
+        
+        return redirect("tests_list")
+
+    # Get test questions with proper ordering
+    test_questions = TestQuestion.objects.filter(test=test).select_related(
+        'question', 'question__topic', 'question__grade', 'question__subject'
+    ).order_by('order')
 
     return render(
         request,
@@ -438,10 +418,13 @@ def test_editor(request, test_id=None):
         {
             "test": test,
             "test_questions": test_questions,
-            "students": students,
-            "groups": groups,
+            "groups": ClassGroup.objects.filter(created_by=request.user),
+            "students": Student.objects.filter(created_by=request.user),
+            "grades": Grade.objects.all(),
+            "subjects": Subject.objects.all(),
         }
     )
+
 
 @login_required
 def create_test(request):
@@ -710,3 +693,56 @@ def add_questions_to_test(request, test_id):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+        
+@login_required
+def inline_add_question(request, test_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+
+    data = json.loads(request.body)
+
+    # 1️⃣ Create Question
+    question = Question.objects.create(
+        question_text=data["question_text"],
+        answer_text=data.get("answer_text", ""),
+        marks=data.get("marks", 1),
+        question_type=data.get("question_type", "theory"),
+        year=data.get("year"),
+        grade=test.grade if hasattr(test, "grade") else None,
+        subject=test.subject if hasattr(test, "subject") else None,
+        topic_id=data.get("topic"),
+        created_by=request.user,
+    )
+
+    # 2️⃣ Compute order safely
+    last_order = (
+        TestQuestion.objects
+        .filter(test=test)
+        .aggregate(max_order=models.Max("order"))
+        ["max_order"] or 0
+    )
+
+    tq = TestQuestion.objects.create(
+        test=test,
+        question=question,
+        order=last_order + 1
+    )
+
+    # 3️⃣ Return HTML snippet
+    html = render_to_string(
+        "teacher/partials/test_question_card.html",
+        {
+            "tq": tq,
+            "question": question,
+        },
+        request=request
+    )
+
+    return JsonResponse({
+        "status": "ok",
+        "html": html,
+        "question_id": question.id,
+        "order": tq.order,
+    })
