@@ -2,221 +2,991 @@
 {% load static %}
 
 {% block title %}
-Edit Test — {{ test.title }}
+{% if test %}Edit Test – {{ test.title }}{% else %}Create Test{% endif %}
 {% endblock %}
 
 {% block content %}
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.css">
+
 <style>
 /* ===================== LAYOUT ===================== */
-.test-shell {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 24px;
+.test-container {
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-/* ===================== SIDEBAR ===================== */
-.section-panel {
-  background: #fafafa;
-  border: 1px solid #ddd;
+.test-header {
+  background: white;
   border-radius: 14px;
-  padding: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
-.section-panel h3 {
-  margin-top: 0;
+.test-title-input {
+  font-size: 24px;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 8px 0;
+  width: 100%;
+  outline: none;
+  margin-bottom: 20px;
 }
 
-.section-item {
-  padding: 8px 10px;
+.test-title-input:focus {
+  border-bottom-color: #2563eb;
+}
+
+.test-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.meta-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 6px;
+}
+
+.meta-field input,
+.meta-field select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
   border-radius: 8px;
-  cursor: pointer;
+  font-size: 14px;
 }
 
-.section-item.active {
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.checkbox-field input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+/* ===================== ACTION BAR ===================== */
+.action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .2s;
+}
+
+.btn.primary {
   background: #2563eb;
   color: white;
 }
 
-/* ===================== MAIN ===================== */
-.test-main {
-  background: white;
-  border-radius: 14px;
-  padding: 22px;
-  border: 1px solid #ddd;
+.btn.primary:hover {
+  background: #1d4ed8;
 }
 
-/* ===================== HEADER ===================== */
-.test-header {
+.btn.success {
+  background: #10b981;
+  color: white;
+}
+
+.btn.success:hover {
+  background: #059669;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+/* ===================== QUESTIONS LIST ===================== */
+.questions-section {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
-.test-title {
-  font-size: 20px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  width: 60%;
+.section-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
 }
 
-/* ===================== QUESTION CARD ===================== */
 .question-card {
-  border: 1px solid #ddd;
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 18px;
-  background: #fcfcfc;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: #fafafa;
+  transition: all .2s;
+}
+
+.question-card:hover {
+  border-color: #2563eb;
+  background: white;
 }
 
 .question-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
 }
 
-.question-label {
+.question-number {
+  background: #2563eb;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 6px;
   font-weight: 600;
-}
-
-/* ===================== STUDENT ANSWER ===================== */
-.student-answer {
-  margin-top: 14px;
-}
-
-.student-answer textarea {
-  width: 100%;
-  height: 120px;
-  resize: vertical;
-  border-radius: 10px;
-  border: 1px dashed #aaa;
-  padding: 10px;
-  background: #fff;
-}
-
-/* ===================== ACTIONS ===================== */
-.actions {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
   font-size: 14px;
 }
 
-.btn.primary { background: #2563eb; color: white; }
-.btn.muted { background: #e5e7eb; }
-.btn.danger { background: #dc2626; color: white; }
+.question-actions {
+  display: flex;
+  gap: 8px;
+}
 
-/* ===================== PAGINATION ===================== */
-.pagination {
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: #6b7280;
+  transition: all .2s;
+}
+
+.icon-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.question-content {
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  min-height: 60px;
+  border: 1px solid #e5e7eb;
+}
+
+.question-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.meta-badge {
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ===================== ADD QUESTION PANEL ===================== */
+.add-question-panel {
+  border: 2px dashed #d1d5db;
+  border-radius: 12px;
+  padding: 30px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.add-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* ===================== PROSEMIRROR EDITOR ===================== */
+.editor-container {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  background: white;
+  margin-bottom: 20px;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 12px 12px 0 0;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all .2s;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.toolbar-btn.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.toolbar-divider {
+  width: 1px;
+  background: #d1d5db;
+  margin: 0 8px;
+}
+
+.ProseMirror {
+  padding: 20px;
+  min-height: 200px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  margin: 16px 0;
+  width: 100%;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid #d1d5db;
+  padding: 8px 12px;
+}
+
+.ProseMirror th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* ===================== MODAL ===================== */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.modal-header {
   display: flex;
   justify-content: space-between;
-  margin-top: 22px;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* ===================== EMPTY STATE ===================== */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: .3;
+}
+
+.empty-state h3 {
+  margin: 0 0 12px 0;
+  color: #374151;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin: 0 0 24px 0;
+}
+
+/* ===================== ASSIGNMENT SECTION ===================== */
+.assignment-section {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-top: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.assignment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+.selected-items {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selected-tag {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selected-tag button {
+  background: none;
+  border: none;
+  color: #1e40af;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+/* ===================== SAVE INDICATOR ===================== */
+.save-indicator {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  font-size: 14px;
+  color: #6b7280;
+  display: none;
+}
+
+.save-indicator.saving {
+  display: block;
+  color: #2563eb;
+}
+
+.save-indicator.saved {
+  display: block;
+  color: #10b981;
 }
 </style>
 
-<form method="post" id="testForm">
-{% csrf_token %}
-
-<div class="test-shell">
-
-  <!-- ===================== LEFT: SECTIONS ===================== -->
-  <aside class="section-panel">
-    <h3>Sections</h3>
-
-    {% for s in sections %}
-      <div class="section-item {% if s.id == active_section.id %}active{% endif %}">
-        {{ s.title }}
-      </div>
-    {% endfor %}
-
-    <button type="button" class="btn muted" style="margin-top:10px;">
-      ➕ Add Section
-    </button>
-  </aside>
-
-  <!-- ===================== RIGHT: MAIN ===================== -->
-  <main class="test-main">
-
-    <!-- HEADER -->
+<div class="test-container">
+  <form method="post" id="testForm">
+    {% csrf_token %}
+    
+    <!-- TEST HEADER -->
     <div class="test-header">
       <input
         type="text"
         name="title"
-        class="test-title"
-        value="{{ test.title }}"
-        placeholder="Test title"
+        class="test-title-input"
+        placeholder="Untitled Test"
+        value="{{ test.title|default:'' }}"
+        required
       >
-
-      <label>
-        <input type="checkbox" name="is_published"
-               {% if test.is_published %}checked{% endif %}>
-        Published
-      </label>
-    </div>
-
-    <!-- IMPORT -->
-    <div style="margin-bottom:16px;">
-      <a
-        href="{% url 'question_library' %}?import_to_test={{ test.id }}"
-        target="_blank"
-        class="btn primary"
-      >
-        ➕ Import from Question Library
-      </a>
-
-      <button type="button" class="btn muted">
-        ➕ New Question (Inline)
-      </button>
-    </div>
-
-    <!-- ===================== QUESTIONS ===================== -->
-    {% for q in questions %}
-      <div class="question-card">
-
-        <div class="question-header">
-          <span class="question-label">Q{{ forloop.counter }}</span>
-
-          <div class="actions">
-            <a href="{% url 'edit_question' q.id %}" target="_blank">Edit</a>
-            <button type="button" class="btn danger">Remove</button>
+      
+      <div class="test-meta">
+        <div class="meta-field">
+          <label>Start Date & Time</label>
+          <input
+            type="datetime-local"
+            name="start_time"
+            value="{{ test.start_time|date:'Y-m-d\TH:i' }}"
+          >
+        </div>
+        
+        <div class="meta-field">
+          <label>Duration (minutes)</label>
+          <input
+            type="number"
+            name="duration_minutes"
+            placeholder="60"
+            value="{{ test.duration_minutes|default:'' }}"
+          >
+        </div>
+        
+        <div class="meta-field">
+          <label>Status</label>
+          <div class="checkbox-field">
+            <input
+              type="checkbox"
+              name="is_published"
+              id="publishCheck"
+              {% if test.is_published %}checked{% endif %}
+            >
+            <label for="publishCheck" style="margin: 0;">Publish test</label>
           </div>
         </div>
-
-        <!-- QUESTION TEXT -->
-        <iframe
-          src="{% static 'editors/richtext_editor.html' %}"
-          style="width:100%; height:220px; border:1px solid #ccc; border-radius:10px;"
-        ></iframe>
-
-        <!-- STUDENT ANSWER FIELD (PREVIEW) -->
-        <div class="student-answer">
-          <label><strong>Student Answer Space</strong></label>
-          <textarea placeholder="Students will write their answer here…"></textarea>
-        </div>
-
       </div>
-    {% empty %}
-      <p><em>No questions in this section.</em></p>
-    {% endfor %}
-
-    <!-- ===================== PAGINATION ===================== -->
-    <div class="pagination">
-      <button type="button" class="btn muted">← Previous Section</button>
-      <button type="button" class="btn muted">Next Section →</button>
     </div>
 
-  </main>
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <div style="display: flex; gap: 12px;">
+        <button type="button" class="btn primary" onclick="openAddQuestionModal()">
+          ✏️ Create Question
+        </button>
+        <a
+          href="{% url 'question_library' %}?import_to_test={{ test.id }}"
+          target="_blank"
+          class="btn secondary"
+        >
+          📚 Import from Library
+        </a>
+      </div>
+      
+      <div style="display: flex; gap: 12px;">
+        <button type="submit" class="btn success">
+          💾 Save Test
+        </button>
+        <a href="{% url 'tests_list' %}" class="btn secondary">
+          Cancel
+        </a>
+      </div>
+    </div>
 
+    <!-- QUESTIONS SECTION -->
+    <div class="questions-section">
+      <div class="section-header">
+        <h2>Questions ({{ test_questions|length }})</h2>
+      </div>
+
+      <div id="questionsList">
+        {% if test_questions %}
+          {% for tq in test_questions %}
+            <div class="question-card" data-question-id="{{ tq.question.id }}">
+              <div class="question-header">
+                <span class="question-number">Q{{ forloop.counter }}</span>
+                <div class="question-actions">
+                  <button
+                    type="button"
+                    class="icon-btn"
+                    onclick="editQuestion({{ tq.question.id }})"
+                    title="Edit question"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    type="button"
+                    class="icon-btn"
+                    onclick="removeQuestion({{ tq.id }})"
+                    title="Remove from test"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+              
+              <div class="question-content">
+                {{ tq.question.question_text|safe }}
+              </div>
+              
+              <div class="question-meta">
+                <span class="meta-badge">{{ tq.question.marks }} mark{{ tq.question.marks|pluralize }}</span>
+                <span class="meta-badge">{{ tq.question.get_question_type_display }}</span>
+                <span class="meta-badge">{{ tq.question.topic.name }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <h3>No questions yet</h3>
+            <p>Start by creating a new question or importing from your question library</p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+              <button type="button" class="btn primary" onclick="openAddQuestionModal()">
+                Create Question
+              </button>
+              <a
+                href="{% url 'question_library' %}?import_to_test={{ test.id }}"
+                target="_blank"
+                class="btn secondary"
+              >
+                Import from Library
+              </a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ASSIGNMENT SECTION -->
+    <div class="assignment-section">
+      <h2 style="margin-top: 0;">Assign Test</h2>
+      <p style="color: #6b7280; margin-bottom: 20px;">
+        Select students or class groups to assign this test to
+      </p>
+      
+      <div class="assignment-grid">
+        <div class="form-group">
+          <label>Assign to Students</label>
+          <select id="studentSelect" multiple style="height: 120px;">
+            {% for student in students %}
+              <option value="{{ student.id }}">
+                {{ student.full_name }} ({{ student.grade }}-{{ student.section }})
+              </option>
+            {% endfor %}
+          </select>
+          <div class="selected-items" id="selectedStudents"></div>
+        </div>
+        
+        <div class="form-group">
+          <label>Assign to Class Groups</label>
+          <select id="groupSelect" multiple style="height: 120px;">
+            {% for group in groups %}
+              <option value="{{ group.id }}">
+                {{ group.name }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="selected-items" id="selectedGroups"></div>
+        </div>
+      </div>
+    </div>
+  </form>
 </div>
-</form>
+
+<!-- ADD/EDIT QUESTION MODAL -->
+<div class="modal" id="questionModal">
+  <div class="modal-content" style="max-width: 900px;">
+    <div class="modal-header">
+      <h3 id="modalTitle">Create Question</h3>
+      <button type="button" class="close-btn" onclick="closeQuestionModal()">×</button>
+    </div>
+    
+    <form id="questionForm">
+      <!-- EDITOR -->
+      <div class="form-group">
+        <label>Question Text</label>
+        <div class="editor-container">
+          <div class="editor-toolbar">
+            <button type="button" class="toolbar-btn" data-command="bold" title="Bold">
+              <strong>B</strong>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="italic" title="Italic">
+              <em>I</em>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="underline" title="Underline">
+              <u>U</u>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="subscript" title="Subscript">
+              X<sub>2</sub>
+            </button>
+            <button type="button" class="toolbar-btn" data-command="superscript" title="Superscript">
+              X<sup>2</sup>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+              ≡
+            </button>
+            <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+              ≣
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+              ⇤
+            </button>
+            <button type="button" class="toolbar-btn" data-command="justifyCenter" title="Align Center">
+              ⬌
+            </button>
+            <button type="button" class="toolbar-btn" data-command="justifyRight" title="Align Right">
+              ⇥
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="insertTable()" title="Insert Table">
+              ⊞
+            </button>
+            <button type="button" class="toolbar-btn" onclick="insertImage()" title="Insert Image">
+              🖼️
+            </button>
+          </div>
+          <div class="ProseMirror" id="questionEditor" contenteditable="true"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Answer/Solution</label>
+        <textarea name="answer_text" id="answerText" placeholder="Enter the correct answer or solution"></textarea>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div class="form-group">
+          <label>Marks</label>
+          <input type="number" name="marks" id="marksInput" value="1" min="1" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Question Type</label>
+          <select name="question_type" id="typeSelect" required>
+            <option value="mcq">MCQ</option>
+            <option value="theory">Theory</option>
+            <option value="structured">Structured</option>
+            <option value="practical">Practical</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" name="year" id="yearInput" placeholder="2024" min="1990" max="2100">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" onclick="closeQuestionModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn primary">
+          Save Question
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SAVE INDICATOR -->
+<div class="save-indicator" id="saveIndicator">
+  <span id="saveText">Saving...</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-model/1.19.0/prosemirror-model.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-state/1.4.2/prosemirror-state.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.js"></script>
+
+<script>
+// Simple rich text editor functionality
+let currentQuestionId = null;
+
+// Toolbar button handlers
+document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    const command = btn.dataset.command;
+    document.execCommand(command, false, null);
+    updateToolbarState();
+  });
+});
+
+function updateToolbarState() {
+  document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+    const command = btn.dataset.command;
+    if (document.queryCommandState(command)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+// Update toolbar state on selection change
+document.getElementById('questionEditor').addEventListener('mouseup', updateToolbarState);
+document.getElementById('questionEditor').addEventListener('keyup', updateToolbarState);
+
+function insertTable() {
+  const rows = prompt('Number of rows:', '3');
+  const cols = prompt('Number of columns:', '3');
+  
+  if (rows && cols) {
+    let html = '<table><tbody>';
+    for (let i = 0; i < parseInt(rows); i++) {
+      html += '<tr>';
+      for (let j = 0; j < parseInt(cols); j++) {
+        html += i === 0 ? '<th>Header</th>' : '<td>Cell</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    document.execCommand('insertHTML', false, html);
+  }
+}
+
+function insertImage() {
+  const url = prompt('Enter image URL:');
+  if (url) {
+    document.execCommand('insertImage', false, url);
+  }
+}
+
+// Modal functions
+function openAddQuestionModal() {
+  currentQuestionId = null;
+  document.getElementById('modalTitle').textContent = 'Create Question';
+  document.getElementById('questionForm').reset();
+  document.getElementById('questionEditor').innerHTML = '';
+  document.getElementById('questionModal').classList.add('active');
+}
+
+function closeQuestionModal() {
+  document.getElementById('questionModal').classList.remove('active');
+}
+
+function editQuestion(questionId) {
+  currentQuestionId = questionId;
+  document.getElementById('modalTitle').textContent = 'Edit Question';
+  // Load question data here
+  document.getElementById('questionModal').classList.add('active');
+}
+
+function removeQuestion(testQuestionId) {
+  if (confirm('Remove this question from the test?')) {
+    // Add removal logic here
+    alert('Question removal functionality to be implemented');
+  }
+}
+
+// Question form submission
+document.getElementById('questionForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  
+  const questionHtml = document.getElementById('questionEditor').innerHTML;
+  const formData = new FormData(e.target);
+  formData.append('question_text', questionHtml);
+  
+  // Submit to server
+  fetch('{% url "add_question" %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: formData
+  }).then(response => {
+    if (response.ok) {
+      alert('Question saved successfully!');
+      closeQuestionModal();
+      location.reload();
+    }
+  });
+});
+
+// Assignment selection handling
+const studentSelect = document.getElementById('studentSelect');
+const groupSelect = document.getElementById('groupSelect');
+const selectedStudentsDiv = document.getElementById('selectedStudents');
+const selectedGroupsDiv = document.getElementById('selectedGroups');
+
+const selectedStudents = new Set();
+const selectedGroups = new Set();
+
+studentSelect.addEventListener('change', (e) => {
+  Array.from(e.target.selectedOptions).forEach(opt => {
+    selectedStudents.add(opt.value);
+  });
+  renderSelected();
+});
+
+groupSelect.addEventListener('change', (e) => {
+  Array.from(e.target.selectedOptions).forEach(opt => {
+    selectedGroups.add(opt.value);
+  });
+  renderSelected();
+});
+
+function renderSelected() {
+  selectedStudentsDiv.innerHTML = Array.from(selectedStudents).map(id => {
+    const option = studentSelect.querySelector(`option[value="${id}"]`);
+    return `
+      <div class="selected-tag">
+        ${option.textContent}
+        <button type="button" onclick="removeStudent('${id}')">×</button>
+      </div>
+    `;
+  }).join('');
+  
+  selectedGroupsDiv.innerHTML = Array.from(selectedGroups).map(id => {
+    const option = groupSelect.querySelector(`option[value="${id}"]`);
+    return `
+      <div class="selected-tag">
+        ${option.textContent}
+        <button type="button" onclick="removeGroup('${id}')">×</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeStudent(id) {
+  selectedStudents.delete(id);
+  renderSelected();
+}
+
+function removeGroup(id) {
+  selectedGroups.delete(id);
+  renderSelected();
+}
+
+// Auto-save functionality
+let saveTimeout;
+const saveIndicator = document.getElementById('saveIndicator');
+const saveText = document.getElementById('saveText');
+
+document.getElementById('testForm').addEventListener('input', () => {
+  clearTimeout(saveTimeout);
+  saveIndicator.className = 'save-indicator saving';
+  saveText.textContent = 'Saving...';
+  
+  saveTimeout = setTimeout(() => {
+    autoSave();
+  }, 2000);
+});
+
+function autoSave() {
+  const formData = new FormData(document.getElementById('testForm'));
+  
+  fetch('{% url "autosave_test" test.id %}', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      title: formData.get('title'),
+      published: formData.get('is_published') === 'on'
+    })
+  }).then(response => {
+    if (response.ok) {
+      saveIndicator.className = 'save-indicator saved';
+      saveText.textContent = 'All changes saved';
+      setTimeout(() => {
+        saveIndicator.className = 'save-indicator';
+      }, 2000);
+    }
+  });
+}
+
+// Close modal on outside click
+document.getElementById('questionModal').addEventListener('click', (e) => {
+  if (e.target.id === 'questionModal') {
+    closeQuestionModal();
+  }
+});
+</script>
 
 {% endblock %}

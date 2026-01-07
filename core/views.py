@@ -349,74 +349,6 @@ def duplicate_test(request, test_id):
     return redirect("tests_list")
 
 
-@login_required
-def test_editor(request, test_id=None):
-    test = None
-
-    if test_id:
-        test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
-    # CREATE or UPDATE test
-    if request.method == "POST":
-        title = request.POST.get("title", "").strip()
-        is_published = bool(request.POST.get("is_published"))
-
-        if not title:
-            return JsonResponse({"error": "Title required"}, status=400)
-
-        if not test:
-            test = Test.objects.create(
-                title=title,
-                created_by=request.user,
-                is_published=is_published
-            )
-            return redirect("edit_test", test_id=test.id)
-
-        test.title = title
-        test.is_published = is_published
-        test.save()
-
-    test_questions = (
-        TestQuestion.objects
-        .filter(test=test)
-        .select_related("question")
-        .order_by("order")
-        if test else []
-    )
-
-    return render(
-        request,
-        "teacher/create_test.html",
-        {
-            "test": test,
-            "test_questions": test_questions,
-            "sections": [],  # Add empty sections list to prevent template errors
-            "active_section": None,
-        }
-    )
-
-
-@login_required
-def create_test(request):
-    if request.method == "POST":
-        test = Test.objects.create(
-            title=request.POST.get("title", "Untitled Test"),
-            created_by=request.user,
-            is_published=bool(request.POST.get("is_published")),
-        )
-        return redirect("edit_test", test_id=test.id)
-
-    return render(
-        request,
-        "teacher/create_test.html",
-        {
-            "test": None,
-            "questions": [],
-            "sections": [],
-            "active_section": None,
-        }
-    )
-
 
 def custom_login(request):
     error = None
@@ -443,32 +375,6 @@ def custom_login(request):
 
     return render(request, "registration/login.html", {"error": error})
 
-
-@login_required
-def edit_test(request, test_id):
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
-    if request.method == "POST":
-        test.title = request.POST.get("title", test.title)
-        test.is_published = bool(request.POST.get("is_published"))
-        test.save()
-
-    test_questions = TestQuestion.objects.filter(
-        test=test
-    ).select_related("question").order_by("order")
-
-    return render(
-        request,
-        "teacher/create_test.html",
-        {
-            "test": test,
-            "test_questions": test_questions,
-            "sections": [],
-            "active_section": None,
-        }
-    )
-
-
 # TEMP staging (replace later with JSON / session)
 STAGING_QUESTIONS = [
     {
@@ -479,6 +385,131 @@ STAGING_QUESTIONS = [
     },
 ]
 
+@login_required
+def test_editor(request, test_id=None):
+    test = None
+
+    if test_id:
+        test = get_object_or_404(Test, id=test_id, created_by=request.user)
+
+    # CREATE or UPDATE test
+    if request.method == "POST":
+        title = request.POST.get("title", "").strip()
+        is_published = bool(request.POST.get("is_published"))
+        start_time = request.POST.get("start_time") or None
+        duration_minutes = request.POST.get("duration_minutes") or None
+
+        if not title:
+            return JsonResponse({"error": "Title required"}, status=400)
+
+        if not test:
+            test = Test.objects.create(
+                title=title,
+                created_by=request.user,
+                is_published=is_published,
+                start_time=start_time,
+                duration_minutes=duration_minutes
+            )
+            return redirect("edit_test", test_id=test.id)
+
+        test.title = title
+        test.is_published = is_published
+        test.start_time = start_time
+        test.duration_minutes = duration_minutes
+        test.save()
+        
+        return redirect("edit_test", test_id=test.id)
+
+    test_questions = (
+        TestQuestion.objects
+        .filter(test=test)
+        .select_related("question__grade", "question__subject", "question__topic")
+        .order_by("order")
+        if test else []
+    )
+    
+    # Load students and groups for assignment
+    students = Student.objects.filter(created_by=request.user).select_related("grade")
+    groups = ClassGroup.objects.filter(created_by=request.user).select_related("grade", "subject")
+
+    return render(
+        request,
+        "teacher/create_test.html",
+        {
+            "test": test,
+            "test_questions": test_questions,
+            "students": students,
+            "groups": groups,
+        }
+    )
+
+@login_required
+def create_test(request):
+    # Always create a test first, then redirect to edit it
+    test = Test.objects.create(
+        title="Untitled Test",
+        created_by=request.user,
+        is_published=False,
+    )
+    return redirect("edit_test", test_id=test.id)
+
+
+@login_required
+def edit_test(request, test_id):
+    """Alias for test_editor for backward compatibility"""
+    return test_editor(request, test_id)
+
+
+@login_required
+def remove_question_from_test(request, test_id, test_question_id):
+    """
+    Remove a specific question from a test
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    test_question = get_object_or_404(TestQuestion, id=test_question_id, test=test)
+    
+    test_question.delete()
+    
+    # Reorder remaining questions
+    remaining_questions = TestQuestion.objects.filter(test=test).order_by('order')
+    for idx, tq in enumerate(remaining_questions, start=1):
+        if tq.order != idx:
+            tq.order = idx
+            tq.save()
+    
+    return JsonResponse({"status": "ok", "message": "Question removed"})
+
+
+@login_required  
+def reorder_test_questions(request, test_id):
+    """
+    Reorder questions in a test via drag-and-drop
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    try:
+        data = json.loads(request.body)
+        question_order = data.get("question_order", [])
+        
+        # Update order for each question
+        for idx, tq_id in enumerate(question_order, start=1):
+            TestQuestion.objects.filter(
+                id=tq_id, 
+                test=test
+            ).update(order=idx)
+        
+        return JsonResponse({"status": "ok"})
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 @login_required
 def import_questions_review(request):

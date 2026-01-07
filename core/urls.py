@@ -51,4 +51,8 @@ urlpatterns = [
     # Performance
     path("teacher/performance/class/", views.class_performance, name="class_performance"),
     path("teacher/performance/student/<int:student_id>/", views.student_performance, name="student_performance"),
+    path("teacher/tests/<int:test_id>/questions/<int:test_question_id>/remove/", 
+         views.remove_question_from_test, name="remove_question_from_test"),
+    path("teacher/tests/<int:test_id>/reorder/", 
+         views.reorder_test_questions, name="reorder_test_questions"),
 ]
