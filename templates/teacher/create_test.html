@@ -967,20 +967,22 @@ document.getElementById('questionForm').addEventListener('submit', (e) => {
   const formData = new FormData(e.target);
   
   // Build the payload
-  const payload = {
-    question_text: questionHtml,
-    answer_text: formData.get('answer_text') || '',
-    marks: parseInt(formData.get('marks')) || 1,
-    question_type: formData.get('question_type'),
-    year: formData.get('year') || null,
-    topic: formData.get('topic') || null
-  };
-  
-  // Validate required fields
-  if (!payload.topic) {
-    alert('Please select a topic');
-    return;
-  }
+const payload = {
+  question_text: questionHtml,
+  answer_text: formData.get('answer_text') || '',
+  marks: parseInt(formData.get('marks')) || 1,
+  question_type: formData.get('question_type'),
+  year: formData.get('year') || null,
+  grade: formData.get('grade') || null,
+  subject: formData.get('subject') || null,
+  topic: formData.get('topic') || null
+};
+
+// Validate required fields
+if (!payload.topic || !payload.grade || !payload.subject) {
+  alert('Please select grade, subject, and topic');
+  return;
+}
   
   // Submit to correct endpoint
   fetch('{% url "inline_add_question" test.id %}', {

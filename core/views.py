@@ -701,48 +701,62 @@ def inline_add_question(request, test_id):
 
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
 
-    data = json.loads(request.body)
+    try:
+        data = json.loads(request.body)
 
-    # 1️⃣ Create Question
-    question = Question.objects.create(
-        question_text=data["question_text"],
-        answer_text=data.get("answer_text", ""),
-        marks=data.get("marks", 1),
-        question_type=data.get("question_type", "theory"),
-        year=data.get("year"),
-        grade=test.grade if hasattr(test, "grade") else None,
-        subject=test.subject if hasattr(test, "subject") else None,
-        topic_id=data.get("topic"),
-        created_by=request.user,
-    )
+        # Validate required fields
+        if not data.get("topic") or not data.get("grade") or not data.get("subject"):
+            return JsonResponse({
+                "status": "error",
+                "error": "Grade, subject, and topic are required"
+            }, status=400)
 
-    # 2️⃣ Compute order safely
-    last_order = (
-        TestQuestion.objects
-        .filter(test=test)
-        .aggregate(max_order=models.Max("order"))
-        ["max_order"] or 0
-    )
+        # 1️⃣ Create Question
+        question = Question.objects.create(
+            question_text=data["question_text"],
+            answer_text=data.get("answer_text", ""),
+            marks=data.get("marks", 1),
+            question_type=data.get("question_type", "theory"),
+            year=data.get("year") or None,
+            grade_id=data.get("grade"),
+            subject_id=data.get("subject"),
+            topic_id=data.get("topic"),
+            created_by=request.user,
+        )
 
-    tq = TestQuestion.objects.create(
-        test=test,
-        question=question,
-        order=last_order + 1
-    )
+        # 2️⃣ Compute order safely
+        last_order = (
+            TestQuestion.objects
+            .filter(test=test)
+            .aggregate(max_order=models.Max("order"))
+            ["max_order"] or 0
+        )
 
-    # 3️⃣ Return HTML snippet
-    html = render_to_string(
-        "teacher/partials/test_question_card.html",
-        {
-            "tq": tq,
-            "question": question,
-        },
-        request=request
-    )
+        tq = TestQuestion.objects.create(
+            test=test,
+            question=question,
+            order=last_order + 1
+        )
 
-    return JsonResponse({
-        "status": "ok",
-        "html": html,
-        "question_id": question.id,
-        "order": tq.order,
-    })
+        # 3️⃣ Return HTML snippet
+        html = render_to_string(
+            "teacher/partials/test_question_card.html",
+            {
+                "tq": tq,
+                "question": question,
+            },
+            request=request
+        )
+
+        return JsonResponse({
+            "status": "ok",
+            "html": html,
+            "question_id": question.id,
+            "order": tq.order,
+        })
+    
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "error": str(e)
+        }, status=500)
