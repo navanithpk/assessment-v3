@@ -24,19 +24,94 @@
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
 .test-title-input {
   font-size: 24px;
   font-weight: 600;
   border: none;
   border-bottom: 2px solid #e5e7eb;
   padding: 8px 0;
-  width: 100%;
+  flex: 1;
   outline: none;
-  margin-bottom: 20px;
 }
 
 .test-title-input:focus {
   border-bottom-color: #2563eb;
+}
+
+.test-title-input:disabled {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.status-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-published {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-draft {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-locked {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.warning-banner {
+  background: #fef3c7;
+  border: 2px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.warning-banner.error {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.warning-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.warning-text {
+  flex: 1;
+  color: #92400e;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.warning-banner.error .warning-text {
+  color: #991b1b;
 }
 
 .test-meta {
@@ -61,6 +136,13 @@
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
+}
+
+.meta-field small {
+  display: block;
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 .checkbox-field {
@@ -106,7 +188,7 @@
   color: white;
 }
 
-.btn.primary:hover {
+.btn.primary:hover:not(:disabled) {
   background: #1d4ed8;
 }
 
@@ -115,7 +197,7 @@
   color: white;
 }
 
-.btn.success:hover {
+.btn.success:hover:not(:disabled) {
   background: #059669;
 }
 
@@ -124,8 +206,13 @@
   color: #374151;
 }
 
-.btn.secondary:hover {
+.btn.secondary:hover:not(:disabled) {
   background: #e5e7eb;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ===================== QUESTIONS LIST ===================== */
@@ -134,6 +221,7 @@
   border-radius: 14px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  margin-bottom: 24px;
 }
 
 .section-header {
@@ -192,11 +280,17 @@
   border-radius: 6px;
   color: #6b7280;
   transition: all .2s;
+  font-size: 18px;
 }
 
-.icon-btn:hover {
+.icon-btn:hover:not(:disabled) {
   background: #f3f4f6;
   color: #111827;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .question-content {
@@ -220,22 +314,6 @@
   padding: 4px 10px;
   border-radius: 6px;
   font-weight: 500;
-}
-
-/* ===================== ADD QUESTION PANEL ===================== */
-.add-question-panel {
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  padding: 30px;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.add-options {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 16px;
 }
 
 /* ===================== PROSEMIRROR EDITOR ===================== */
@@ -439,7 +517,7 @@
   background: white;
   border-radius: 14px;
   padding: 24px;
-  margin-top: 24px;
+  margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
@@ -447,35 +525,21 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-top: 16px;
+  margin-bottom: 20px;
 }
 
-.selected-items {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.assignment-summary {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 8px;
 }
 
-.selected-tag {
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 6px 12px;
-  border-radius: 6px;
+.assignment-summary-text {
+  color: #166534;
   font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.selected-tag button {
-  background: none;
-  border: none;
-  color: #1e40af;
-  cursor: pointer;
-  padding: 0;
-  font-size: 16px;
-  line-height: 1;
+  font-weight: 600;
 }
 
 /* ===================== SAVE INDICATOR ===================== */
@@ -509,14 +573,46 @@
     
     <!-- TEST HEADER -->
     <div class="test-header">
-      <input
-        type="text"
-        name="title"
-        class="test-title-input"
-        placeholder="Untitled Test"
-        value="{{ test.title|default:'' }}"
-        required
-      >
+      <div class="header-top">
+        <input
+          type="text"
+          name="title"
+          class="test-title-input"
+          placeholder="Untitled Test"
+          value="{{ test.title|default:'' }}"
+          required
+          {% if has_submissions and test.is_published %}disabled{% endif %}
+        >
+        <div class="status-badges">
+          {% if test.is_published %}
+            <span class="status-badge status-published">✓ Published</span>
+          {% else %}
+            <span class="status-badge status-draft">📝 Draft</span>
+          {% endif %}
+          
+          {% if has_submissions %}
+            <span class="status-badge status-locked">🔒 Has Submissions</span>
+          {% endif %}
+        </div>
+      </div>
+      
+      {% if has_submissions and test.is_published %}
+        <div class="warning-banner error">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-text">
+            <strong>Editing Locked:</strong> This test has student submissions. 
+            To edit questions, you must first unpublish the test. You can still modify assignments and settings.
+          </div>
+        </div>
+      {% elif test.is_published and test.test_questions.count == 0 %}
+        <div class="warning-banner">
+          <div class="warning-icon">⚠️</div>
+          <div class="warning-text">
+            <strong>Warning:</strong> This test is published but has no questions. 
+            Students cannot take an empty test. Please add questions before keeping it published.
+          </div>
+        </div>
+      {% endif %}
       
       <div class="test-meta">
         <div class="meta-field">
@@ -526,6 +622,7 @@
             name="start_time"
             value="{{ test.start_time|date:'Y-m-d\TH:i' }}"
           >
+          <small>When students can start taking this test</small>
         </div>
         
         <div class="meta-field">
@@ -534,12 +631,14 @@
             type="number"
             name="duration_minutes"
             placeholder="60"
+            min="1"
             value="{{ test.duration_minutes|default:'' }}"
           >
+          <small>How long students have to complete the test</small>
         </div>
         
         <div class="meta-field">
-          <label>Status</label>
+          <label>Publish Status</label>
           <div class="checkbox-field">
             <input
               type="checkbox"
@@ -547,8 +646,15 @@
               id="publishCheck"
               {% if test.is_published %}checked{% endif %}
             >
-            <label for="publishCheck" style="margin: 0;">Publish test</label>
+            <label for="publishCheck" style="margin: 0; font-weight: normal;">Publish test to students</label>
           </div>
+          <small>
+            {% if test.test_questions.count == 0 %}
+              ⚠️ Add questions before publishing
+            {% else %}
+              Published tests are visible to assigned students
+            {% endif %}
+          </small>
         </div>
       </div>
     </div>
@@ -556,13 +662,19 @@
     <!-- ACTION BAR -->
     <div class="action-bar">
       <div style="display: flex; gap: 12px;">
-        <button type="button" class="btn primary" onclick="openAddQuestionModal()">
+        <button 
+          type="button" 
+          class="btn primary" 
+          onclick="openAddQuestionModal()"
+          {% if has_submissions and test.is_published %}disabled title="Unpublish test to add questions"{% endif %}
+        >
           ✏️ Create Question
         </button>
         <a
           href="{% url 'question_library' %}?import_to_test={{ test.id }}"
           target="_blank"
           class="btn secondary"
+          {% if has_submissions and test.is_published %}style="pointer-events: none; opacity: 0.5;" title="Unpublish test to import questions"{% endif %}
         >
           📚 Import from Library
         </a>
@@ -596,6 +708,7 @@
                     class="icon-btn"
                     onclick="editQuestion({{ tq.question.id }})"
                     title="Edit question"
+                    {% if has_submissions and test.is_published %}disabled{% endif %}
                   >
                     ✏️
                   </button>
@@ -604,6 +717,7 @@
                     class="icon-btn"
                     onclick="removeQuestion({{ tq.id }})"
                     title="Remove from test"
+                    {% if has_submissions and test.is_published %}disabled{% endif %}
                   >
                     🗑️
                   </button>
@@ -617,7 +731,9 @@
               <div class="question-meta">
                 <span class="meta-badge">{{ tq.question.marks }} mark{{ tq.question.marks|pluralize }}</span>
                 <span class="meta-badge">{{ tq.question.get_question_type_display }}</span>
-                <span class="meta-badge">{{ tq.question.topic.name }}</span>
+                {% if tq.question.topic %}
+                  <span class="meta-badge">{{ tq.question.topic.name }}</span>
+                {% endif %}
               </div>
             </div>
           {% endfor %}
@@ -645,34 +761,82 @@
 
     <!-- ASSIGNMENT SECTION -->
     <div class="assignment-section">
-      <h2 style="margin-top: 0;">Assign Test</h2>
+      <h2 style="margin-top: 0;">Assign Test to Students</h2>
       <p style="color: #6b7280; margin-bottom: 20px;">
-        Select students or class groups to assign this test to
+        Select individual students or class groups to assign this test. Only published tests are visible to students.
       </p>
       
       <div class="assignment-grid">
         <div class="form-group">
-          <label>Assign to Students</label>
-          <select id="studentSelect" multiple style="height: 120px;">
+          <label>Assign to Individual Students</label>
+          <select name="assigned_students" id="studentSelect" multiple style="height: 150px;">
             {% for student in students %}
-              <option value="{{ student.id }}">
+              <option value="{{ student.id }}" 
+                {% if student.id in assigned_student_ids %}selected{% endif %}>
                 {{ student.full_name }} ({{ student.grade }}-{{ student.section }})
+                {% if student.user %} • {{ student.user.username }}{% endif %}
               </option>
             {% endfor %}
           </select>
-          <div class="selected-items" id="selectedStudents"></div>
+          <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">
+            Hold Ctrl (Windows) or Cmd (Mac) to select multiple students
+          </small>
+          
+          {% if assigned_student_ids %}
+            <div class="assignment-summary">
+              <div class="assignment-summary-text">
+                ✓ {{ assigned_student_ids|length }} student{{ assigned_student_ids|length|pluralize }} currently assigned
+              </div>
+            </div>
+          {% endif %}
         </div>
         
         <div class="form-group">
           <label>Assign to Class Groups</label>
-          <select id="groupSelect" multiple style="height: 120px;">
+          <select name="assigned_groups" id="groupSelect" multiple style="height: 150px;">
             {% for group in groups %}
-              <option value="{{ group.id }}">
-                {{ group.name }}
+              <option value="{{ group.id }}"
+                {% if group.id in assigned_group_ids %}selected{% endif %}>
+                {{ group.name }} ({{ group.students.count }} students)
               </option>
             {% endfor %}
           </select>
-          <div class="selected-items" id="selectedGroups"></div>
+          <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">
+            Assigning to a group will assign to all students in that group
+          </small>
+          
+          {% if assigned_group_ids %}
+            <div class="assignment-summary">
+              <div class="assignment-summary-text">
+                ✓ {{ assigned_group_ids|length }} group{{ assigned_group_ids|length|pluralize }} currently assigned
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div style="margin-top: 20px;">
+        <div class="form-group">
+          <label>Exclude Specific Students (Optional)</label>
+          <select name="excluded_students" id="excludeSelect" multiple style="height: 100px;">
+            {% for student in students %}
+              <option value="{{ student.id }}"
+                {% if student.id in excluded_student_ids %}selected{% endif %}>
+                {{ student.full_name }} ({{ student.grade }}-{{ student.section }})
+              </option>
+            {% endfor %}
+          </select>
+          <small style="color: #6b7280; font-size: 12px; margin-top: 4px; display: block;">
+            Excluded students won't see this test even if they're in an assigned group
+          </small>
+          
+          {% if excluded_student_ids %}
+            <div class="assignment-summary" style="background: #fef3c7; border-color: #fde68a;">
+              <div class="assignment-summary-text" style="color: #92400e;">
+                ⚠️ {{ excluded_student_ids|length }} student{{ excluded_student_ids|length|pluralize }} excluded
+              </div>
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -817,6 +981,8 @@
 <script>
 // Simple rich text editor functionality
 let currentQuestionId = null;
+const hasSubmissions = {{ has_submissions|yesno:"true,false" }};
+const isPublished = {{ test.is_published|yesno:"true,false" }};
 
 // Toolbar button handlers
 document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
@@ -840,8 +1006,11 @@ function updateToolbarState() {
 }
 
 // Update toolbar state on selection change
-document.getElementById('questionEditor').addEventListener('mouseup', updateToolbarState);
-document.getElementById('questionEditor').addEventListener('keyup', updateToolbarState);
+const editor = document.getElementById('questionEditor');
+if (editor) {
+  editor.addEventListener('mouseup', updateToolbarState);
+  editor.addEventListener('keyup', updateToolbarState);
+}
 
 function insertTable() {
   const rows = prompt('Number of rows:', '3');
@@ -870,10 +1039,16 @@ function insertImage() {
 
 // Modal functions
 function openAddQuestionModal() {
+  if (hasSubmissions && isPublished) {
+    alert('Cannot add questions to published test with submissions. Please unpublish first.');
+    return;
+  }
+  
   currentQuestionId = null;
   document.getElementById('modalTitle').textContent = 'Create Question';
   document.getElementById('questionForm').reset();
   document.getElementById('questionEditor').innerHTML = '';
+  document.getElementById('topicSelectModal').innerHTML = '<option value="">Select Topic</option>';
   document.getElementById('questionModal').classList.add('active');
 }
 
@@ -882,39 +1057,45 @@ function closeQuestionModal() {
 }
 
 function editQuestion(questionId) {
+  if (hasSubmissions && isPublished) {
+    alert('Cannot edit questions in published test with submissions. Please unpublish first.');
+    return;
+  }
+  
   currentQuestionId = questionId;
   document.getElementById('modalTitle').textContent = 'Edit Question';
-  // Load question data here
+  // TODO: Load question data here
   document.getElementById('questionModal').classList.add('active');
 }
 
 function removeQuestion(testQuestionId) {
-  if (confirm('Remove this question from the test?')) {
-    fetch(`/teacher/tests/{{ test.id }}/questions/${testQuestionId}/remove/`, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === 'ok') {
-        // Remove the question card from DOM
-        const card = document.querySelector(`[data-question-id]`).closest('.question-card');
-        if (card) {
-          card.remove();
-        }
-        // Reload to update question numbers
-        location.reload();
-      } else {
-        alert('Error removing question');
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Failed to remove question');
-    });
+  if (hasSubmissions && isPublished) {
+    alert('Cannot remove questions from published test with submissions. Please unpublish first.');
+    return;
   }
+  
+  if (!confirm('Remove this question from the test?')) {
+    return;
+  }
+  
+  fetch(`/teacher/tests/{{ test.id }}/questions/${testQuestionId}/remove/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to remove question'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to remove question');
+  });
 }
 
 // Modal cascade for Grade/Subject/Topic
@@ -950,8 +1131,10 @@ function loadTopicsForModal() {
     });
 }
 
-gradeSelectModal.addEventListener('change', loadTopicsForModal);
-subjectSelectModal.addEventListener('change', loadTopicsForModal);
+if (gradeSelectModal && subjectSelectModal) {
+  gradeSelectModal.addEventListener('change', loadTopicsForModal);
+  subjectSelectModal.addEventListener('change', loadTopicsForModal);
+}
 
 // Question form submission
 document.getElementById('questionForm').addEventListener('submit', (e) => {
@@ -967,24 +1150,22 @@ document.getElementById('questionForm').addEventListener('submit', (e) => {
   const formData = new FormData(e.target);
   
   // Build the payload
-const payload = {
-  question_text: questionHtml,
-  answer_text: formData.get('answer_text') || '',
-  marks: parseInt(formData.get('marks')) || 1,
-  question_type: formData.get('question_type'),
-  year: formData.get('year') || null,
-  grade: formData.get('grade') || null,
-  subject: formData.get('subject') || null,
-  topic: formData.get('topic') || null
-};
-
-// Validate required fields
-if (!payload.topic || !payload.grade || !payload.subject) {
-  alert('Please select grade, subject, and topic');
-  return;
-}
+  const payload = {
+    question_text: questionHtml,
+    answer_text: formData.get('answer_text') || '',
+    marks: parseInt(formData.get('marks')) || 1,
+    question_type: formData.get('question_type'),
+    year: formData.get('year') || null,
+    topic: formData.get('topic') || null
+  };
   
-  // Submit to correct endpoint
+  // Validate required fields
+  if (!payload.topic) {
+    alert('Please select a topic');
+    return;
+  }
+  
+  // Submit to server
   fetch('{% url "inline_add_question" test.id %}', {
     method: 'POST',
     headers: {
@@ -1001,29 +1182,22 @@ if (!payload.topic || !payload.grade || !payload.subject) {
   })
   .then(data => {
     if (data.status === 'ok') {
-      // Close modal
       closeQuestionModal();
       
-      // Add the question card to the list
       const questionsList = document.getElementById('questionsList');
-      
-      // Remove empty state if it exists
       const emptyState = questionsList.querySelector('.empty-state');
       if (emptyState) {
         emptyState.remove();
       }
       
-      // Insert the new question HTML
       questionsList.insertAdjacentHTML('beforeend', data.html);
       
-      // Update question count in header
       const countElement = document.querySelector('.section-header h2');
       if (countElement) {
         const currentCount = document.querySelectorAll('.question-card').length;
         countElement.textContent = `Questions (${currentCount})`;
       }
       
-      // Show success message
       alert('Question added successfully!');
     } else {
       alert('Error: ' + (data.error || 'Unknown error'));
@@ -1035,60 +1209,15 @@ if (!payload.topic || !payload.grade || !payload.subject) {
   });
 });
 
-// Assignment selection handling
-const studentSelect = document.getElementById('studentSelect');
-const groupSelect = document.getElementById('groupSelect');
-const selectedStudentsDiv = document.getElementById('selectedStudents');
-const selectedGroupsDiv = document.getElementById('selectedGroups');
-
-const selectedStudents = new Set();
-const selectedGroups = new Set();
-
-studentSelect.addEventListener('change', (e) => {
-  Array.from(e.target.selectedOptions).forEach(opt => {
-    selectedStudents.add(opt.value);
-  });
-  renderSelected();
+// Warn before publishing if no questions
+document.getElementById('publishCheck').addEventListener('change', function() {
+  const questionCount = {{ test_questions|length }};
+  if (this.checked && questionCount === 0) {
+    if (!confirm('Warning: You are publishing a test with no questions. Students will not be able to take it. Continue?')) {
+      this.checked = false;
+    }
+  }
 });
-
-groupSelect.addEventListener('change', (e) => {
-  Array.from(e.target.selectedOptions).forEach(opt => {
-    selectedGroups.add(opt.value);
-  });
-  renderSelected();
-});
-
-function renderSelected() {
-  selectedStudentsDiv.innerHTML = Array.from(selectedStudents).map(id => {
-    const option = studentSelect.querySelector(`option[value="${id}"]`);
-    return `
-      <div class="selected-tag">
-        ${option.textContent}
-        <button type="button" onclick="removeStudent('${id}')">×</button>
-      </div>
-    `;
-  }).join('');
-  
-  selectedGroupsDiv.innerHTML = Array.from(selectedGroups).map(id => {
-    const option = groupSelect.querySelector(`option[value="${id}"]`);
-    return `
-      <div class="selected-tag">
-        ${option.textContent}
-        <button type="button" onclick="removeGroup('${id}')">×</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function removeStudent(id) {
-  selectedStudents.delete(id);
-  renderSelected();
-}
-
-function removeGroup(id) {
-  selectedGroups.delete(id);
-  renderSelected();
-}
 
 // Auto-save functionality
 let saveTimeout;
@@ -1115,8 +1244,7 @@ function autoSave() {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      title: formData.get('title'),
-      published: formData.get('is_published') === 'on'
+      title: formData.get('title')
     })
   }).then(response => {
     if (response.ok) {

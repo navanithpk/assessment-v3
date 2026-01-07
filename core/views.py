@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.admin.views.decorators import staff_member_required
 import json
+import re
 from django.template.loader import render_to_string
 from django.db import models
 from .models import (
@@ -26,15 +27,29 @@ from django.db.models import Count, Q
 
 @login_required
 def autosave_test(request, test_id):
+    """
+    Autosave test details
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
-    data = json.loads(request.body)
-
-    test.title = data.get("title", test.title)
-    test.is_published = data.get("published", test.is_published)
-    test.save()
-
-    return JsonResponse({"status": "ok"})
-
+    
+    try:
+        data = json.loads(request.body)
+        
+        # Only allow autosave of basic fields
+        test.title = data.get("title", test.title)
+        
+        # Don't autosave publish status - that should be explicit
+        # test.is_published = data.get("published", test.is_published)
+        
+        test.save()
+        
+        return JsonResponse({"status": "ok"})
+    except Exception as e:
+        print(f"Autosave error: {str(e)}")
+        return JsonResponse({"error": str(e)}, status=400)
 
 @staff_member_required
 def admin_dashboard(request):
@@ -132,25 +147,75 @@ def teacher_dashboard(request):
 
 @login_required
 def student_dashboard(request):
-    return render(request, "student/student_dashboard.html")
-
+    """
+    Student dashboard showing available tests
+    """
+    # Get the student profile
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return render(request, 'student/no_profile.html')
+    
+    # Get assigned tests
+    assigned_tests = Test.objects.filter(
+        is_published=True
+    ).filter(
+        models.Q(assigned_students=student) | 
+        models.Q(assigned_groups__students=student)
+    ).exclude(
+        excluded_students=student
+    ).distinct().order_by('-created_at')
+    
+    # Get completed tests (tests where student has submitted answers)
+    completed_test_ids = StudentAnswer.objects.filter(
+        student=student
+    ).values_list('test_id', flat=True).distinct()
+    
+    return render(request, 'student/student_dashboard.html', {
+        'student': student,
+        'assigned_tests': assigned_tests,
+        'completed_test_ids': list(completed_test_ids),
+    })
 
 def root_redirect(request):
     if request.user.is_authenticated:
         return redirect("teacher_dashboard")
     return redirect("login")
 
-
 @login_required
 def tests_list(request):
-    tests = Test.objects.filter(created_by=request.user).order_by("-id")
-
-    return render(
-        request,
-        "teacher/tests_list.html",
-        {"tests": tests}
-    )
-
+    """
+    List all tests with proper status display
+    """
+    tests = Test.objects.filter(created_by=request.user).prefetch_related(
+        'assigned_students',
+        'assigned_groups',
+        'test_questions'
+    ).order_by("-id")
+    
+    # Add submission counts to each test
+    test_data = []
+    for test in tests:
+        submission_count = StudentAnswer.objects.filter(test=test).values('student').distinct().count()
+        assigned_count = test.assigned_students.count()
+        
+        # Count students from groups
+        group_student_count = 0
+        for group in test.assigned_groups.all():
+            group_student_count += group.students.count()
+        
+        total_assigned = assigned_count + group_student_count
+        
+        test_data.append({
+            'test': test,
+            'submission_count': submission_count,
+            'total_assigned': total_assigned,
+            'has_submissions': submission_count > 0,
+        })
+    
+    return render(request, "teacher/tests_list.html", {
+        "test_data": test_data
+    })
 
 @login_required
 def ajax_topics(request):
@@ -338,22 +403,45 @@ def add_edit_question(request, question_id=None):
         }
     )
 
-
 @login_required
 def toggle_publish(request, test_id):
+    """
+    Toggle test publish status with validation
+    """
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    # Check if test has questions
+    if not test.test_questions.exists():
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Cannot publish test without questions'
+        }, status=400)
+    
+    # Toggle publish status
     test.is_published = not test.is_published
     test.save()
+    
+    print(f"Test '{test.title}' publish status: {test.is_published}")
+    
     return redirect("tests_list")
-
 
 @login_required
 def delete_test(request, test_id):
+    """
+    Delete test with validation
+    """
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    # Check if test has submissions
+    if StudentAnswer.objects.filter(test=test).exists():
+        # Don't allow deletion if students have submitted
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Cannot delete test with student submissions'
+        }, status=403)
+    
     test.delete()
     return redirect("tests_list")
-
-
 @login_required
 def duplicate_test(request, test_id):
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
@@ -432,40 +520,89 @@ from .models import Student, ClassGroup
 
 @login_required
 def test_editor(request, test_id):
+    """
+    Edit test with proper assignment and publish status handling
+    """
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
+    
+    # Check if test has submissions
+    has_submissions = StudentAnswer.objects.filter(test=test).exists()
+    
+    # Prevent editing if test is published and has submissions
     if request.method == "POST":
-        # basic test save
+        # Check if trying to edit questions/content when published
+        if test.is_published and has_submissions:
+            return JsonResponse({
+                'status': 'error',
+                'error': 'Cannot edit test that has student submissions. Unpublish the test first.'
+            }, status=403)
+        
+        # Save basic test info
         test.title = request.POST.get("title", test.title)
         test.start_time = request.POST.get("start_time") or None
         test.duration_minutes = request.POST.get("duration_minutes") or None
-        test.is_published = bool(request.POST.get("is_published"))
+        
+        # Handle publish status
+        is_published = request.POST.get("is_published") == "on"
+        test.is_published = is_published
+        
         test.save()
-
-        # assignments
-        test.assigned_students.set(request.POST.getlist("assigned_students"))
-        test.assigned_groups.set(request.POST.getlist("assigned_groups"))
-        test.excluded_students.set(request.POST.getlist("excluded_students"))
+        
+        # Handle assignments - FIXED: Now properly saves M2M relationships
+        # Get selected students
+        assigned_student_ids = request.POST.getlist("assigned_students")
+        if assigned_student_ids:
+            test.assigned_students.set(assigned_student_ids)
+        else:
+            test.assigned_students.clear()
+        
+        # Get selected groups
+        assigned_group_ids = request.POST.getlist("assigned_groups")
+        if assigned_group_ids:
+            test.assigned_groups.set(assigned_group_ids)
+        else:
+            test.assigned_groups.clear()
+        
+        # Get excluded students
+        excluded_student_ids = request.POST.getlist("excluded_students")
+        if excluded_student_ids:
+            test.excluded_students.set(excluded_student_ids)
+        else:
+            test.excluded_students.clear()
+        
+        print(f"Test saved: {test.title}")
+        print(f"Published: {test.is_published}")
+        print(f"Assigned students: {list(test.assigned_students.all())}")
+        print(f"Assigned groups: {list(test.assigned_groups.all())}")
         
         return redirect("tests_list")
-
-    # Get test questions with proper ordering
+    
+    # GET request - load test with all assignments
     test_questions = TestQuestion.objects.filter(test=test).select_related(
         'question', 'question__topic', 'question__grade', 'question__subject'
     ).order_by('order')
-
-    return render(
-        request,
-        "teacher/create_test.html",
-        {
-            "test": test,
-            "test_questions": test_questions,
-            "groups": ClassGroup.objects.filter(created_by=request.user),
-            "students": Student.objects.filter(created_by=request.user),
-            "grades": Grade.objects.all(),
-            "subjects": Subject.objects.all(),
-        }
-    )
+    
+    # Get all students and groups for assignment
+    all_students = Student.objects.filter(created_by=request.user).select_related('grade', 'user')
+    all_groups = ClassGroup.objects.filter(created_by=request.user).select_related('grade', 'subject')
+    
+    # Get currently assigned
+    assigned_student_ids = list(test.assigned_students.values_list('id', flat=True))
+    assigned_group_ids = list(test.assigned_groups.values_list('id', flat=True))
+    excluded_student_ids = list(test.excluded_students.values_list('id', flat=True))
+    
+    return render(request, "teacher/create_test.html", {
+        "test": test,
+        "test_questions": test_questions,
+        "groups": all_groups,
+        "students": all_students,
+        "grades": Grade.objects.all(),
+        "subjects": Subject.objects.all(),
+        "has_submissions": has_submissions,
+        "assigned_student_ids": assigned_student_ids,
+        "assigned_group_ids": assigned_group_ids,
+        "excluded_student_ids": excluded_student_ids,
+    })
 
 
 @login_required
@@ -484,18 +621,23 @@ def edit_test(request, test_id):
     """Alias for test_editor for backward compatibility"""
     return test_editor(request, test_id)
 
-
 @login_required
 def remove_question_from_test(request, test_id, test_question_id):
     """
-    Remove a specific question from a test
+    Remove a question from a test with validation
     """
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
     
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
-    test_question = get_object_or_404(TestQuestion, id=test_question_id, test=test)
     
+    # Prevent editing published tests with submissions
+    if test.is_published and StudentAnswer.objects.filter(test=test).exists():
+        return JsonResponse({
+            "error": "Cannot modify published test with submissions"
+        }, status=403)
+    
+    test_question = get_object_or_404(TestQuestion, id=test_question_id, test=test)
     test_question.delete()
     
     # Reorder remaining questions
@@ -506,7 +648,6 @@ def remove_question_from_test(request, test_id, test_question_id):
             tq.save()
     
     return JsonResponse({"status": "ok", "message": "Question removed"})
-
 
 @login_required  
 def reorder_test_questions(request, test_id):
@@ -569,11 +710,14 @@ def import_questions_review(request):
 
     return render(request, "teacher/import_questions.html", context)
 
+from django.contrib.auth.models import User
+from django.db import transaction
 
 @login_required
 def add_student(request):
     """
-    Handle adding a new student - returns JSON for AJAX or redirects for regular form
+    Handle adding a new student with user account creation
+    Username can be email or simple username
     """
     if request.method == "POST":
         try:
@@ -583,15 +727,51 @@ def add_student(request):
             else:
                 data = request.POST
             
-            # Create student
-            student = Student.objects.create(
-                full_name=data.get("full_name"),
-                roll_number=data.get("roll_number", ""),
-                admission_id=data.get("admission_id", ""),
-                grade_id=data.get("grade"),
-                section=data.get("section"),
-                created_by=request.user
-            )
+            # Get username (required) - can be email
+            username = data.get("username", "").strip()
+            if not username:
+                raise ValueError("Username/Email is required")
+            
+            # Validate username format - allow email addresses
+            # Allow letters, numbers, dots, dashes, underscores, and @ for emails
+            if not re.match(r'^[a-zA-Z0-9.@_-]+$', username):
+                raise ValueError("Username can only contain letters, numbers, dots, @, dashes and underscores")
+            
+            # Start transaction
+            with transaction.atomic():
+                # Check if username already exists
+                if User.objects.filter(username=username).exists():
+                    raise ValueError(f"Username/Email '{username}' already exists")
+                
+                # Get password (required)
+                password = data.get("password", "").strip()
+                if not password:
+                    raise ValueError("Password is required")
+                
+                if len(password) < 6:
+                    raise ValueError("Password must be at least 6 characters long")
+                
+                # Create User
+                name_parts = data.get("full_name", "").split()
+                user = User.objects.create_user(
+                    username=username,
+                    email=username if '@' in username else '',  # Set email if it's an email
+                    first_name=name_parts[0] if name_parts else '',
+                    last_name=' '.join(name_parts[1:]) if len(name_parts) > 1 else '',
+                )
+                user.set_password(password)
+                user.save()
+                
+                # Create Student
+                student = Student.objects.create(
+                    user=user,
+                    full_name=data.get("full_name"),
+                    roll_number=data.get("roll_number", ""),
+                    admission_id=data.get("admission_id", ""),
+                    grade_id=data.get("grade"),
+                    section=data.get("section"),
+                    created_by=request.user
+                )
             
             # Return JSON for AJAX requests
             if request.content_type == 'application/json':
@@ -604,38 +784,55 @@ def add_student(request):
                         'admission_id': student.admission_id,
                         'grade': student.grade.name,
                         'section': student.section,
+                        'username': student.user.username,
                     }
                 })
             else:
-                # Regular form submission - redirect
                 return redirect("students_list")
                 
-        except Exception as e:
+        except ValueError as e:
+            print(f"ValueError in add_student: {str(e)}")  # Debug
             if request.content_type == 'application/json':
                 return JsonResponse({
                     'status': 'error',
                     'error': str(e)
                 }, status=400)
             else:
-                # Handle error for regular form
+                return render(request, "teacher/students/add_student.html", {
+                    "grades": Grade.objects.all(),
+                    "error": str(e)
+                })
+        except Exception as e:
+            print(f"Exception in add_student: {str(e)}")  # Debug
+            import traceback
+            traceback.print_exc()
+            
+            if request.content_type == 'application/json':
+                return JsonResponse({
+                    'status': 'error',
+                    'error': str(e)
+                }, status=400)
+            else:
                 return render(request, "teacher/students/add_student.html", {
                     "grades": Grade.objects.all(),
                     "error": str(e)
                 })
     
-    # GET request - show form
+    # GET request
     return render(request, "teacher/students/add_student.html", {
         "grades": Grade.objects.all()
     })
+
 
 @login_required
 def students_list(request):
     """
     Display list of all students with filtering
+    Search now includes username
     """
     students = Student.objects.filter(
         created_by=request.user
-    ).select_related('grade').order_by('grade', 'section', 'roll_number')
+    ).select_related('grade', 'user').order_by('grade', 'section', 'roll_number')
     
     # Apply filters
     search = request.GET.get('search')
@@ -643,7 +840,8 @@ def students_list(request):
         students = students.filter(
             Q(full_name__icontains=search) |
             Q(roll_number__icontains=search) |
-            Q(admission_id__icontains=search)
+            Q(admission_id__icontains=search) |
+            Q(user__username__icontains=search)  # Added username search
         )
     
     grade_filter = request.GET.get('grade')
@@ -665,6 +863,7 @@ def students_list(request):
         "grades_count": grades_count,
         "sections_count": sections_count,
     })
+
     
 @login_required
 def add_group(request):
@@ -761,6 +960,7 @@ def get_student(request, student_id):
                 'admission_id': student.admission_id or '',
                 'grade_id': student.grade_id,
                 'section': student.section,
+                'username': student.user.username if student.user else '',
             }
         })
     except Exception as e:
@@ -769,11 +969,10 @@ def get_student(request, student_id):
             'error': str(e)
         }, status=404)
 
-
 @login_required
 def edit_student(request, student_id):
     """
-    Edit student details
+    Edit student details including username and password
     """
     student = get_object_or_404(
         Student, 
@@ -783,23 +982,96 @@ def edit_student(request, student_id):
 
     if request.method == "POST":
         try:
+            # Debug: Print request info
+            print(f"Content-Type: {request.content_type}")
+            print(f"Request body: {request.body[:200] if request.body else 'Empty'}")
+            
             # Check if it's JSON (AJAX) or form data
             if request.content_type == 'application/json':
                 data = json.loads(request.body)
             else:
                 data = request.POST
             
-            # Update student
-            student.full_name = data.get("full_name", student.full_name)
-            student.roll_number = data.get("roll_number", "")
-            student.admission_id = data.get("admission_id", "")
-            student.grade_id = data.get("grade", student.grade_id)
-            student.section = data.get("section", student.section)
-            student.save()
+            print(f"Parsed data: {data}")  # Debug
+            
+            # Get username (required) - can be email
+            new_username = data.get("username", "").strip()
+            if not new_username:
+                raise ValueError("Username/Email is required")
+            
+            # Validate username format - allow email addresses
+            if not re.match(r'^[a-zA-Z0-9.@_-]+$', new_username):
+                raise ValueError("Username can only contain letters, numbers, dots, @, dashes and underscores")
+            
+            with transaction.atomic():
+                # Update student info
+                student.full_name = data.get("full_name", student.full_name)
+                student.roll_number = data.get("roll_number", "")
+                student.admission_id = data.get("admission_id", "")
+                student.grade_id = data.get("grade", student.grade_id)
+                student.section = data.get("section", student.section)
+                student.save()
+                
+                print(f"Student updated: {student.full_name}")  # Debug
+                
+                # Update or create user account
+                if student.user:
+                    print(f"Updating existing user: {student.user.username}")  # Debug
+                    
+                    # Check if username is changing
+                    if new_username != student.user.username:
+                        # Check if new username is available
+                        if User.objects.filter(username=new_username).exclude(id=student.user.id).exists():
+                            raise ValueError(f"Username/Email '{new_username}' already exists")
+                        student.user.username = new_username
+                        # Update email if it's an email address
+                        if '@' in new_username:
+                            student.user.email = new_username
+                        print(f"Username changed to: {new_username}")  # Debug
+                    
+                    # Update password if provided
+                    new_password = data.get("password", "").strip()
+                    if new_password:
+                        if len(new_password) < 6:
+                            raise ValueError("Password must be at least 6 characters long")
+                        student.user.set_password(new_password)
+                        print("Password updated")  # Debug
+                    
+                    # Update name
+                    name_parts = student.full_name.split()
+                    student.user.first_name = name_parts[0] if name_parts else ''
+                    student.user.last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+                    student.user.save()
+                    
+                    print("User saved successfully")  # Debug
+                else:
+                    # Create new user account if doesn't exist
+                    print("Creating new user account")  # Debug
+                    
+                    if User.objects.filter(username=new_username).exists():
+                        raise ValueError(f"Username/Email '{new_username}' already exists")
+                    
+                    password = data.get("password", "").strip() or "student123"
+                    if len(password) < 6:
+                        raise ValueError("Password must be at least 6 characters long")
+                    
+                    name_parts = student.full_name.split()
+                    user = User.objects.create_user(
+                        username=new_username,
+                        email=new_username if '@' in new_username else '',
+                        first_name=name_parts[0] if name_parts else '',
+                        last_name=' '.join(name_parts[1:]) if len(name_parts) > 1 else '',
+                    )
+                    user.set_password(password)
+                    user.save()
+                    student.user = user
+                    student.save()
+                    
+                    print(f"New user created: {user.username}")  # Debug
             
             # Return JSON for AJAX
-            if request.content_type == 'application/json':
-                return JsonResponse({
+            if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                response_data = {
                     'status': 'success',
                     'student': {
                         'id': student.id,
@@ -807,17 +1079,37 @@ def edit_student(request, student_id):
                         'roll_number': student.roll_number,
                         'grade': student.grade.name,
                         'section': student.section,
+                        'username': student.user.username if student.user else '',
                     }
-                })
+                }
+                print(f"Returning success response: {response_data}")  # Debug
+                return JsonResponse(response_data)
             else:
                 return redirect("students_list")
                 
-        except Exception as e:
-            if request.content_type == 'application/json':
+        except ValueError as e:
+            print(f"ValueError in edit_student: {str(e)}")  # Debug
+            if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'status': 'error',
                     'error': str(e)
                 }, status=400)
+            else:
+                return render(request, "teacher/students/edit_student.html", {
+                    "student": student,
+                    "grades": Grade.objects.all(),
+                    "error": str(e)
+                })
+        except Exception as e:
+            print(f"Exception in edit_student: {str(e)}")  # Debug
+            import traceback
+            traceback.print_exc()
+            
+            if request.content_type == 'application/json' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'status': 'error',
+                    'error': str(e)
+                }, status=500)
             else:
                 return render(request, "teacher/students/edit_student.html", {
                     "student": student,
@@ -831,11 +1123,10 @@ def edit_student(request, student_id):
         "grades": Grade.objects.all(),
     })
 
-
 @login_required
 def delete_student(request, student_id):
     """
-    Delete a student
+    Delete a student and their user account
     """
     if request.method != "POST":
         return JsonResponse({
@@ -849,7 +1140,12 @@ def delete_student(request, student_id):
             id=student_id, 
             created_by=request.user
         )
-        student.delete()
+        
+        # Delete associated user account
+        if student.user:
+            student.user.delete()  # This will cascade delete the student
+        else:
+            student.delete()
         
         return JsonResponse({
             'status': 'success',
@@ -860,6 +1156,7 @@ def delete_student(request, student_id):
             'status': 'error',
             'error': str(e)
         }, status=400)
+
 
 @login_required
 def add_questions_to_test(request, test_id):
@@ -904,35 +1201,43 @@ def add_questions_to_test(request, test_id):
         
 @login_required
 def inline_add_question(request, test_id):
+    """
+    Add question inline to test with validation
+    """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    # Prevent editing published tests with submissions
+    if test.is_published and StudentAnswer.objects.filter(test=test).exists():
+        return JsonResponse({
+            "error": "Cannot modify published test with submissions"
+        }, status=403)
 
     try:
         data = json.loads(request.body)
 
-        # Validate required fields
-        if not data.get("topic") or not data.get("grade") or not data.get("subject"):
-            return JsonResponse({
-                "status": "error",
-                "error": "Grade, subject, and topic are required"
-            }, status=400)
-
-        # 1️⃣ Create Question
+        # Get topic to derive grade and subject
+        topic_id = data.get("topic")
+        topic = None
+        if topic_id:
+            topic = get_object_or_404(Topic, id=topic_id)
+        
+        # Create Question
         question = Question.objects.create(
             question_text=data["question_text"],
             answer_text=data.get("answer_text", ""),
             marks=data.get("marks", 1),
             question_type=data.get("question_type", "theory"),
-            year=data.get("year") or None,
-            grade_id=data.get("grade"),
-            subject_id=data.get("subject"),
-            topic_id=data.get("topic"),
+            year=data.get("year"),
+            grade=topic.grade if topic else None,
+            subject=topic.subject if topic else None,
+            topic=topic,
             created_by=request.user,
         )
 
-        # 2️⃣ Compute order safely
+        # Compute order safely
         last_order = (
             TestQuestion.objects
             .filter(test=test)
@@ -946,7 +1251,7 @@ def inline_add_question(request, test_id):
             order=last_order + 1
         )
 
-        # 3️⃣ Return HTML snippet
+        # Return HTML snippet
         html = render_to_string(
             "teacher/partials/test_question_card.html",
             {
@@ -962,12 +1267,12 @@ def inline_add_question(request, test_id):
             "question_id": question.id,
             "order": tq.order,
         })
-    
+        
     except Exception as e:
-        return JsonResponse({
-            "status": "error",
-            "error": str(e)
-        }, status=500)
+        print(f"Error adding question: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({"error": str(e)}, status=500)
 
 from django.utils import timezone
 from datetime import timedelta
@@ -975,108 +1280,106 @@ from datetime import timedelta
 @login_required
 def student_test_list(request):
     """
-    Show all tests assigned to the logged-in student
+    List of all tests available to the student
     """
-    # Get the student object for the logged-in user
     try:
-        student = request.user.student_profile
-    except (Student.DoesNotExist, AttributeError):
-        # If no student profile exists, show empty page
-        return render(request, "student/test_list.html", {"tests": []})
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return render(request, 'student/no_profile.html')
     
     # Get all published tests assigned to this student
-    # Either directly or through class groups
-    assigned_tests = Test.objects.filter(
+    tests = Test.objects.filter(
         is_published=True
     ).filter(
-        models.Q(assigned_students=student) |
+        models.Q(assigned_students=student) | 
         models.Q(assigned_groups__students=student)
     ).exclude(
         excluded_students=student
-    ).distinct().order_by('start_time')
+    ).distinct().order_by('-created_at')
     
-    test_data = []
-    now = timezone.now()
-    
-    for test in assigned_tests:
-        # Get attempt if exists
-        try:
-            attempt = StudentTestAttempt.objects.get(student=student, test=test)
-        except StudentTestAttempt.DoesNotExist:
-            attempt = None
-        
-        # Calculate test status
-        status = 'upcoming'
-        can_start = False
-        time_until_start = None
-        
-        if test.start_time:
-            if test.duration_minutes:
-                end_time = test.start_time + timedelta(minutes=test.duration_minutes)
-                
-                if now < test.start_time:
-                    status = 'upcoming'
-                    delta = test.start_time - now
-                    hours = delta.seconds // 3600
-                    minutes = (delta.seconds % 3600) // 60
-                    if delta.days > 0:
-                        time_until_start = f"{delta.days} day{'s' if delta.days > 1 else ''}"
-                    elif hours > 0:
-                        time_until_start = f"{hours} hour{'s' if hours > 1 else ''}"
-                    else:
-                        time_until_start = f"{minutes} minute{'s' if minutes > 1 else ''}"
-                elif now >= test.start_time and now <= end_time:
-                    status = 'live'
-                    can_start = True
-                else:
-                    status = 'completed'
-            else:
-                # No duration means it's always available after start time
-                if now >= test.start_time:
-                    status = 'live'
-                    can_start = True
-        else:
-            # No start time means always available
-            status = 'live'
-            can_start = True
-        
-        # Override if submitted
-        if attempt and attempt.is_submitted:
-            status = 'completed'
-            can_start = False
-        
-        # Get question count and total marks
-        test_questions = TestQuestion.objects.filter(test=test).select_related('question')
-        question_count = test_questions.count()
-        total_marks = sum(tq.question.marks for tq in test_questions)
-        
-        # Count answered questions
-        answered_count = 0
-        if attempt:
-            answered_count = StudentAnswer.objects.filter(
-                student=student,
-                test=test,
-                answer_text__isnull=False
-            ).exclude(answer_text='').count()
-        
-        progress = int((answered_count / question_count * 100)) if question_count > 0 else 0
-        
-        test_data.append({
-            'test': test,
-            'status': status,
-            'can_start': can_start,
-            'time_until_start': time_until_start,
-            'attempt': attempt,
-            'question_count': question_count,
-            'total_marks': total_marks,
-            'answered_count': answered_count,
-            'progress': progress,
-        })
-    
-    return render(request, "student/test_list.html", {
-        "tests": test_data
+    return render(request, 'student/test_list.html', {
+        'student': student,
+        'tests': tests,
     })
 
+@login_required
+def student_take_test(request, test_id):
+    """
+    Student takes a test
+    """
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return render(request, 'student/no_profile.html')
+    
+    test = get_object_or_404(Test, id=test_id, is_published=True)
+    
+    # Check if student is assigned this test
+    is_assigned = test.assigned_students.filter(id=student.id).exists() or \
+                  test.assigned_groups.filter(students=student).exists()
+    
+    is_excluded = test.excluded_students.filter(id=student.id).exists()
+    
+    if not is_assigned or is_excluded:
+        return render(request, 'student/test_not_available.html')
+    
+    # Get test questions
+    test_questions = TestQuestion.objects.filter(
+        test=test
+    ).select_related('question').order_by('order')
+    
+    # Get student's previous answers if any
+    student_answers = {}
+    for tq in test_questions:
+        try:
+            answer = StudentAnswer.objects.get(
+                student=student,
+                test=test,
+                question=tq.question
+            )
+            student_answers[tq.question.id] = answer.answer_text
+        except StudentAnswer.DoesNotExist:
+            student_answers[tq.question.id] = ''
+    
+    if request.method == 'POST':
+        # Save answers
+        for tq in test_questions:
+            answer_text = request.POST.get(f'question_{tq.question.id}', '')
+            
+            StudentAnswer.objects.update_or_create(
+                student=student,
+                test=test,
+                question=tq.question,
+                defaults={
+                    'answer_text': answer_text,
+                }
+            )
+        
+        return redirect('student_test_submitted', test_id=test.id)
+    
+    return render(request, 'student/take_test.html', {
+        'student': student,
+        'test': test,
+        'test_questions': test_questions,
+        'student_answers': student_answers,
+    })
+
+@login_required
+def student_test_submitted(request, test_id):
+    """
+    Confirmation page after test submission
+    """
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return render(request, 'student/no_profile.html')
+    
+    test = get_object_or_404(Test, id=test_id)
+    
+    return render(request, 'student/test_submitted.html', {
+        'student': student,
+        'test': test,
+    })
 
 @login_required
 def student_test_attempt(request, test_id):
@@ -1261,40 +1564,39 @@ def student_test_review(request, test_id):
 @login_required
 def student_results(request):
     """
-    Show all completed tests and their results
+    View student's test results
     """
     try:
-        student = request.user.student_profile
-    except (Student.DoesNotExist, AttributeError):
-        return render(request, "student/results.html", {"results": []})
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        return render(request, 'student/no_profile.html')
     
-    attempts = StudentTestAttempt.objects.filter(
-        student=student,
-        is_submitted=True
-    ).select_related('test').order_by('-submitted_at')
-    
+    # Get tests with results
     results = []
-    for attempt in attempts:
+    answered_tests = StudentAnswer.objects.filter(
+        student=student,
+        marks_awarded__isnull=False
+    ).values_list('test_id', flat=True).distinct()
+    
+    for test_id in answered_tests:
+        test = Test.objects.get(id=test_id)
         answers = StudentAnswer.objects.filter(
             student=student,
-            test=attempt.test
+            test=test,
+            marks_awarded__isnull=False
         )
         
-        total_marks = sum(
-            tq.question.marks 
-            for tq in TestQuestion.objects.filter(test=attempt.test).select_related('question')
-        )
-        
-        scored_marks = sum(a.marks_awarded or 0 for a in answers)
+        total_marks = sum(a.marks_awarded for a in answers if a.marks_awarded)
+        max_marks = sum(a.question.marks for a in answers)
         
         results.append({
-            'test': attempt.test,
-            'attempt': attempt,
+            'test': test,
             'total_marks': total_marks,
-            'scored_marks': scored_marks,
-            'percentage': int((scored_marks / total_marks * 100)) if total_marks > 0 else 0,
+            'max_marks': max_marks,
+            'percentage': (total_marks / max_marks * 100) if max_marks > 0 else 0,
         })
     
-    return render(request, "student/results.html", {
-        "results": results
+    return render(request, 'student/results.html', {
+        'student': student,
+        'results': results,
     })

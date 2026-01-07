@@ -26,7 +26,6 @@
   margin: 0;
 }
 
-/* Grid Layout */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -34,7 +33,6 @@
   margin-bottom: 32px;
 }
 
-/* Widget Cards */
 .widget-card {
   background: white;
   border-radius: 16px;
@@ -139,7 +137,6 @@
   background: #059669;
 }
 
-/* Quick Actions Section */
 .quick-actions {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 16px;
@@ -188,7 +185,6 @@
   font-weight: 500;
 }
 
-/* Add Student Section */
 .add-student-section {
   background: white;
   border-radius: 16px;
@@ -214,15 +210,42 @@
 .add-student-form {
   background: #f9fafb;
   border-radius: 12px;
-  padding: 20px;
+  padding: 24px;
   margin-bottom: 20px;
+  border: 2px solid #e5e7eb;
+}
+
+.form-section {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.form-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.form-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.form-row:last-child {
+  margin-bottom: 0;
 }
 
 .form-group {
@@ -237,6 +260,11 @@
   font-size: 14px;
 }
 
+.form-group label .required {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
 .form-group input,
 .form-group select {
   width: 100%;
@@ -244,6 +272,7 @@
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
+  transition: all .2s;
 }
 
 .form-group input:focus,
@@ -253,7 +282,20 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-/* Students List */
+.form-group .helper-text {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.login-credentials-section {
+  background: #fef3c7;
+  border-radius: 10px;
+  padding: 20px;
+  border: 2px solid #fde68a;
+}
+
 .students-list {
   margin-top: 20px;
   max-height: 400px;
@@ -291,6 +333,16 @@
   color: #6b7280;
   font-size: 13px;
   margin: 0;
+}
+
+.username-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
 }
 
 .student-actions {
@@ -346,13 +398,11 @@
 </style>
 
 <div class="dashboard-container">
-  <!-- Dashboard Header -->
   <div class="dashboard-header">
     <h1>Welcome back, {{ user.first_name|default:user.username }}! 👋</h1>
     <p>Here's what's happening with your classes today</p>
   </div>
 
-  <!-- Quick Actions -->
   <div class="quick-actions">
     <h2>Quick Actions</h2>
     <div class="actions-grid">
@@ -375,9 +425,7 @@
     </div>
   </div>
 
-  <!-- Dashboard Widgets -->
   <div class="dashboard-grid">
-    <!-- Tests Widget -->
     <div class="widget-card">
       <div class="widget-header">
         <h3 class="widget-title">Tests</h3>
@@ -391,7 +439,6 @@
       </div>
     </div>
 
-    <!-- Questions Widget -->
     <div class="widget-card">
       <div class="widget-header">
         <h3 class="widget-title">Questions</h3>
@@ -405,7 +452,6 @@
       </div>
     </div>
 
-    <!-- Students Widget -->
     <div class="widget-card">
       <div class="widget-header">
         <h3 class="widget-title">Students</h3>
@@ -418,7 +464,6 @@
       </div>
     </div>
 
-    <!-- Groups Widget -->
     <div class="widget-card">
       <div class="widget-header">
         <h3 class="widget-title">Class Groups</h3>
@@ -446,44 +491,86 @@
 
     <form id="addStudentForm" class="add-student-form">
       {% csrf_token %}
-      <div class="form-row">
-        <div class="form-group">
-          <label for="fullName">Full Name *</label>
-          <input type="text" id="fullName" name="full_name" required placeholder="John Doe">
-        </div>
-        <div class="form-group">
-          <label for="rollNumber">Roll Number</label>
-          <input type="text" id="rollNumber" name="roll_number" placeholder="001">
-        </div>
-        <div class="form-group">
-          <label for="admissionId">Admission ID</label>
-          <input type="text" id="admissionId" name="admission_id" placeholder="ADM2024001">
+      
+      <!-- Personal Information -->
+      <div class="form-section">
+        <div class="form-section-title">👤 Personal Information</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="fullName">Full Name <span class="required">*</span></label>
+            <input type="text" id="fullName" name="full_name" required placeholder="e.g., John Doe">
+          </div>
+          <div class="form-group">
+            <label for="rollNumber">Roll Number</label>
+            <input type="text" id="rollNumber" name="roll_number" placeholder="e.g., 001">
+          </div>
+          <div class="form-group">
+            <label for="admissionId">Admission ID</label>
+            <input type="text" id="admissionId" name="admission_id" placeholder="e.g., ADM2024001">
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label for="grade">Grade *</label>
-          <select id="grade" name="grade" required>
-            <option value="">Select Grade</option>
-            {% for grade in grades %}
-              <option value="{{ grade.id }}">{{ grade.name }}</option>
-            {% endfor %}
-          </select>
+
+      <!-- Academic Information -->
+      <div class="form-section">
+        <div class="form-section-title">🎓 Academic Information</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="grade">Grade <span class="required">*</span></label>
+            <select id="grade" name="grade" required>
+              <option value="">Select Grade</option>
+              {% for grade in grades %}
+                <option value="{{ grade.id }}">{{ grade.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="section">Section <span class="required">*</span></label>
+            <input type="text" id="section" name="section" required placeholder="e.g., A" maxlength="10">
+          </div>
         </div>
-        <div class="form-group">
-          <label for="section">Section *</label>
-          <input type="text" id="section" name="section" required placeholder="A" maxlength="10">
+      </div>
+
+      <!-- Login Credentials -->
+      <div class="form-section login-credentials-section">
+        <div class="form-section-title">🔐 Login Credentials</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="username">Email/Username <span class="required">*</span></label>
+            <input 
+              type="email" 
+              id="username" 
+              name="username" 
+              required
+              placeholder="e.g., john.doe@school.com"
+            >
+            <span class="helper-text">Student will use this email to log in</span>
+          </div>
+          <div class="form-group">
+            <label for="password">Password <span class="required">*</span></label>
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              required
+              placeholder="Enter a secure password"
+              minlength="6"
+            >
+            <span class="helper-text">Minimum 6 characters. Student will use this to log in.</span>
+          </div>
         </div>
-        <div class="form-group" style="display: flex; align-items: flex-end;">
-          <button type="submit" class="btn success" style="width: 100%;">
-            ➕ Add Student
-          </button>
-        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <div style="margin-top: 24px;">
+        <button type="submit" class="btn success" style="width: 100%; padding: 14px; font-size: 15px;">
+          ➕ Add Student with Login Account
+        </button>
       </div>
     </form>
 
     <!-- Recent Students List -->
-    <div class="section-header" style="margin-top: 24px;">
+    <div class="section-header" style="margin-top: 32px;">
       <h3>Recent Students</h3>
     </div>
 
@@ -492,16 +579,21 @@
         {% for student in recent_students %}
           <div class="student-item" data-student-id="{{ student.id }}">
             <div class="student-info">
-              <p class="student-name">{{ student.full_name }}</p>
+              <p class="student-name">
+                {{ student.full_name }}
+                {% if student.user %}
+                  <span class="username-badge">📧 {{ student.user.username }}</span>
+                {% endif %}
+              </p>
               <p class="student-details">
                 {{ student.grade.name }} - Section {{ student.section }}
                 {% if student.roll_number %} • Roll: {{ student.roll_number }}{% endif %}
               </p>
             </div>
             <div class="student-actions">
-              <button class="icon-btn" onclick="editStudent({{ student.id }})" title="Edit">
+              <a href="{% url 'edit_student' student.id %}" class="icon-btn" title="Edit">
                 ✏️
-              </button>
+              </a>
               <button class="icon-btn delete" onclick="deleteStudent({{ student.id }})" title="Delete">
                 🗑️
               </button>
@@ -519,7 +611,6 @@
 </div>
 
 <script>
-// Add Student Form Handler
 document.getElementById('addStudentForm').addEventListener('submit', function(e) {
   e.preventDefault();
   
@@ -528,6 +619,19 @@ document.getElementById('addStudentForm').addEventListener('submit', function(e)
   formData.forEach((value, key) => {
     data[key] = value;
   });
+  
+  // Validate email format
+  const email = data.username;
+  if (!email || !email.includes('@')) {
+    alert('Please enter a valid email address');
+    return;
+  }
+  
+  // Validate password
+  if (data.password.length < 6) {
+    alert('Password must be at least 6 characters long');
+    return;
+  }
   
   fetch('{% url "add_student" %}', {
     method: 'POST',
@@ -539,24 +643,18 @@ document.getElementById('addStudentForm').addEventListener('submit', function(e)
   })
   .then(response => {
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      return response.json().then(err => { throw err; });
     }
     return response.json();
   })
   .then(data => {
     if (data.status === 'success') {
-      // Show success message
       const successMsg = document.getElementById('successMessage');
       successMsg.classList.add('show');
       setTimeout(() => successMsg.classList.remove('show'), 3000);
       
-      // Reset form
       document.getElementById('addStudentForm').reset();
-      
-      // Add student to list
       addStudentToList(data.student);
-      
-      // Update count
       updateStudentCount();
     } else {
       alert('Error: ' + (data.error || 'Unknown error'));
@@ -564,42 +662,41 @@ document.getElementById('addStudentForm').addEventListener('submit', function(e)
   })
   .catch(error => {
     console.error('Error:', error);
-    alert('Failed to add student. Please try again.');
+    alert('Failed to add student: ' + (error.error || 'Please try again'));
   });
 });
 
 function addStudentToList(student) {
   const studentsList = document.getElementById('studentsList');
-  
-  // Remove empty state if it exists
   const emptyState = studentsList.querySelector('.empty-state');
   if (emptyState) {
     emptyState.remove();
   }
   
-  // Create student item
   const studentItem = document.createElement('div');
   studentItem.className = 'student-item';
   studentItem.dataset.studentId = student.id;
   studentItem.innerHTML = `
     <div class="student-info">
-      <p class="student-name">${student.full_name}</p>
+      <p class="student-name">
+        ${student.full_name}
+        ${student.username ? '<span class="username-badge">📧 ' + student.username + '</span>' : ''}
+      </p>
       <p class="student-details">
         ${student.grade} - Section ${student.section}
         ${student.roll_number ? ' • Roll: ' + student.roll_number : ''}
       </p>
     </div>
     <div class="student-actions">
-      <button class="icon-btn" onclick="editStudent(${student.id})" title="Edit">
+      <a href="/teacher/students/${student.id}/edit/" class="icon-btn" title="Edit">
         ✏️
-      </button>
+      </a>
       <button class="icon-btn delete" onclick="deleteStudent(${student.id})" title="Delete">
         🗑️
       </button>
     </div>
   `;
   
-  // Add to top of list
   studentsList.insertBefore(studentItem, studentsList.firstChild);
 }
 
@@ -608,12 +705,8 @@ function updateStudentCount() {
   document.getElementById('studentCount').textContent = currentCount + 1;
 }
 
-function editStudent(studentId) {
-  window.location.href = `/teacher/students/${studentId}/edit/`;
-}
-
 function deleteStudent(studentId) {
-  if (!confirm('Are you sure you want to delete this student?')) {
+  if (!confirm('Are you sure you want to delete this student? This will also delete their login account.')) {
     return;
   }
   
@@ -626,17 +719,14 @@ function deleteStudent(studentId) {
   .then(response => response.json())
   .then(data => {
     if (data.status === 'success') {
-      // Remove from DOM
       const studentItem = document.querySelector(`[data-student-id="${studentId}"]`);
       if (studentItem) {
         studentItem.remove();
       }
       
-      // Update count
       const currentCount = parseInt(document.getElementById('studentCount').textContent);
       document.getElementById('studentCount').textContent = Math.max(0, currentCount - 1);
       
-      // Check if list is empty
       const studentsList = document.getElementById('studentsList');
       if (studentsList.children.length === 0) {
         studentsList.innerHTML = `
