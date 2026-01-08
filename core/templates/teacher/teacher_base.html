@@ -57,6 +57,17 @@ body {
   color: #9ca3af;
 }
 
+/* Admin badge */
+.admin-badge {
+  background: #fbbf24;
+  color: #78350f;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
 /* Push logout to bottom */
 .sidebar .spacer {
   flex: 1;
@@ -93,7 +104,12 @@ body {
 
   <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
-    <h2>Teacher</h2>
+    <h2>
+      Teacher
+      {% if request.user.profile.role == 'school_admin' %}
+      <span class="admin-badge">ADMIN</span>
+      {% endif %}
+    </h2>
 
     <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
 
@@ -105,6 +121,12 @@ body {
     <a href="{% url 'students_list' %}">👨‍🎓 Students List</a>
     <a href="{% url 'add_student' %}">➕ Add Student</a>
     <a href="{% url 'groups_list' %}">🧩 Class Groups</a>
+
+    {% if request.user.profile.role == 'school_admin' %}
+    <div class="section">Administration</div>
+    <a href="{% url 'create_user_account' %}">👤 Create User Account</a>
+    <a href="{% url 'school_users_list' %}">👥 Manage Users</a>
+    {% endif %}
 
     <div class="section">Performance</div>
     <a href="{% url 'class_performance' %}">📊 Class Performance</a>

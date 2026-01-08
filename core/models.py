@@ -2,6 +2,49 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Create your models here.
+
+class School(models.Model):
+    """
+    School model - Teachers and Students belong to a school
+    """
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=50, unique=True)  # e.g., "SCH001"
+    address = models.TextField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    email = models.EmailField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ["name"]
+    
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+
+class UserProfile(models.Model):
+    """
+    Extended user profile for role management
+    """
+    ROLE_CHOICES = [
+        ('student', 'Student'),
+        ('teacher', 'Teacher'),
+        ('school_admin', 'School Admin'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ["user__username"]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()} at {self.school}"
+
+
 class Grade(models.Model):
     name = models.CharField(max_length=50)
 
@@ -12,6 +55,7 @@ class Grade(models.Model):
 
     def __str__(self):
         return self.name
+        
         
 class Subject(models.Model):
     name = models.CharField(max_length=100)
@@ -44,6 +88,7 @@ class Topic(models.Model):
 
     def __str__(self):
         return f"{self.grade} | {self.subject} | {self.name}"
+
 
 class LearningObjective(models.Model):
     code = models.CharField(max_length=30)
@@ -96,7 +141,8 @@ class Question(models.Model):
 
     learning_objectives = models.ManyToManyField(
         LearningObjective,
-        related_name="questions"
+        related_name="questions",
+        blank=True
     )
 
     question_text = models.TextField()
@@ -122,6 +168,7 @@ class Question(models.Model):
 
 class Test(models.Model):
     title = models.CharField(max_length=255)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)  # Added for filtering
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     is_published = models.BooleanField(default=False)
 
@@ -154,8 +201,28 @@ class Test(models.Model):
         blank=True,
         related_name="excluded_from_tests"
     )
+    
     def __str__(self):
         return self.title
+    
+    def get_all_assigned_students(self):
+        """
+        Get all students assigned to this test (both directly and through groups)
+        excluding those in excluded_students
+        """
+        from django.db.models import Q
+        
+        # Direct assignments
+        direct_students = self.assigned_students.all()
+        
+        # Group assignments
+        group_students = Student.objects.filter(classgroup__in=self.assigned_groups.all())
+        
+        # Combine and exclude
+        all_students = (direct_students | group_students).distinct()
+        excluded = self.excluded_students.all()
+        
+        return all_students.exclude(id__in=excluded)
 
 
 class TestQuestion(models.Model):
@@ -178,29 +245,24 @@ class TestQuestion(models.Model):
         ordering = ["order"]
 
     def __str__(self):
-        return f"{self.test.title} — Q{self.order}"
+        return f"{self.test.title} – Q{self.order}"
 
 
 class Student(models.Model):
-    user = models.OneToOneField(
-    User,
-    on_delete=models.CASCADE,
-    related_name='student_profile',
-    null=True,
-    blank=True)
     full_name = models.CharField(max_length=200)
     roll_number = models.CharField(max_length=50, blank=True)
     admission_id = models.CharField(max_length=50, blank=True)
 
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     section = models.CharField(max_length=10)  # A, B, C
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_students')
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)  # Added
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("grade", "section", "roll_number")
-        ordering = ["grade", "section", "roll_number"]
+        unique_together = ("grade", "section", "roll_number", "school")  # Updated
+        ordering = ["school", "grade", "section", "roll_number"]
 
     def __str__(self):
         return f"{self.full_name} ({self.grade}-{self.section})"
@@ -211,9 +273,13 @@ class ClassGroup(models.Model):
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     section = models.CharField(max_length=10)
     subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)  # Added
 
     students = models.ManyToManyField(Student, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ["school", "name"]
 
     def __str__(self):
         return self.name
@@ -265,32 +331,3 @@ class StudentAnswer(models.Model):
     
     def __str__(self):
         return f"{self.student.full_name} - {self.test.title} - Q{self.question.id}"
-        
-class StudentTestAttempt(models.Model):
-    """
-    Tracks when a student starts a test and their overall progress
-    """
-    student = models.ForeignKey(
-        Student,
-        on_delete=models.CASCADE,
-        related_name="test_attempts"
-    )
-    
-    test = models.ForeignKey(
-        Test,
-        on_delete=models.CASCADE,
-        related_name="attempts"
-    )
-    
-    started_at = models.DateTimeField(auto_now_add=True)
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    time_remaining_seconds = models.IntegerField(null=True, blank=True)
-    
-    is_submitted = models.BooleanField(default=False)
-    
-    class Meta:
-        unique_together = ("student", "test")
-        ordering = ["-started_at"]
-    
-    def __str__(self):
-        return f"{self.student.full_name} - {self.test.title}"

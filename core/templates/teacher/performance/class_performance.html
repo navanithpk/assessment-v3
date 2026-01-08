@@ -3,103 +3,67 @@
 {% block title %}Class Performance{% endblock %}
 
 {% block content %}
+
 <style>
-.filters {
+.performance-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.header {
+  margin-bottom: 32px;
+}
+
+.header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.header p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.placeholder-card {
   background: white;
-  padding: 18px;
-  border-radius: 14px;
+  border-radius: 16px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.placeholder-icon {
+  font-size: 64px;
   margin-bottom: 20px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
+  opacity: 0.3;
 }
 
-.filter-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 16px;
+.placeholder-card h2 {
+  font-size: 24px;
+  color: #374151;
+  margin: 0 0 12px 0;
 }
 
-.filters select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.table-wrap {
-  background: white;
-  padding: 18px;
-  border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.08);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 10px;
-  font-size: 14px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-th {
-  background: #f3f4f6;
-  text-align: left;
+.placeholder-card p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
 }
 </style>
 
-<h1>Class Performance</h1>
-
-<form method="get" class="filters">
-  <div class="filter-grid">
-    <select name="test" required>
-      <option value="">Select Test</option>
-      {% for t in tests %}
-        <option value="{{ t.id }}" {% if request.GET.test == t.id|stringformat:"s" %}selected{% endif %}>
-          {{ t.title }}
-        </option>
-      {% endfor %}
-    </select>
-
-    <select name="group" required>
-      <option value="">Select Class / Group</option>
-      {% for g in groups %}
-        <option value="{{ g.id }}" {% if request.GET.group == g.id|stringformat:"s" %}selected{% endif %}>
-          {{ g.name }}
-        </option>
-      {% endfor %}
-    </select>
-
-    <button type="submit">View</button>
+<div class="performance-container">
+  <div class="header">
+    <h1>📊 Class Performance</h1>
+    <p>Analytics and insights for your classes</p>
   </div>
-</form>
 
-{% if results %}
-<div class="table-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Student</th>
-        <th>Grade</th>
-        <th>Section</th>
-        <th>Total Score</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in results %}
-      <tr>
-        <td>
-          <a href="{% url 'student_performance' r.student.id %}">
-            {{ r.student.full_name }}
-          </a>
-        </td>
-        <td>{{ r.student.grade.name }}</td>
-        <td>{{ r.student.section }}</td>
-        <td>{{ r.score }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="placeholder-card">
+    <div class="placeholder-icon">📈</div>
+    <h2>Performance Analytics Coming Soon</h2>
+    <p>This feature will show detailed performance metrics, test scores, and learning objective coverage for your classes.</p>
+  </div>
 </div>
-{% endif %}
+
 {% endblock %}

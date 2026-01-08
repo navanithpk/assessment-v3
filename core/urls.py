@@ -24,17 +24,17 @@ urlpatterns = [
     path("teacher/tests/<int:test_id>/add-questions/", views.add_questions_to_test, name="add_questions_to_test"),
     path("teacher/tests/<int:test_id>/questions/<int:test_question_id>/remove/", 
          views.remove_question_from_test, name="remove_question_from_test"),
-    path("teacher/tests/<int:test_id>/reorder/", 
-         views.reorder_test_questions, name="reorder_test_questions"),
+    #path("teacher/tests/<int:test_id>/reorder/", 
+     #    views.reorder_test_questions, name="reorder_test_questions"),
     path("teacher/tests/<int:test_id>/inline-add-question/",
          views.inline_add_question, name="inline_add_question"),
     
-    path(
-        "teacher/import-questions/",
-        views.import_questions_review,
-        name="import_questions_review"
-    ),
-
+    #path(
+     #   "teacher/import-questions/",
+      ## name="import_questions_review"
+    #),
+    path("teacher/school/users/", views.school_users_list, name="school_users_list"),
+    
     # Tests (student) - NEW
     path("student/tests/", views.student_tests_list, name="student_tests_list"),
 
@@ -46,7 +46,7 @@ urlpatterns = [
     # AJAX
     path("ajax/topics/", views.ajax_topics, name="ajax_topics"),
     path("ajax/los/", views.ajax_learning_objectives, name="ajax_los"),
-    path("ajax/questions/", views.ajax_questions, name="ajax_questions"),
+    #path("ajax/questions/", views.ajax_questions, name="ajax_questions"),
     
     # Students
     path("teacher/students/", views.students_list, name="students_list"),
@@ -56,8 +56,9 @@ urlpatterns = [
     # Groups
     path("teacher/groups/", views.groups_list, name="groups_list"),
     path("teacher/groups/add/", views.add_group, name="add_group"),
+    path("teacher/users/create/", views.create_user_account, name="create_user_account"),
 
     # Performance
     path("teacher/performance/class/", views.class_performance, name="class_performance"),
-    path("teacher/performance/student/<int:student_id>/", views.student_performance, name="student_performance"),
+    #path("teacher/performance/student/<int:student_id>/", views.student_performance, name="student_performance"),
 ]

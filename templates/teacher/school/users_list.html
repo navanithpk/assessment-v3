@@ -1,0 +1,277 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}School Users - {{ school.name }}{% endblock %}
+
+{% block content %}
+<style>
+.users-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.page-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.page-header p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.section {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.count-badge {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.users-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.user-card {
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all .2s;
+}
+
+.user-card:hover {
+  border-color: #2563eb;
+  background: #f9fafb;
+}
+
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 16px;
+  margin: 0 0 4px 0;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+}
+
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.role-badge.school-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-badge.teacher {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.role-badge.student {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th {
+  background: #f9fafb;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+table td {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+
+table tr:hover {
+  background: #f9fafb;
+}
+</style>
+
+<div class="users-container">
+  <div class="page-header">
+    <h1>🏫 {{ school.name }}</h1>
+    <p>View all teachers and students in your school</p>
+  </div>
+
+  <!-- TEACHERS SECTION -->
+  <div class="section">
+    <div class="section-header">
+      <h2>👨‍🏫 Teachers</h2>
+      <span class="count-badge">{{ teachers.count }} teacher{{ teachers.count|pluralize }}</span>
+    </div>
+
+    {% if teachers %}
+      <div class="users-grid">
+        {% for profile in teachers %}
+          <div class="user-card">
+            <div class="user-header">
+              <div class="user-avatar">
+                {{ profile.user.first_name.0|default:profile.user.username.0|upper }}
+              </div>
+              <div class="user-info">
+                <h3 class="user-name">
+                  {{ profile.user.get_full_name|default:profile.user.username }}
+                </h3>
+                <p class="user-email">{{ profile.user.email }}</p>
+              </div>
+            </div>
+            
+            <div class="user-meta">
+              <div class="meta-item">
+                <span class="role-badge {{ profile.role }}">
+                  {{ profile.get_role_display }}
+                </span>
+              </div>
+              <div class="meta-item">
+                📧 {{ profile.user.username }}
+              </div>
+              <div class="meta-item">
+                📅 Joined {{ profile.created_at|date:"M d, Y" }}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>No other teachers in your school yet.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- STUDENTS SECTION -->
+  <div class="section">
+    <div class="section-header">
+      <h2>👨‍🎓 Students</h2>
+      <span class="count-badge">{{ students.count }} student{{ students.count|pluralize }}</span>
+    </div>
+
+    {% if students %}
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Roll Number</th>
+            <th>Grade</th>
+            <th>Section</th>
+            <th>Admission ID</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for student in students %}
+            <tr>
+              <td style="font-weight: 600;">{{ student.full_name }}</td>
+              <td>{{ student.roll_number }}</td>
+              <td>{{ student.grade.name }}</td>
+              <td>{{ student.section }}</td>
+              <td>{{ student.admission_id|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="empty-state">
+        <p>No students in your school yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
