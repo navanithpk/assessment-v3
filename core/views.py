@@ -113,25 +113,102 @@ def student_dashboard(request):
 
 @login_required
 def create_user_account(request):
+    school = get_user_school(request.user)
+    user_role = get_user_role(request.user)
+    
     if request.method == 'POST':
         role = request.POST.get('role')
-        # Create user based on role
-        # Set school to request.user.profile.school
-        # Return success message
-    return render(request, 'teacher/create_user_account.html')
+        name = request.POST.get('name')
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        sex = request.POST.get('sex')
+        
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            return render(request, 'teacher/create_user_account.html', {
+                'error': 'Username already exists. Please choose a different username.',
+                'school': school
+            })
+        
+        try:
+            # Create Django User
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=name.split()[0] if name else '',
+                last_name=' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
+            )
+            
+            # Create UserProfile
+            UserProfile.objects.create(
+                user=user,
+                role=role,
+                school=school
+            )
+            
+            # THIS IS WHERE THE LAST SNIPPET GOES:
+            if role == 'student':
+                grade_num = request.POST.get('grade')
+                division = request.POST.get('division')
+                
+                # Update UserProfile with student info
+                user.profile.grade = grade_num
+                user.profile.division = division
+                user.profile.save()
+                
+                # Create Student record
+                grade, _ = Grade.objects.get_or_create(name=f"Grade {grade_num}")
+                Student.objects.create(
+                    full_name=name,
+                    grade=grade,
+                    section=division,
+                    school=school,
+                    created_by=user  # Link to the created user, not request.user
+                )
+            
+            elif role == 'teacher':
+                subject = request.POST.get('subject')
+                user.profile.subject = subject
+                user.profile.save()
+            
+            messages.success(request, f'Account created successfully! Username: {username}')
+            return render(request, 'teacher/create_user_account.html', {
+                'success': True,
+                'created_username': username,
+                'school': school
+            })
+            
+        except Exception as e:
+            return render(request, 'teacher/create_user_account.html', {
+                'error': f'Error creating account: {str(e)}',
+                'school': school
+            })
+    
+    return render(request, 'teacher/create_user_account.html', {'school': school})
 
 @login_required
 def manage_users(request):
+    school = get_user_school(request.user)
+    
     if request.method == 'POST':
-        # Handle password reset
         user_id = request.POST.get('user_id')
         new_password = request.POST.get('new_password')
-        # Update password
+        
+        try:
+            user = User.objects.get(id=user_id, profile__school=school)
+            user.set_password(new_password)
+            user.save()
+            messages.success(request, f'Password updated for {user.username}')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found')
     
     # Get all users from same school
-    users = User.objects.filter(profile__school=request.user.profile.school)
-    return render(request, 'teacher/manage_users.html', {'users': users})
-
+    users = User.objects.filter(profile__school=school).select_related('profile')
+    
+    return render(request, 'teacher/manage_users.html', {
+        'users': users,
+        'school': school
+    })
 
 # ===================== SCHOOL USERS LIST =====================
 

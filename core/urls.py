@@ -52,11 +52,12 @@ urlpatterns = [
     path("teacher/students/", views.students_list, name="students_list"),
     path("teacher/students/add/", views.add_student, name="add_student"),
     path("teacher/students/<int:student_id>/edit/", views.edit_student, name="edit_student"),
-
+    path("teacher/users/manage/", views.manage_users, name="manage_users"),
     # Groups
     path("teacher/groups/", views.groups_list, name="groups_list"),
     path("teacher/groups/add/", views.add_group, name="add_group"),
     path("teacher/users/create/", views.create_user_account, name="create_user_account"),
+    path("teacher/users/manage/", views.manage_users, name="manage_users"),  # ADD THIS LINE
 
     # Performance
     path("teacher/performance/class/", views.class_performance, name="class_performance"),

@@ -31,7 +31,9 @@ class UserProfile(models.Model):
         ('teacher', 'Teacher'),
         ('school_admin', 'School Admin'),
     ]
-    
+    subject = models.CharField(max_length=100, blank=True, null=True)
+    grade = models.IntegerField(null=True, blank=True)  # For students
+    division = models.CharField(max_length=10, blank=True, null=True) 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
     school = models.ForeignKey(School, on_delete=models.CASCADE, related_name='users', null=True, blank=True)
