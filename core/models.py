@@ -248,6 +248,8 @@ class TestQuestion(models.Model):
         return f"{self.test.title} – Q{self.order}"
 
 
+# Update your Student model in models.py to include the user field
+
 class Student(models.Model):
     full_name = models.CharField(max_length=200)
     roll_number = models.CharField(max_length=50, blank=True)
@@ -255,18 +257,26 @@ class Student(models.Model):
 
     grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
     section = models.CharField(max_length=10)  # A, B, C
-    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)  # Added
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Add this field for login account
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='student_profile'
+    )
+    
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_students')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("grade", "section", "roll_number", "school")  # Updated
+        unique_together = ("grade", "section", "roll_number", "school")
         ordering = ["school", "grade", "section", "roll_number"]
 
     def __str__(self):
         return f"{self.full_name} ({self.grade}-{self.section})"
-
 
 class ClassGroup(models.Model):
     name = models.CharField(max_length=100)  # "Grade 8A Physics"

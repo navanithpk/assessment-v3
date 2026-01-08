@@ -2,100 +2,217 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}Teacher{% endblock %}</title>
 
 <style>
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont;
-  background: #f4f6f8;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f5f7fa;
+  color: #2d3748;
 }
 
 .page {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 260px 1fr;
   height: 100vh;
 }
 
 /* ================= SIDEBAR ================= */
 .sidebar {
-  background: #2f2f2f;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   color: white;
-  padding: 22px;
+  padding: 0;
   display: flex;
   flex-direction: column;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
 }
 
-.sidebar h2 {
-  margin: 0 0 18px 0;
-  font-size: 18px;
-  font-weight: 600;
+.sidebar-header {
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.sidebar a {
-  display: block;
-  color: #e5e7eb;
-  text-decoration: none;
-  margin: 8px 0;
-  padding: 6px 8px;
-  border-radius: 6px;
-  font-size: 14px;
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
 }
 
-.sidebar a:hover {
-  background: rgba(255,255,255,0.08);
-  color: white;
+.sidebar-header .school-name {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 6px;
+  font-weight: 400;
 }
 
-/* Section label */
-.sidebar .section {
-  margin-top: 18px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #9ca3af;
-}
-
-/* Admin badge */
 .admin-badge {
-  background: #fbbf24;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   color: #78350f;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
 
-/* Push logout to bottom */
-.sidebar .spacer {
+.sidebar-nav {
+  padding: 16px 12px;
   flex: 1;
 }
 
-/* Logout button */
-.sidebar button {
-  margin-top: 12px;
+.sidebar-section {
+  margin-bottom: 24px;
+}
+
+.sidebar-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #cbd5e1;
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+}
+
+.sidebar-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  transform: translateX(4px);
+}
+
+.sidebar-link.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  font-weight: 600;
+}
+
+.sidebar-link.active .sidebar-icon {
+  transform: scale(1.1);
+}
+
+.sidebar-icon {
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.logout-form {
+  margin: 0;
+}
+
+.logout-btn {
   width: 100%;
-  padding: 8px 10px;
+  padding: 12px;
   border-radius: 8px;
   border: none;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.logout-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
+.logout-btn:active {
+  transform: translateY(0);
+}
+
+/* ================= MAIN CONTENT ================= */
+.main {
+  padding: 32px;
+  overflow-y: auto;
+  background: #f5f7fa;
+}
+
+/* Scrollbar styling */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+  
+  .sidebar {
+    display: none;
+  }
+}
+
+/* ================= ADDITIONAL UTILITIES ================= */
+.badge-count {
   background: #ef4444;
   color: white;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.sidebar button:hover {
-  background: #dc2626;
-}
-
-/* ================= MAIN ================= */
-.main {
-  padding: 30px;
-  overflow-y: auto;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+  font-weight: 600;
 }
 </style>
+
+{% block extra_css %}{% endblock %}
 </head>
 
 <body>
@@ -104,47 +221,100 @@ body {
 
   <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar">
-    <h2>
-      Teacher
-      {% if request.user.profile.role == 'school_admin' %}
-      <span class="admin-badge">ADMIN</span>
+    
+    <!-- Header -->
+    <div class="sidebar-header">
+      <h2>
+        👨‍🏫 Teacher Portal
+        {% if request.user.profile.role == 'school_admin' %}
+        <span class="admin-badge">Admin</span>
+        {% endif %}
+      </h2>
+      {% if school %}
+      <div class="school-name">{{ school.name }}</div>
       {% endif %}
-    </h2>
+    </div>
 
-    <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
+    <!-- Navigation -->
+    <div class="sidebar-nav">
+      
+      <!-- Dashboard -->
+      <div class="sidebar-section">
+        <a href="{% url 'teacher_dashboard' %}" 
+           class="sidebar-link {% if request.path == '/teacher/' %}active{% endif %}">
+          <span class="sidebar-icon">🏠</span>
+          <span>Dashboard</span>
+        </a>
+      </div>
 
-    <div class="section">Assessments</div>
-    <a href="{% url 'tests_list' %}">📝 My Tests</a>
-    <a href="{% url 'question_library' %}">📚 Question Library</a>
+      <!-- Assessments -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Assessments</div>
+        <a href="{% url 'tests_list' %}" 
+           class="sidebar-link {% if '/tests/' in request.path and '/student/' not in request.path %}active{% endif %}">
+          <span class="sidebar-icon">📝</span>
+          <span>My Tests</span>
+        </a>
+        <a href="{% url 'question_library' %}" 
+           class="sidebar-link {% if '/questions/' in request.path %}active{% endif %}">
+          <span class="sidebar-icon">📚</span>
+          <span>Question Library</span>
+        </a>
+      </div>
 
-    <div class="section">Students</div>
-    <a href="{% url 'students_list' %}">👨‍🎓 Students List</a>
-    <a href="{% url 'add_student' %}">➕ Add Student</a>
-    <a href="{% url 'groups_list' %}">🧩 Class Groups</a>
+      <!-- Students & Groups -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Students & Groups</div>
+        <a href="{% url 'create_user_account' %}" 
+           class="sidebar-link {% if '/users/create/' in request.path %}active{% endif %}">
+          <span class="sidebar-icon">➕</span>
+          <span>Create User</span>
+        </a>
+        <a href="{% url 'school_users_list' %}" 
+           class="sidebar-link {% if '/school/users/' in request.path %}active{% endif %}">
+          <span class="sidebar-icon">👥</span>
+          <span>All Users</span>
+        </a>
+        <a href="{% url 'groups_list' %}" 
+           class="sidebar-link {% if '/groups/' in request.path %}active{% endif %}">
+          <span class="sidebar-icon">🎓</span>
+          <span>Class Groups</span>
+        </a>
+      </div>
 
-    {% if request.user.profile.role == 'school_admin' %}
-    <div class="section">Administration</div>
-    <a href="{% url 'create_user_account' %}">👤 Create User Account</a>
-    <a href="{% url 'school_users_list' %}">👥 Manage Users</a>
-    {% endif %}
+      <!-- Performance -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Performance</div>
+        <a href="{% url 'class_performance' %}" 
+           class="sidebar-link {% if '/performance/' in request.path %}active{% endif %}">
+          <span class="sidebar-icon">📊</span>
+          <span>Class Performance</span>
+        </a>
+      </div>
 
-    <div class="section">Performance</div>
-    <a href="{% url 'class_performance' %}">📊 Class Performance</a>
+    </div>
 
-    <div class="spacer"></div>
+    <!-- Footer / Logout -->
+    <div class="sidebar-footer">
+      <form method="post" action="{% url 'logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">
+          <span>🚪</span>
+          <span>Logout</span>
+        </button>
+      </form>
+    </div>
 
-    <form method="post" action="{% url 'logout' %}">
-      {% csrf_token %}
-      <button type="submit">Logout</button>
-    </form>
   </aside>
 
-  <!-- ================= PAGE CONTENT ================= -->
+  <!-- ================= MAIN CONTENT ================= -->
   <main class="main">
     {% block content %}{% endblock %}
   </main>
 
 </div>
+
+{% block extra_js %}{% endblock %}
 
 </body>
 </html>

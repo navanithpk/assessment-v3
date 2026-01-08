@@ -1,0 +1,622 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Create Class Group{% endblock %}
+
+{% block content %}
+
+<style>
+.form-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.page-header {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.page-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.form-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group label .required {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all .2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.helper-text {
+  color: #6b7280;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.students-section {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 20px;
+  border: 2px solid #e5e7eb;
+}
+
+.student-selector {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.student-list {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 12px;
+  background: white;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.student-list-title {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.student-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s;
+  border: 1px solid transparent;
+}
+
+.student-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.student-item.selected {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+.student-item input[type="checkbox"] {
+  margin-right: 10px;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.student-name {
+  font-weight: 500;
+  color: #111827;
+  flex: 1;
+}
+
+.student-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+.transfer-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transfer-btn {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all .2s;
+}
+
+.transfer-btn:hover:not(:disabled) {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.transfer-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.selected-count {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .2s;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.quick-fill {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-fill-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .2s;
+}
+
+.quick-fill-btn:hover {
+  background: #f3f4f6;
+  border-color: #2563eb;
+}
+
+.info-box {
+  background: #dbeafe;
+  border-left: 4px solid #2563eb;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.info-box p {
+  margin: 0;
+  color: #1e40af;
+  font-size: 13px;
+}
+</style>
+
+<div class="form-container">
+  <div class="page-header">
+    <h1>➕ Create Class Group</h1>
+    <p>Organize students by subject and section for easier test assignment</p>
+  </div>
+
+  <div class="info-box">
+    <p>💡 <strong>Tip:</strong> Class groups help you assign tests to multiple students at once. Students can be in multiple groups.</p>
+  </div>
+
+  <form method="post" id="groupForm">
+    {% csrf_token %}
+
+    <!-- Basic Information -->
+    <div class="form-section">
+      <h3 class="section-title">📋 Basic Information</h3>
+      
+      <div class="form-group">
+        <label for="groupName">Group Name <span class="required">*</span></label>
+        <input 
+          type="text" 
+          id="groupName" 
+          name="name" 
+          required
+          placeholder="e.g., Grade 10A Physics"
+        >
+        <span class="helper-text">Choose a descriptive name that identifies the grade, section, and subject</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="grade">Grade <span class="required">*</span></label>
+          <select id="grade" name="grade" required>
+            <option value="">Select Grade</option>
+            {% for g in grades %}
+              <option value="{{ g.id }}">{{ g.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="section">Section <span class="required">*</span></label>
+          <input 
+            type="text" 
+            id="section" 
+            name="section" 
+            required
+            placeholder="e.g., A"
+            maxlength="10"
+          >
+        </div>
+
+        <div class="form-group full-width">
+          <label for="subject">Subject <span class="required">*</span></label>
+          <select id="subject" name="subject" required>
+            <option value="">Select Subject</option>
+            {% for s in subjects %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="quick-fill">
+        <button type="button" class="quick-fill-btn" onclick="autoFillName()">
+          ✨ Auto-generate name from fields
+        </button>
+      </div>
+    </div>
+
+    <!-- Students Assignment -->
+    <div class="form-section">
+      <h3 class="section-title">👨‍🎓 Assign Students</h3>
+      
+      <div class="students-section">
+        <input 
+          type="text" 
+          id="searchStudents" 
+          class="filter-input" 
+          placeholder="🔍 Search students by name, grade, or section..."
+        >
+
+        <div class="student-selector">
+          <!-- Available Students -->
+          <div>
+            <div class="student-list" id="availableList">
+              <div class="student-list-title">Available Students ({{ students.count }})</div>
+              {% for student in students %}
+                <label class="student-item">
+                  <input 
+                    type="checkbox" 
+                    class="available-checkbox"
+                    value="{{ student.id }}"
+                    data-name="{{ student.full_name|lower }}"
+                    data-grade="{{ student.grade.name }}"
+                    data-section="{{ student.section }}"
+                  >
+                  <span class="student-name">{{ student.full_name }}</span>
+                  <span class="student-meta">{{ student.grade.name }}-{{ student.section }}</span>
+                </label>
+              {% empty %}
+                <p style="color: #6b7280; text-align: center; padding: 20px;">
+                  No students available. <a href="{% url 'add_student' %}">Add students first</a>
+                </p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Transfer Buttons -->
+          <div class="transfer-buttons">
+            <button type="button" class="transfer-btn" onclick="addSelected()" title="Add selected students">
+              →
+            </button>
+            <button type="button" class="transfer-btn" onclick="removeSelected()" title="Remove selected students">
+              ←
+            </button>
+            <button type="button" class="transfer-btn" onclick="addAll()" title="Add all students">
+              ⇉
+            </button>
+            <button type="button" class="transfer-btn" onclick="removeAll()" title="Remove all students">
+              ⇇
+            </button>
+          </div>
+
+          <!-- Selected Students -->
+          <div>
+            <div class="student-list" id="selectedList">
+              <div class="student-list-title">Selected Students (0)</div>
+              <p id="emptyMessage" style="color: #6b7280; text-align: center; padding: 20px;">
+                No students selected yet
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="selected-count" id="selectedCount">
+          0 students selected
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <a href="{% url 'groups_list' %}" class="btn secondary">
+        Cancel
+      </a>
+      <button type="submit" class="btn primary" id="submitBtn">
+        💾 Create Group
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+// Auto-fill group name based on grade, section, and subject
+function autoFillName() {
+  const grade = document.getElementById('grade');
+  const section = document.getElementById('section').value.trim();
+  const subject = document.getElementById('subject');
+  
+  if (!grade.value || !section || !subject.value) {
+    alert('Please select grade, section, and subject first');
+    return;
+  }
+  
+  const gradeName = grade.options[grade.selectedIndex].text;
+  const subjectName = subject.options[subject.selectedIndex].text;
+  
+  const generatedName = `${gradeName} ${section} ${subjectName}`;
+  document.getElementById('groupName').value = generatedName;
+}
+
+// Search functionality
+document.getElementById('searchStudents').addEventListener('input', function(e) {
+  const searchTerm = e.target.value.toLowerCase();
+  const allItems = document.querySelectorAll('.student-item');
+  
+  allItems.forEach(item => {
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    const name = checkbox.dataset.name || '';
+    const grade = checkbox.dataset.grade || '';
+    const section = checkbox.dataset.section || '';
+    const searchable = `${name} ${grade} ${section}`.toLowerCase();
+    
+    if (searchable.includes(searchTerm)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+});
+
+// Transfer functions
+function addSelected() {
+  const availableList = document.getElementById('availableList');
+  const selectedList = document.getElementById('selectedList');
+  const checkedItems = availableList.querySelectorAll('.available-checkbox:checked');
+  
+  if (checkedItems.length === 0) {
+    return;
+  }
+  
+  checkedItems.forEach(checkbox => {
+    const item = checkbox.closest('.student-item');
+    checkbox.classList.remove('available-checkbox');
+    checkbox.classList.add('selected-checkbox');
+    checkbox.name = 'students';
+    item.classList.add('selected');
+    selectedList.appendChild(item);
+  });
+  
+  updateCount();
+}
+
+function removeSelected() {
+  const availableList = document.getElementById('availableList');
+  const selectedList = document.getElementById('selectedList');
+  const checkedItems = selectedList.querySelectorAll('.selected-checkbox:checked');
+  
+  if (checkedItems.length === 0) {
+    return;
+  }
+  
+  checkedItems.forEach(checkbox => {
+    const item = checkbox.closest('.student-item');
+    checkbox.classList.remove('selected-checkbox');
+    checkbox.classList.add('available-checkbox');
+    checkbox.removeAttribute('name');
+    checkbox.checked = false;
+    item.classList.remove('selected');
+    availableList.appendChild(item);
+  });
+  
+  updateCount();
+}
+
+function addAll() {
+  const availableList = document.getElementById('availableList');
+  const selectedList = document.getElementById('selectedList');
+  const allItems = availableList.querySelectorAll('.student-item');
+  
+  allItems.forEach(item => {
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    checkbox.classList.remove('available-checkbox');
+    checkbox.classList.add('selected-checkbox');
+    checkbox.name = 'students';
+    checkbox.checked = false;
+    item.classList.add('selected');
+    selectedList.appendChild(item);
+  });
+  
+  updateCount();
+}
+
+function removeAll() {
+  const availableList = document.getElementById('availableList');
+  const selectedList = document.getElementById('selectedList');
+  const allItems = selectedList.querySelectorAll('.student-item');
+  
+  allItems.forEach(item => {
+    const checkbox = item.querySelector('input[type="checkbox"]');
+    checkbox.classList.remove('selected-checkbox');
+    checkbox.classList.add('available-checkbox');
+    checkbox.removeAttribute('name');
+    checkbox.checked = false;
+    item.classList.remove('selected');
+    availableList.appendChild(item);
+  });
+  
+  updateCount();
+}
+
+function updateCount() {
+  const selectedList = document.getElementById('selectedList');
+  const studentItems = selectedList.querySelectorAll('.student-item');
+  const count = studentItems.length;
+  
+  // Update title
+  selectedList.querySelector('.student-list-title').textContent = 
+    `Selected Students (${count})`;
+  
+  // Update count badge
+  document.getElementById('selectedCount').textContent = 
+    `${count} student${count !== 1 ? 's' : ''} selected`;
+  
+  // Update available list title
+  const availableList = document.getElementById('availableList');
+  const availableCount = availableList.querySelectorAll('.student-item').length;
+  availableList.querySelector('.student-list-title').textContent = 
+    `Available Students (${availableCount})`;
+  
+  // Show/hide empty message
+  const emptyMessage = document.getElementById('emptyMessage');
+  if (count === 0) {
+    if (!emptyMessage) {
+      const msg = document.createElement('p');
+      msg.id = 'emptyMessage';
+      msg.style.cssText = 'color: #6b7280; text-align: center; padding: 20px;';
+      msg.textContent = 'No students selected yet';
+      selectedList.appendChild(msg);
+    }
+  } else {
+    if (emptyMessage) {
+      emptyMessage.remove();
+    }
+  }
+}
+
+// Form validation
+document.getElementById('groupForm').addEventListener('submit', function(e) {
+  const selectedStudents = document.querySelectorAll('input[name="students"]');
+  
+  if (selectedStudents.length === 0) {
+    e.preventDefault();
+    alert('Please select at least one student for the group');
+    return false;
+  }
+  
+  // Ensure all selected checkboxes are checked for form submission
+  selectedStudents.forEach(cb => cb.checked = true);
+});
+
+// Initialize
+updateCount();
+</script>
+
+{% endblock %}

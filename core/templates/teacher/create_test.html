@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}
-{% if test %}Edit Test – {{ test.title }}{% else %}Create Test{% endif %}
+{% if test %}Edit Test — {{ test.title }}{% else %}Create Test{% endif %}
 {% endblock %}
 
 {% block content %}
@@ -41,7 +41,7 @@
 
 .test-meta {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-top: 20px;
 }
@@ -134,6 +134,7 @@
   border-radius: 14px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  margin-bottom: 24px;
 }
 
 .section-header {
@@ -222,22 +223,6 @@
   font-weight: 500;
 }
 
-/* ===================== ADD QUESTION PANEL ===================== */
-.add-question-panel {
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  padding: 30px;
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.add-options {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 16px;
-}
-
 /* ===================== PROSEMIRROR EDITOR ===================== */
 .editor-container {
   border: 2px solid #e5e7eb;
@@ -295,6 +280,10 @@
   line-height: 1.6;
 }
 
+.ProseMirror p {
+  margin: 0 0 1em 0;
+}
+
 .ProseMirror table {
   border-collapse: collapse;
   margin: 16px 0;
@@ -330,6 +319,7 @@
   z-index: 1000;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
 }
 
 .modal.active {
@@ -339,10 +329,13 @@
 .modal-content {
   background: white;
   border-radius: 16px;
-  max-width: 500px;
+  max-width: 900px;
   width: 90%;
   padding: 32px;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  margin: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -401,6 +394,7 @@
 .form-group textarea {
   min-height: 120px;
   resize: vertical;
+  font-family: inherit;
 }
 
 .modal-actions {
@@ -408,6 +402,12 @@
   gap: 12px;
   justify-content: flex-end;
   margin-top: 24px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
 }
 
 /* ===================== EMPTY STATE ===================== */
@@ -437,73 +437,151 @@
   background: white;
   border-radius: 14px;
   padding: 24px;
-  margin-top: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.assignment-header {
+  margin-bottom: 20px;
+}
+
+.assignment-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+}
+
+.assignment-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
 }
 
 .assignment-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 16px;
+  gap: 24px;
 }
 
-.selected-items {
-  margin-top: 12px;
+.assignment-column {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.assignment-column h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #374151;
+}
+
+.assignment-column select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.add-btn {
+  width: 100%;
+  padding: 8px 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background .2s;
+}
+
+.add-btn:hover {
+  background: #1d4ed8;
+}
+
+.selected-tags {
+  margin-top: 16px;
+  min-height: 100px;
+  max-height: 200px;
+  overflow-y: auto;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
-.selected-tag {
+.tag {
   background: #dbeafe;
   color: #1e40af;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 8px;
   font-size: 13px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.selected-tag button {
+.tag-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag button {
   background: none;
   border: none;
   color: #1e40af;
   cursor: pointer;
   padding: 0;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
+  font-weight: bold;
 }
 
-/* ===================== SAVE INDICATOR ===================== */
-.save-indicator {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  background: white;
-  padding: 12px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+.tag button:hover {
+  color: #1e3a8a;
+}
+
+.empty-tags {
+  color: #9ca3af;
+  font-style: italic;
   font-size: 14px;
-  color: #6b7280;
-  display: none;
+  padding: 20px;
+  text-align: center;
 }
 
-.save-indicator.saving {
-  display: block;
-  color: #2563eb;
+/* ===================== TOAST ===================== */
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
-.save-indicator.saved {
-  display: block;
-  color: #10b981;
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
 }
 </style>
 
 <div class="test-container">
   <form method="post" id="testForm">
     {% csrf_token %}
+    
+    <!-- Hidden inputs for assignments will be added here by JavaScript -->
+    <div id="assignmentHiddenInputs"></div>
     
     <!-- TEST HEADER -->
     <div class="test-header">
@@ -517,6 +595,19 @@
       >
       
       <div class="test-meta">
+        <div class="meta-field">
+          <label>Subject</label>
+          <select name="subject">
+            <option value="">Select Subject</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.id }}" 
+                {% if test.subject_id == subject.id %}selected{% endif %}>
+                {{ subject.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        
         <div class="meta-field">
           <label>Start Date & Time</label>
           <input
@@ -643,34 +734,49 @@
 
     <!-- ASSIGNMENT SECTION -->
     <div class="assignment-section">
-      <h2 style="margin-top: 0;">Assign Test</h2>
-      <p style="color: #6b7280; margin-bottom: 20px;">
-        Select students or class groups to assign this test to
-      </p>
+      <div class="assignment-header">
+        <h2>Assign Test</h2>
+        <p>Select students or class groups to assign this test to</p>
+      </div>
       
       <div class="assignment-grid">
-        <div class="form-group">
-          <label>Assign to Students</label>
-          <select id="studentSelect" multiple style="height: 120px;">
+        <!-- Students Column -->
+        <div class="assignment-column">
+          <h3>👨‍🎓 Individual Students</h3>
+          <select id="studentSelect" size="5">
             {% for student in students %}
-              <option value="{{ student.id }}">
-                {{ student.full_name }} ({{ student.grade }}-{{ student.section }})
+              <option value="{{ student.id }}" 
+                data-name="{{ student.full_name }}"
+                data-info="{{ student.grade.name }}-{{ student.section }}">
+                {{ student.full_name }} ({{ student.grade.name }}-{{ student.section }})
               </option>
             {% endfor %}
           </select>
-          <div class="selected-items" id="selectedStudents"></div>
+          <button type="button" class="add-btn" onclick="addSelectedStudents()">
+            ➕ Add Selected
+          </button>
+          <div class="selected-tags" id="selectedStudentsTags">
+            <span class="empty-tags">No students assigned yet</span>
+          </div>
         </div>
         
-        <div class="form-group">
-          <label>Assign to Class Groups</label>
-          <select id="groupSelect" multiple style="height: 120px;">
+        <!-- Groups Column -->
+        <div class="assignment-column">
+          <h3>👥 Class Groups</h3>
+          <select id="groupSelect" size="5">
             {% for group in groups %}
-              <option value="{{ group.id }}">
+              <option value="{{ group.id }}" 
+                data-name="{{ group.name }}">
                 {{ group.name }}
               </option>
             {% endfor %}
           </select>
-          <div class="selected-items" id="selectedGroups"></div>
+          <button type="button" class="add-btn" onclick="addSelectedGroups()">
+            ➕ Add Selected
+          </button>
+          <div class="selected-tags" id="selectedGroupsTags">
+            <span class="empty-tags">No groups assigned yet</span>
+          </div>
         </div>
       </div>
     </div>
@@ -679,49 +785,39 @@
 
 <!-- ADD/EDIT QUESTION MODAL -->
 <div class="modal" id="questionModal">
-  <div class="modal-content" style="max-width: 900px;">
+  <div class="modal-content">
     <div class="modal-header">
       <h3 id="modalTitle">Create Question</h3>
       <button type="button" class="close-btn" onclick="closeQuestionModal()">×</button>
     </div>
     
-    <form id="questionForm">
-      <!-- EDITOR -->
+    <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
+      <!-- Rich Text Editor -->
       <div class="form-group">
-        <label>Question Text</label>
+        <label>Question Text *</label>
         <div class="editor-container">
-          <div class="editor-toolbar">
-            <button type="button" class="toolbar-btn" data-command="bold" title="Bold">
+          <div class="editor-toolbar" id="editorToolbar">
+            <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Bold">
               <strong>B</strong>
             </button>
-            <button type="button" class="toolbar-btn" data-command="italic" title="Italic">
+            <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Italic">
               <em>I</em>
             </button>
-            <button type="button" class="toolbar-btn" data-command="underline" title="Underline">
+            <button type="button" class="toolbar-btn" onclick="formatText('underline')" title="Underline">
               <u>U</u>
             </button>
-            <button type="button" class="toolbar-btn" data-command="subscript" title="Subscript">
+            <button type="button" class="toolbar-btn" onclick="formatText('subscript')" title="Subscript">
               X<sub>2</sub>
             </button>
-            <button type="button" class="toolbar-btn" data-command="superscript" title="Superscript">
+            <button type="button" class="toolbar-btn" onclick="formatText('superscript')" title="Superscript">
               X<sup>2</sup>
             </button>
             <div class="toolbar-divider"></div>
-            <button type="button" class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
-              ≡
+            <button type="button" class="toolbar-btn" onclick="formatText('insertUnorderedList')" title="Bullet List">
+              •
             </button>
-            <button type="button" class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
-              ≣
-            </button>
-            <div class="toolbar-divider"></div>
-            <button type="button" class="toolbar-btn" data-command="justifyLeft" title="Align Left">
-              ⇤
-            </button>
-            <button type="button" class="toolbar-btn" data-command="justifyCenter" title="Align Center">
-              ⬌
-            </button>
-            <button type="button" class="toolbar-btn" data-command="justifyRight" title="Align Right">
-              ⇥
+            <button type="button" class="toolbar-btn" onclick="formatText('insertOrderedList')" title="Numbered List">
+              1.
             </button>
             <div class="toolbar-divider"></div>
             <button type="button" class="toolbar-btn" onclick="insertTable()" title="Insert Table">
@@ -731,26 +827,60 @@
               🖼️
             </button>
           </div>
-          <div class="ProseMirror" id="questionEditor" contenteditable="true"></div>
+          <div class="ProseMirror" id="questionEditor" contenteditable="true">
+            <p>Type your question here...</p>
+          </div>
         </div>
       </div>
 
+      <!-- Answer -->
       <div class="form-group">
         <label>Answer/Solution</label>
         <textarea name="answer_text" id="answerText" placeholder="Enter the correct answer or solution"></textarea>
       </div>
 
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+      <!-- Grade, Subject, Topic -->
+      <div class="form-grid">
         <div class="form-group">
-          <label>Marks</label>
+          <label>Grade *</label>
+          <select name="grade" id="gradeSelect" required onchange="loadTopicsForModal()">
+            <option value="">Select Grade</option>
+            {% for grade in grades %}
+              <option value="{{ grade.id }}">{{ grade.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Subject *</label>
+          <select name="subject" id="subjectSelect" required onchange="loadTopicsForModal()">
+            <option value="">Select Subject</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.id }}">{{ subject.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Topic *</label>
+          <select name="topic" id="topicSelect" required>
+            <option value="">Select topic</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Marks, Type, Year -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Marks *</label>
           <input type="number" name="marks" id="marksInput" value="1" min="1" required>
         </div>
         
         <div class="form-group">
-          <label>Question Type</label>
+          <label>Question Type *</label>
           <select name="question_type" id="typeSelect" required>
-            <option value="mcq">MCQ</option>
             <option value="theory">Theory</option>
+            <option value="mcq">MCQ</option>
             <option value="structured">Structured</option>
             <option value="practical">Practical</option>
           </select>
@@ -758,7 +888,7 @@
         
         <div class="form-group">
           <label>Year</label>
-          <input type="number" name="year" id="yearInput" placeholder="2024" min="1990" max="2100">
+          <input type="number" name="year" id="yearInput" placeholder="2026" min="1990" max="2100">
         </div>
       </div>
 
@@ -767,16 +897,11 @@
           Cancel
         </button>
         <button type="submit" class="btn primary">
-          Save Question
+          Save & Add to Test
         </button>
       </div>
     </form>
   </div>
-</div>
-
-<!-- SAVE INDICATOR -->
-<div class="save-indicator" id="saveIndicator">
-  <span id="saveText">Saving...</span>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-model/1.19.0/prosemirror-model.min.js"></script>
@@ -784,33 +909,268 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.js"></script>
 
 <script>
-// Simple rich text editor functionality
-let currentQuestionId = null;
+// ===================== GLOBAL STATE =====================
+const selectedStudents = new Set();
+const selectedGroups = new Set();
+const studentData = new Map();
+const groupData = new Map();
 
-// Toolbar button handlers
-document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    e.preventDefault();
-    const command = btn.dataset.command;
-    document.execCommand(command, false, null);
-    updateToolbarState();
+// Load existing assignments from server
+{% for student in assigned_students %}
+  selectedStudents.add('{{ student.id }}');
+{% endfor %}
+
+{% for group in assigned_groups %}
+  selectedGroups.add('{{ group.id }}');
+{% endfor %}
+
+// Populate data maps from select options
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('#studentSelect option').forEach(opt => {
+    studentData.set(opt.value, {
+      name: opt.dataset.name,
+      info: opt.dataset.info
+    });
   });
+
+  document.querySelectorAll('#groupSelect option').forEach(opt => {
+    groupData.set(opt.value, {
+      name: opt.dataset.name
+    });
+  });
+
+  // Render initial assignments
+  renderStudentTags();
+  renderGroupTags();
+  
+  console.log(`Loaded ${selectedStudents.size} assigned students and ${selectedGroups.size} groups`);
 });
 
-function updateToolbarState() {
-  document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
-    const command = btn.dataset.command;
-    if (document.queryCommandState(command)) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
+// ===================== ASSIGNMENT RENDERING =====================
+
+function renderStudentTags() {
+  const container = document.getElementById('selectedStudentsTags');
+  container.innerHTML = '';
+  
+  if (selectedStudents.size === 0) {
+    container.innerHTML = '<span class="empty-tags">No students assigned yet</span>';
+    return;
+  }
+  
+  selectedStudents.forEach(id => {
+    const data = studentData.get(id);
+    if (data) {
+      const tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.innerHTML = `
+        <div class="tag-content">
+          <span>👨‍🎓 ${data.name}</span>
+          <small style="opacity: 0.8;">(${data.info})</small>
+        </div>
+        <button type="button" onclick="removeStudent('${id}')" title="Remove">×</button>
+      `;
+      container.appendChild(tag);
     }
+  });
+  
+  updateHiddenInputs();
+}
+
+function renderGroupTags() {
+  const container = document.getElementById('selectedGroupsTags');
+  container.innerHTML = '';
+  
+  if (selectedGroups.size === 0) {
+    container.innerHTML = '<span class="empty-tags">No groups assigned yet</span>';
+    return;
+  }
+  
+  selectedGroups.forEach(id => {
+    const data = groupData.get(id);
+    if (data) {
+      const tag = document.createElement('div');
+      tag.className = 'tag';
+      tag.innerHTML = `
+        <div class="tag-content">
+          <span>👥 ${data.name}</span>
+        </div>
+        <button type="button" onclick="removeGroup('${id}')" title="Remove">×</button>
+      `;
+      container.appendChild(tag);
+    }
+  });
+  
+  updateHiddenInputs();
+}
+
+function updateHiddenInputs() {
+  const container = document.getElementById('assignmentHiddenInputs');
+  container.innerHTML = '';
+  
+  // Add hidden inputs for students
+  selectedStudents.forEach(id => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'assigned_students';
+    input.value = id;
+    container.appendChild(input);
+  });
+  
+  // Add hidden inputs for groups
+  selectedGroups.forEach(id => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'assigned_groups';
+    input.value = id;
+    container.appendChild(input);
   });
 }
 
-// Update toolbar state on selection change
-document.getElementById('questionEditor').addEventListener('mouseup', updateToolbarState);
-document.getElementById('questionEditor').addEventListener('keyup', updateToolbarState);
+// ===================== ADD/REMOVE FUNCTIONS =====================
+
+function addSelectedStudents() {
+  const select = document.getElementById('studentSelect');
+  const selectedOptions = Array.from(select.selectedOptions);
+  
+  if (selectedOptions.length === 0) {
+    showToast('Please select at least one student', 'error');
+    return;
+  }
+  
+  let added = 0;
+  selectedOptions.forEach(opt => {
+    if (!selectedStudents.has(opt.value)) {
+      selectedStudents.add(opt.value);
+      added++;
+    }
+  });
+  
+  if (added > 0) {
+    renderStudentTags();
+    select.selectedIndex = -1;
+    showToast(`Added ${added} student(s)`, 'success');
+  } else {
+    showToast('Student(s) already assigned', 'info');
+  }
+}
+
+function addSelectedGroups() {
+  const select = document.getElementById('groupSelect');
+  const selectedOptions = Array.from(select.selectedOptions);
+  
+  if (selectedOptions.length === 0) {
+    showToast('Please select at least one group', 'error');
+    return;
+  }
+  
+  let added = 0;
+  selectedOptions.forEach(opt => {
+    if (!selectedGroups.has(opt.value)) {
+      selectedGroups.add(opt.value);
+      added++;
+    }
+  });
+  
+  if (added > 0) {
+    renderGroupTags();
+    select.selectedIndex = -1;
+    showToast(`Added ${added} group(s)`, 'success');
+  } else {
+    showToast('Group(s) already assigned', 'info');
+  }
+}
+
+function removeStudent(id) {
+  selectedStudents.delete(id);
+  renderStudentTags();
+  showToast('Student removed', 'info');
+}
+
+function removeGroup(id) {
+  selectedGroups.delete(id);
+  renderGroupTags();
+  showToast('Group removed', 'info');
+}
+
+// ===================== FORM SUBMISSION =====================
+
+document.getElementById('testForm').addEventListener('submit', (e) => {
+  updateHiddenInputs(); // Ensure hidden inputs are current
+  showToast('Saving test...', 'saving');
+});
+
+// ===================== QUESTION MODAL =====================
+
+let proseMirrorView = null;
+
+function openAddQuestionModal() {
+  document.getElementById('questionModal').classList.add('active');
+  document.getElementById('modalTitle').textContent = 'Create Question';
+  
+  // Reset form
+  document.getElementById('questionForm').reset();
+  document.getElementById('questionEditor').innerHTML = '<p>Type your question here...</p>';
+  
+  // Initialize ProseMirror if not already done
+  if (!proseMirrorView) {
+    initializeProseMirror();
+  }
+}
+
+function closeQuestionModal() {
+  document.getElementById('questionModal').classList.remove('active');
+}
+
+function initializeProseMirror() {
+  const { Schema, DOMParser: PMDOMParser, DOMSerializer } = window.PM.model;
+  const { EditorState } = window.PM.state;
+  const { EditorView } = window.PM.view;
+
+  const schema = new Schema({
+    nodes: {
+      doc: { content: "block+" },
+      paragraph: {
+        content: "inline*",
+        group: "block",
+        parseDOM: [{ tag: "p" }],
+        toDOM() { return ["p", 0]; }
+      },
+      text: { group: "inline" },
+      hard_break: {
+        inline: true,
+        group: "inline",
+        selectable: false,
+        parseDOM: [{ tag: "br" }],
+        toDOM() { return ["br"]; }
+      }
+    },
+    marks: {
+      bold: {
+        parseDOM: [{ tag: "strong" }, { tag: "b" }],
+        toDOM() { return ["strong", 0]; }
+      },
+      italic: {
+        parseDOM: [{ tag: "em" }, { tag: "i" }],
+        toDOM() { return ["em", 0]; }
+      },
+      underline: {
+        parseDOM: [{ tag: "u" }],
+        toDOM() { return ["u", 0]; }
+      }
+    }
+  });
+
+  const editorElement = document.getElementById('questionEditor');
+  const doc = PMDOMParser.fromSchema(schema).parse(editorElement);
+
+  proseMirrorView = new EditorView(editorElement, {
+    state: EditorState.create({ doc, schema })
+  });
+}
+
+function formatText(command) {
+  document.execCommand(command, false, null);
+}
 
 function insertTable() {
   const rows = prompt('Number of rows:', '3');
@@ -821,11 +1181,12 @@ function insertTable() {
     for (let i = 0; i < parseInt(rows); i++) {
       html += '<tr>';
       for (let j = 0; j < parseInt(cols); j++) {
-        html += i === 0 ? '<th>Header</th>' : '<td>Cell</td>';
+        html += '<td>Cell</td>';
       }
       html += '</tr>';
     }
     html += '</tbody></table>';
+    
     document.execCommand('insertHTML', false, html);
   }
 }
@@ -837,156 +1198,171 @@ function insertImage() {
   }
 }
 
-// Modal functions
-function openAddQuestionModal() {
-  currentQuestionId = null;
-  document.getElementById('modalTitle').textContent = 'Create Question';
-  document.getElementById('questionForm').reset();
-  document.getElementById('questionEditor').innerHTML = '';
-  document.getElementById('questionModal').classList.add('active');
+function loadTopicsForModal() {
+  const gradeId = document.getElementById('gradeSelect').value;
+  const subjectId = document.getElementById('subjectSelect').value;
+  const topicSelect = document.getElementById('topicSelect');
+  
+  topicSelect.innerHTML = '<option value="">Loading...</option>';
+  
+  if (!gradeId || !subjectId) {
+    topicSelect.innerHTML = '<option value="">Select grade & subject first</option>';
+    return;
+  }
+  
+  fetch(`/ajax/topics/?grade_id=${gradeId}&subject_id=${subjectId}`)
+    .then(r => r.json())
+    .then(data => {
+      topicSelect.innerHTML = '<option value="">Select topic</option>';
+      data.topics.forEach(topic => {
+        const opt = document.createElement('option');
+        opt.value = topic.id;
+        opt.textContent = topic.name;
+        topicSelect.appendChild(opt);
+      });
+    })
+    .catch(err => {
+      console.error('Error loading topics:', err);
+      topicSelect.innerHTML = '<option value="">Error loading topics</option>';
+    });
 }
 
-function closeQuestionModal() {
-  document.getElementById('questionModal').classList.remove('active');
+function handleQuestionSubmit(event) {
+  event.preventDefault();
+  
+  const editor = document.getElementById('questionEditor');
+  const questionText = editor.innerHTML;
+  
+  if (!questionText || questionText.trim() === '<p>Type your question here...</p>') {
+    showToast('Please enter question text', 'error');
+    return;
+  }
+  
+  const formData = {
+    question_text: questionText,
+    answer_text: document.getElementById('answerText').value,
+    grade: document.getElementById('gradeSelect').value,
+    subject: document.getElementById('subjectSelect').value,
+    topic: document.getElementById('topicSelect').value,
+    marks: document.getElementById('marksInput').value,
+    question_type: document.getElementById('typeSelect').value,
+    year: document.getElementById('yearInput').value || null
+  };
+  
+  // Validate required fields
+  if (!formData.grade || !formData.subject || !formData.topic) {
+    showToast('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  showToast('Adding question...', 'saving');
+  
+  fetch(`/teacher/tests/{{ test.id }}/inline-add-question/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      showToast('Question added successfully! Reloading...', 'success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    showToast('Failed to add question', 'error');
+  });
+}
+
+// ===================== QUESTION REMOVAL =====================
+
+function removeQuestion(testQuestionId) {
+  if (!confirm('Remove this question from the test?')) {
+    return;
+  }
+  
+  showToast('Removing question...', 'saving');
+  
+  fetch(`/teacher/tests/{{ test.id }}/questions/${testQuestionId}/remove/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': '{{ csrf_token }}'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      showToast('Question removed! Reloading...', 'success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast('Error removing question', 'error');
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    showToast('Failed to remove question', 'error');
+  });
 }
 
 function editQuestion(questionId) {
-  currentQuestionId = questionId;
-  document.getElementById('modalTitle').textContent = 'Edit Question';
-  // Load question data here
-  document.getElementById('questionModal').classList.add('active');
+  window.open(`/questions/edit/${questionId}/`, '_blank');
 }
 
-function removeQuestion(testQuestionId) {
-  if (confirm('Remove this question from the test?')) {
-    // Add removal logic here
-    alert('Question removal functionality to be implemented');
+// ===================== TOAST NOTIFICATIONS =====================
+
+let currentToast = null;
+
+function showToast(message, type = 'info') {
+  if (currentToast) {
+    currentToast.remove();
+  }
+  
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  
+  let bgColor = '#6b7280';
+  if (type === 'success') bgColor = '#10b981';
+  if (type === 'error') bgColor = '#ef4444';
+  if (type === 'saving') bgColor = '#3b82f6';
+  
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: ${bgColor};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  currentToast = toast;
+  
+  if (type !== 'saving') {
+    setTimeout(() => {
+      if (currentToast === toast) {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+        currentToast = null;
+      }
+    }, 3000);
   }
 }
-
-// Question form submission
-document.getElementById('questionForm').addEventListener('submit', (e) => {
-  e.preventDefault();
-  
-  const questionHtml = document.getElementById('questionEditor').innerHTML;
-  const formData = new FormData(e.target);
-  formData.append('question_text', questionHtml);
-  
-  // Submit to server
-  fetch('{% url "add_question" %}', {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: formData
-  }).then(response => {
-    if (response.ok) {
-      alert('Question saved successfully!');
-      closeQuestionModal();
-      location.reload();
-    }
-  });
-});
-
-// Assignment selection handling
-const studentSelect = document.getElementById('studentSelect');
-const groupSelect = document.getElementById('groupSelect');
-const selectedStudentsDiv = document.getElementById('selectedStudents');
-const selectedGroupsDiv = document.getElementById('selectedGroups');
-
-const selectedStudents = new Set();
-const selectedGroups = new Set();
-
-studentSelect.addEventListener('change', (e) => {
-  Array.from(e.target.selectedOptions).forEach(opt => {
-    selectedStudents.add(opt.value);
-  });
-  renderSelected();
-});
-
-groupSelect.addEventListener('change', (e) => {
-  Array.from(e.target.selectedOptions).forEach(opt => {
-    selectedGroups.add(opt.value);
-  });
-  renderSelected();
-});
-
-function renderSelected() {
-  selectedStudentsDiv.innerHTML = Array.from(selectedStudents).map(id => {
-    const option = studentSelect.querySelector(`option[value="${id}"]`);
-    return `
-      <div class="selected-tag">
-        ${option.textContent}
-        <button type="button" onclick="removeStudent('${id}')">×</button>
-      </div>
-    `;
-  }).join('');
-  
-  selectedGroupsDiv.innerHTML = Array.from(selectedGroups).map(id => {
-    const option = groupSelect.querySelector(`option[value="${id}"]`);
-    return `
-      <div class="selected-tag">
-        ${option.textContent}
-        <button type="button" onclick="removeGroup('${id}')">×</button>
-      </div>
-    `;
-  }).join('');
-}
-
-function removeStudent(id) {
-  selectedStudents.delete(id);
-  renderSelected();
-}
-
-function removeGroup(id) {
-  selectedGroups.delete(id);
-  renderSelected();
-}
-
-// Auto-save functionality
-let saveTimeout;
-const saveIndicator = document.getElementById('saveIndicator');
-const saveText = document.getElementById('saveText');
-
-document.getElementById('testForm').addEventListener('input', () => {
-  clearTimeout(saveTimeout);
-  saveIndicator.className = 'save-indicator saving';
-  saveText.textContent = 'Saving...';
-  
-  saveTimeout = setTimeout(() => {
-    autoSave();
-  }, 2000);
-});
-
-function autoSave() {
-  const formData = new FormData(document.getElementById('testForm'));
-  
-  fetch('{% url "autosave_test" test.id %}', {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}'
-    },
-    body: JSON.stringify({
-      title: formData.get('title'),
-      published: formData.get('is_published') === 'on'
-    })
-  }).then(response => {
-    if (response.ok) {
-      saveIndicator.className = 'save-indicator saved';
-      saveText.textContent = 'All changes saved';
-      setTimeout(() => {
-        saveIndicator.className = 'save-indicator';
-      }, 2000);
-    }
-  });
-}
-
-// Close modal on outside click
-document.getElementById('questionModal').addEventListener('click', (e) => {
-  if (e.target.id === 'questionModal') {
-    closeQuestionModal();
-  }
-});
 </script>
 
 {% endblock %}

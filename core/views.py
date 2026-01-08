@@ -190,9 +190,60 @@ def create_user_account(request):
 # ===================== SCHOOL USERS LIST =====================
 
 @login_required
+def change_user_password(request):
+    """
+    Change password for any user (teachers/students)
+    Only accessible by school admins and teachers
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    role = get_user_role(request.user)
+    school = get_user_school(request.user)
+    
+    if role not in ['teacher', 'school_admin']:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        user_id = data.get("user_id")
+        new_password = data.get("new_password")
+        
+        if not user_id or not new_password:
+            return JsonResponse({"error": "User ID and password required"}, status=400)
+        
+        user = get_object_or_404(User, id=user_id)
+        
+        # Verify user belongs to same school
+        try:
+            user_profile = user.profile
+            if user_profile.school != school:
+                return JsonResponse({"error": "User not in your school"}, status=403)
+        except:
+            # Check if it's a student
+            try:
+                student = user.student_profile
+                if student.school != school:
+                    return JsonResponse({"error": "User not in your school"}, status=403)
+            except:
+                return JsonResponse({"error": "User not found"}, status=404)
+        
+        # Change password
+        user.set_password(new_password)
+        user.save()
+        
+        return JsonResponse({
+            "status": "success",
+            "message": f"Password changed successfully for {user.username}"
+        })
+        
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+@login_required
 def school_users_list(request):
     """
-    View all teachers and students in the same school
+    View all teachers and students in the same school in a unified table
     """
     school = get_user_school(request.user)
     role = get_user_role(request.user)
@@ -201,25 +252,76 @@ def school_users_list(request):
         messages.error(request, "You are not assigned to a school.")
         return redirect("teacher_dashboard")
     
-    # Get all users from same school
+    # Get search query
+    search_query = request.GET.get('search', '').strip()
+    
+    # Get all user profiles from same school (teachers and school admins)
     teachers = UserProfile.objects.filter(
         school=school,
         role__in=['teacher', 'school_admin']
-    ).select_related('user')
+    ).select_related('user').order_by('user__first_name', 'user__last_name')
     
-    students_profiles = UserProfile.objects.filter(
-        school=school,
-        role='student'
-    ).select_related('user')
+    # Get student records with their user accounts
+    students = Student.objects.filter(
+        school=school
+    ).select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
     
-    # Get student details
-    students = Student.objects.filter(school=school).select_related('grade')
+    # Apply search filter
+    if search_query:
+        teachers = teachers.filter(
+            Q(user__first_name__icontains=search_query) |
+            Q(user__last_name__icontains=search_query) |
+            Q(user__username__icontains=search_query)
+        )
+        students = students.filter(
+            Q(full_name__icontains=search_query) |
+            Q(roll_number__icontains=search_query) |
+            Q(admission_id__icontains=search_query) |
+            Q(user__username__icontains=search_query)
+        )
+    
+    # Combine into a unified list with user type
+    all_users = []
+    
+    for teacher in teachers:
+        all_users.append({
+            'id': teacher.user.id,
+            'name': f"{teacher.user.first_name} {teacher.user.last_name}".strip() or teacher.user.username,
+            'username': teacher.user.username,
+            'email': teacher.user.email,
+            'role': teacher.get_role_display(),
+            'type': 'teacher',
+            'joined': teacher.created_at,
+            'additional_info': None
+        })
+    
+    for student in students:
+        all_users.append({
+            'id': student.user.id if student.user else None,
+            'name': student.full_name,
+            'username': student.user.username if student.user else 'No account',
+            'email': student.user.email if student.user else '',
+            'role': 'Student',
+            'type': 'student',
+            'joined': student.created_at,
+            'additional_info': {
+                'grade': student.grade.name,
+                'section': student.section,
+                'roll_number': student.roll_number,
+                'admission_id': student.admission_id
+            }
+        })
+    
+    # Sort by name
+    all_users.sort(key=lambda x: x['name'].lower())
     
     context = {
         'school': school,
-        'teachers': teachers,
-        'students': students,
-        'role': role
+        'all_users': all_users,
+        'role': role,
+        'search_query': search_query,
+        'total_teachers': teachers.count(),
+        'total_students': students.count(),
     }
     
     return render(request, "teacher/school/users_list.html", context)
@@ -702,21 +804,11 @@ def add_student(request):
             school=school,
             created_by=request.user
         )
-        return redirect("students_list")
+        return redirect("school_users_list")
+
 
     return render(request, "teacher/students/add_student.html", {
         "grades": Grade.objects.all(),
-        "school": school
-    })
-
-
-@login_required
-def students_list(request):
-    school = get_user_school(request.user)
-    students = Student.objects.filter(school=school)
-
-    return render(request, "teacher/students/students_list.html", {
-        "students": students,
         "school": school
     })
 
@@ -733,7 +825,8 @@ def edit_student(request, student_id):
         student.grade_id = request.POST.get("grade")
         student.section = request.POST.get("section")
         student.save()
-        return redirect("students_list")
+        return redirect("school_users_list")
+
 
     return render(
         request,
@@ -852,3 +945,66 @@ def student_performance(request, student_id):
         "school": school,
         "student": student
     })
+
+# Add these views to your views.py file
+
+@login_required
+def groups_list(request):
+    school = get_user_school(request.user)
+    groups = ClassGroup.objects.filter(school=school, created_by=request.user).prefetch_related('students', 'subject', 'grade')
+    
+    # Calculate statistics
+    total_students = sum(group.students.count() for group in groups)
+    unique_subjects = len(set(group.subject for group in groups if group.subject))
+    
+    return render(
+        request,
+        "teacher/groups/groups_list.html",
+        {
+            "groups": groups,
+            "school": school,
+            "total_students": total_students,
+            "unique_subjects": unique_subjects,
+        }
+    )
+
+
+@login_required
+def edit_group(request, group_id):
+    school = get_user_school(request.user)
+    group = get_object_or_404(ClassGroup, id=group_id, school=school, created_by=request.user)
+
+    if request.method == "POST":
+        group.name = request.POST["name"]
+        group.grade_id = request.POST["grade"]
+        group.section = request.POST["section"]
+        group.subject_id = request.POST["subject"]
+        group.save()
+
+        student_ids = request.POST.getlist("students")
+        group.students.set(student_ids)
+
+        messages.success(request, f"Group '{group.name}' updated successfully!")
+        return redirect("groups_list")
+
+    return render(request, "teacher/groups/edit_group.html", {
+        "group": group,
+        "grades": Grade.objects.all(),
+        "subjects": Subject.objects.all(),
+        "students": Student.objects.filter(school=school),
+        "school": school,
+    })
+
+
+@login_required
+def delete_group(request, group_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+    
+    school = get_user_school(request.user)
+    group = get_object_or_404(ClassGroup, id=group_id, school=school, created_by=request.user)
+    
+    group_name = group.name
+    group.delete()
+    
+    return JsonResponse({"status": "success", "message": f"Group '{group_name}' deleted successfully"})
