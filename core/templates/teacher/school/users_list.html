@@ -1,647 +1,490 @@
-{% extends "teacher/base.html" %}
-{% load static %}
+{% extends "teacher/teacher_base.html" %}
 
-{% block title %}All Users - {{ school.name }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .users-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 12px;
-        margin-bottom: 2rem;
-    }
-    
-    .search-box {
-        background: white;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .search-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.3s;
-    }
-    
-    .search-input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-    
-    .stat-card {
-        background: rgba(255, 255, 255, 0.2);
-        padding: 1rem;
-        border-radius: 8px;
-        backdrop-filter: blur(10px);
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-        margin: 0.5rem 0;
-    }
-    
-    .users-table {
-        background: white;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    
-    .table-container {
-        overflow-x: auto;
-    }
-    
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    
-    thead {
-        background: #f7fafc;
-        border-bottom: 2px solid #e2e8f0;
-    }
-    
-    th {
-        padding: 1rem;
-        text-align: left;
-        font-weight: 600;
-        color: #4a5568;
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    
-    td {
-        padding: 1rem;
-        border-bottom: 1px solid #e2e8f0;
-        vertical-align: middle;
-    }
-    
-    tbody tr:hover {
-        background: #f7fafc;
-        transition: background 0.2s;
-    }
-    
-    .user-name {
-        font-weight: 600;
-        color: #2d3748;
-    }
-    
-    .username-masked {
-        font-family: monospace;
-        color: #718096;
-        font-size: 0.875rem;
-    }
-    
-    .role-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 9999px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    
-    .role-teacher {
-        background: #c3dafe;
-        color: #2c5282;
-    }
-    
-    .role-student {
-        background: #c6f6d5;
-        color: #22543d;
-    }
-    
-    .role-school_admin {
-        background: #fed7d7;
-        color: #742a2a;
-    }
-    
-    .info-text {
-        color: #718096;
-        font-size: 0.875rem;
-    }
-    
-    .btn-password {
-        background: #667eea;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        transition: all 0.3s;
-    }
-    
-    .btn-password:hover {
-        background: #5a67d8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-    }
-    
-    .btn-password:disabled {
-        background: #cbd5e0;
-        cursor: not-allowed;
-        transform: none;
-    }
-    
-    /* Modal Styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(5px);
-    }
-    
-    .modal.active {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .modal-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        max-width: 500px;
-        width: 90%;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        animation: slideUp 0.3s ease;
-    }
-    
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    .modal-header {
-        margin-bottom: 1.5rem;
-    }
-    
-    .modal-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #2d3748;
-        margin: 0;
-    }
-    
-    .modal-body {
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    
-    .form-label {
-        display: block;
-        font-weight: 600;
-        color: #4a5568;
-        margin-bottom: 0.5rem;
-    }
-    
-    .form-input {
-        width: 100%;
-        padding: 0.75rem;
-        border: 2px solid #e2e8f0;
-        border-radius: 6px;
-        font-size: 1rem;
-        transition: all 0.3s;
-    }
-    
-    .form-input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    
-    .modal-footer {
-        display: flex;
-        gap: 1rem;
-        justify-content: flex-end;
-    }
-    
-    .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        border: none;
-    }
-    
-    .btn-primary {
-        background: #667eea;
-        color: white;
-    }
-    
-    .btn-primary:hover {
-        background: #5a67d8;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
-    }
-    
-    .btn-secondary {
-        background: #e2e8f0;
-        color: #4a5568;
-    }
-    
-    .btn-secondary:hover {
-        background: #cbd5e0;
-    }
-    
-    .password-display {
-        background: #f7fafc;
-        padding: 1rem;
-        border-radius: 6px;
-        font-family: monospace;
-        font-size: 1.25rem;
-        text-align: center;
-        letter-spacing: 2px;
-        margin: 1rem 0;
-        border: 2px solid #e2e8f0;
-    }
-    
-    .alert {
-        padding: 1rem;
-        border-radius: 6px;
-        margin-bottom: 1rem;
-    }
-    
-    .alert-success {
-        background: #c6f6d5;
-        color: #22543d;
-        border: 1px solid #9ae6b4;
-    }
-    
-    .alert-error {
-        background: #fed7d7;
-        color: #742a2a;
-        border: 1px solid #fc8181;
-    }
-    
-    .no-results {
-        text-align: center;
-        padding: 3rem;
-        color: #718096;
-    }
-    
-    .no-results-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-    }
-</style>
-{% endblock %}
+{% block title %}All Users{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 1400px; margin: 0 auto; padding: 2rem;">
-    
-    <!-- Header -->
-    <div class="users-header">
-        <h1 style="margin: 0; font-size: 2rem;">👥 All Users</h1>
-        <p style="margin: 0.5rem 0 0 0; opacity: 0.9;">{{ school.name }}</p>
-        
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div style="font-size: 0.875rem; opacity: 0.9;">Teachers</div>
-                <div class="stat-value">{{ total_teachers }}</div>
-            </div>
-            <div class="stat-card">
-                <div style="font-size: 0.875rem; opacity: 0.9;">Students</div>
-                <div class="stat-value">{{ total_students }}</div>
-            </div>
-            <div class="stat-card">
-                <div style="font-size: 0.875rem; opacity: 0.9;">Total Users</div>
-                <div class="stat-value">{{ all_users|length }}</div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Search Box -->
-    <div class="search-box">
-        <form method="GET" action="{% url 'school_users_list' %}" id="searchForm">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <div style="flex: 1;">
-                    <input 
-                        type="text" 
-                        name="search" 
-                        class="search-input" 
-                        placeholder="🔍 Search by name, username, roll number, or admission ID..."
-                        value="{{ search_query }}"
-                        id="searchInput"
-                    >
-                </div>
-                {% if search_query %}
-                <a href="{% url 'school_users_list' %}" class="btn btn-secondary" style="text-decoration: none;">
-                    Clear
-                </a>
-                {% endif %}
-            </div>
-        </form>
-    </div>
-    
-    <!-- Users Table -->
-    <div class="users-table">
-        <div class="table-container">
-            {% if all_users %}
-            <table>
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Additional Info</th>
-                        <th>Joined</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                    {% for user in all_users %}
-                    <tr>
-                        <td>
-                            <div class="user-name">{{ user.name }}</div>
-                            {% if user.email %}
-                            <div class="info-text">{{ user.email }}</div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="username-masked" data-username="{{ user.username }}">
-                                {{ user.username|slice:":3" }}•••••
-                            </span>
-                        </td>
-                        <td>
-                            <span class="role-badge role-{{ user.type }}">
-                                {{ user.role }}
-                            </span>
-                        </td>
-                        <td>
-                            {% if user.additional_info %}
-                            <div class="info-text">
-                                <div>📚 {{ user.additional_info.grade }} - Section {{ user.additional_info.section }}</div>
-                                <div>🎫 Roll: {{ user.additional_info.roll_number }}</div>
-                                {% if user.additional_info.admission_id %}
-                                <div>🆔 ID: {{ user.additional_info.admission_id }}</div>
-                                {% endif %}
-                            </div>
-                            {% else %}
-                            <span class="info-text">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="info-text">{{ user.joined|date:"M d, Y" }}</span>
-                        </td>
-                        <td>
-                            {% if user.id %}
-                            <button 
-                                class="btn-password" 
-                                onclick="openPasswordModal({{ user.id }}, '{{ user.username }}', '{{ user.name }}')"
-                            >
-                                🔑 Change Password
-                            </button>
-                            {% else %}
-                            <button class="btn-password" disabled>
-                                No Account
-                            </button>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            {% else %}
-            <div class="no-results">
-                <div class="no-results-icon">🔍</div>
-                <h3>No users found</h3>
-                <p>Try adjusting your search criteria</p>
-            </div>
+
+<style>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.stats-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  flex: 1;
+}
+
+.stat-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stat-card .value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.search-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color .2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.users-table-wrap {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.users-table td {
+  padding: 16px 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.users-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.role-badge.teacher {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.role-badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-badge.student {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all .2s;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+/* Password Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #10b981;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10000;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+</style>
+
+<div class="page-header">
+  <h1>👥 All Users</h1>
+  <a href="{% url 'create_user_account' %}" class="btn primary">
+    ➕ Create New User
+  </a>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <h3>Total Teachers</h3>
+    <div class="value">{{ total_teachers }}</div>
+  </div>
+  <div class="stat-card">
+    <h3>Total Students</h3>
+    <div class="value">{{ total_students }}</div>
+  </div>
+  <div class="stat-card">
+    <h3>Total Users</h3>
+    <div class="value">{{ total_teachers|add:total_students }}</div>
+  </div>
+</div>
+
+<div class="search-bar">
+  <input
+    type="text"
+    id="searchInput"
+    class="search-input"
+    placeholder="🔍 Search by name, username, or role..."
+  >
+</div>
+
+<div class="users-table-wrap">
+  <table class="users-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Additional Info</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="usersTableBody">
+      {% for user in all_users %}
+      <tr class="user-row" data-search="{{ user.name|lower }} {{ user.username|lower }} {{ user.role|lower }}">
+        <td><strong>{{ user.name }}</strong></td>
+        <td>{{ user.username }}</td>
+        <td>
+          <span class="role-badge {% if user.role == 'School Admin' %}admin{% elif user.role == 'Teacher' %}teacher{% else %}student{% endif %}">
+            {{ user.role }}
+          </span>
+        </td>
+        <td>
+          {% if user.additional_info %}
+            {{ user.additional_info.grade }}-{{ user.additional_info.section }}
+            {% if user.additional_info.roll_number %}
+              | Roll: {{ user.additional_info.roll_number }}
             {% endif %}
-        </div>
-    </div>
-    
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td>
+          {% if user.id %}
+            <button
+              class="btn secondary"
+              onclick="openPasswordModal({{ user.id }}, '{{ user.name }}', '{{ user.username }}')"
+            >
+              🔑 Edit Password
+            </button>
+          {% else %}
+            <span style="color: #9ca3af;">No account</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" class="no-results">No users found</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
 <!-- Password Change Modal -->
-<div id="passwordModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="modal-title">🔑 Change Password</h2>
-        </div>
-        <div class="modal-body">
-            <div id="modalAlert" style="display: none;"></div>
-            
-            <div class="form-group">
-                <label class="form-label">User</label>
-                <div class="form-input" style="background: #f7fafc; cursor: not-allowed;" readonly id="modalUserName">
-                    <!-- Will be filled by JS -->
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">Username</label>
-                <div class="form-input" style="background: #f7fafc; cursor: not-allowed; font-family: monospace;" readonly id="modalUsername">
-                    <!-- Will be filled by JS -->
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label">New Password</label>
-                <input 
-                    type="text" 
-                    class="form-input" 
-                    id="newPassword" 
-                    placeholder="Enter new password"
-                    autocomplete="off"
-                >
-                <button 
-                    type="button" 
-                    onclick="generatePassword()" 
-                    style="margin-top: 0.5rem; padding: 0.5rem 1rem; background: #e2e8f0; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;"
-                >
-                    🎲 Generate Random Password
-                </button>
-            </div>
-            
-            <div id="successMessage" style="display: none;">
-                <div class="alert alert-success">
-                    <strong>✅ Password changed successfully!</strong>
-                    <div class="password-display" id="displayPassword"></div>
-                    <button 
-                        type="button" 
-                        onclick="copyPassword()" 
-                        class="btn btn-primary" 
-                        style="width: 100%;"
-                    >
-                        📋 Copy Password to Clipboard
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">
-                Cancel
-            </button>
-            <button type="button" class="btn btn-primary" onclick="changePassword()" id="savePasswordBtn">
-                💾 Change Password
-            </button>
-        </div>
+<div class="modal" id="passwordModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🔑 Change Password</h3>
+      <button type="button" class="close-btn" onclick="closePasswordModal()">×</button>
     </div>
+    
+    <div class="form-group">
+      <label>User</label>
+      <input type="text" id="modalUserName" readonly style="background: #f9fafb;">
+    </div>
+    
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="modalUsername" readonly style="background: #f9fafb;">
+    </div>
+    
+    <div class="form-group">
+      <label>New Password *</label>
+      <input type="text" id="newPassword" placeholder="Enter new password">
+    </div>
+    
+    <div class="modal-actions">
+      <button type="button" class="btn secondary" onclick="closePasswordModal()">
+        Cancel
+      </button>
+      <button type="button" class="btn primary" onclick="changePassword()">
+        💾 Change Password
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
 let currentUserId = null;
-let currentPassword = null;
 
-// Real-time search
-document.getElementById('searchInput').addEventListener('input', function() {
-    // Optional: implement client-side filtering for instant results
-    // Or just submit the form
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  const searchTerm = e.target.value.toLowerCase();
+  const rows = document.querySelectorAll('.user-row');
+  
+  rows.forEach(row => {
+    const searchData = row.getAttribute('data-search');
+    if (searchData.includes(searchTerm)) {
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  });
 });
 
-function openPasswordModal(userId, username, name) {
-    currentUserId = userId;
-    document.getElementById('modalUserName').textContent = name;
-    document.getElementById('modalUsername').textContent = username;
-    document.getElementById('newPassword').value = '';
-    document.getElementById('successMessage').style.display = 'none';
-    document.getElementById('modalAlert').style.display = 'none';
-    document.getElementById('savePasswordBtn').style.display = 'inline-block';
-    document.getElementById('passwordModal').classList.add('active');
+function openPasswordModal(userId, userName, username) {
+  currentUserId = userId;
+  document.getElementById('modalUserName').value = userName;
+  document.getElementById('modalUsername').value = username;
+  document.getElementById('newPassword').value = '';
+  document.getElementById('passwordModal').classList.add('active');
 }
 
 function closePasswordModal() {
-    document.getElementById('passwordModal').classList.remove('active');
-    currentUserId = null;
-    currentPassword = null;
+  document.getElementById('passwordModal').classList.remove('active');
+  currentUserId = null;
 }
 
-function generatePassword() {
-    const length = 12;
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
-    let password = "";
-    for (let i = 0; i < length; i++) {
-        password += charset.charAt(Math.floor(Math.random() * charset.length));
-    }
-    document.getElementById('newPassword').value = password;
-}
-
-async function changePassword() {
-    const password = document.getElementById('newPassword').value.trim();
-    
-    if (!password) {
-        showAlert('Please enter a password', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAlert('Password must be at least 6 characters', 'error');
-        return;
-    }
-    
-    const saveBtn = document.getElementById('savePasswordBtn');
-    saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Changing...';
-    
-    try {
-        const response = await fetch('{% url "change_user_password" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                user_id: currentUserId,
-                new_password: password
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            currentPassword = password;
-            document.getElementById('displayPassword').textContent = password;
-            document.getElementById('successMessage').style.display = 'block';
-            document.getElementById('savePasswordBtn').style.display = 'none';
-            showAlert(data.message, 'success');
-        } else {
-            showAlert(data.error || 'Failed to change password', 'error');
-            saveBtn.disabled = false;
-            saveBtn.textContent = '💾 Change Password';
-        }
-    } catch (error) {
-        showAlert('Network error. Please try again.', 'error');
-        saveBtn.disabled = false;
-        saveBtn.textContent = '💾 Change Password';
-    }
-}
-
-function copyPassword() {
-    if (!currentPassword) return;
-    
-    navigator.clipboard.writeText(currentPassword).then(() => {
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = '✅ Copied!';
-        btn.style.background = '#48bb78';
-        
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = '#667eea';
-        }, 2000);
-    }).catch(() => {
-        showAlert('Failed to copy to clipboard', 'error');
-    });
-}
-
-function showAlert(message, type) {
-    const alertDiv = document.getElementById('modalAlert');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
-    alertDiv.style.display = 'block';
-    
-    setTimeout(() => {
-        alertDiv.style.display = 'none';
-    }, 5000);
-}
-
-// Close modal on outside click
-document.getElementById('passwordModal').addEventListener('click', function(e) {
-    if (e.target === this) {
+function changePassword() {
+  const newPassword = document.getElementById('newPassword').value.trim();
+  
+  if (!newPassword) {
+    showToast('Please enter a new password', 'error');
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    showToast('Password must be at least 6 characters', 'error');
+    return;
+  }
+  
+  fetch('{% url "change_user_password" %}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify({
+      user_id: currentUserId,
+      new_password: newPassword
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      // Copy to clipboard
+      navigator.clipboard.writeText(newPassword).then(() => {
+        showToast('Password changed and copied to clipboard! ✓', 'success');
         closePasswordModal();
+      }).catch(() => {
+        showToast('Password changed successfully! (Could not copy to clipboard)', 'success');
+        closePasswordModal();
+      });
+    } else {
+      showToast(data.error || 'Failed to change password', 'error');
     }
-});
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    showToast('Failed to change password', 'error');
+  });
+}
 
-// Close modal on Escape key
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.style.background = type === 'error' ? '#ef4444' : '#10b981';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Close modal on ESC key
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closePasswordModal();
-    }
+  if (e.key === 'Escape') {
+    closePasswordModal();
+  }
 });
 </script>
+
 {% endblock %}

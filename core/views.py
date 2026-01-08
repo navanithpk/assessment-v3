@@ -248,23 +248,50 @@ def school_users_list(request):
     school = get_user_school(request.user)
     role = get_user_role(request.user)
     
+    # Allow staff users to view even without a school profile
     if not school:
-        messages.error(request, "You are not assigned to a school.")
-        return redirect("teacher_dashboard")
+        if request.user.is_staff or request.user.is_superuser:
+            # Get all schools and let admin choose
+            schools = School.objects.all()
+            
+            # If there's only one school, use it
+            if schools.count() == 1:
+                school = schools.first()
+            else:
+                # Show error and suggest creating/assigning school
+                messages.warning(request, 
+                    "You don't have a school assigned. Please create a school or contact an administrator.")
+                
+                # Show all users without school filter (for superadmin)
+                if request.user.is_superuser:
+                    teachers = UserProfile.objects.filter(
+                        role__in=['teacher', 'school_admin']
+                    ).select_related('user').order_by('user__first_name', 'user__last_name')
+                    
+                    students = Student.objects.all().select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
+                else:
+                    return redirect("teacher_dashboard")
+        else:
+            messages.error(request, "You are not assigned to a school. Please contact an administrator.")
+            return redirect("teacher_dashboard")
     
     # Get search query
     search_query = request.GET.get('search', '').strip()
     
     # Get all user profiles from same school (teachers and school admins)
-    teachers = UserProfile.objects.filter(
-        school=school,
-        role__in=['teacher', 'school_admin']
-    ).select_related('user').order_by('user__first_name', 'user__last_name')
-    
-    # Get student records with their user accounts
-    students = Student.objects.filter(
-        school=school
-    ).select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
+    if school:
+        teachers = UserProfile.objects.filter(
+            school=school,
+            role__in=['teacher', 'school_admin']
+        ).select_related('user').order_by('user__first_name', 'user__last_name')
+        
+        # Get student records with their user accounts
+        students = Student.objects.filter(
+            school=school
+        ).select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
+    else:
+        # Already filtered above for superuser
+        pass
     
     # Apply search filter
     if search_query:
@@ -559,10 +586,17 @@ def student_tests_list(request):
 
 @login_required
 def question_library(request):
+    """
+    Question library with option to hide inline-created questions
+    """
     school = get_user_school(request.user)
     qs = Question.objects.filter(
         created_by=request.user
     ).select_related("grade", "subject", "topic").prefetch_related("learning_objectives")
+
+    # âœ… NEW: Filter out questions that were created inline for tests (optional)
+    # Uncomment the line below if you want to hide inline questions by default
+    # qs = qs.annotate(test_count=models.Count('tests')).filter(test_count=0)
 
     # Filters
     grade = request.GET.get("grade")
@@ -590,6 +624,9 @@ def question_library(request):
     if los:
         qs = qs.filter(learning_objectives__id__in=los).distinct()
 
+    # âœ… IMPROVED: Add test count annotation for UI display
+    qs = qs.annotate(test_count=models.Count('tests'))
+
     return render(
         request,
         "teacher/question_library.html",
@@ -601,8 +638,7 @@ def question_library(request):
             "school": school,
         }
     )
-
-
+    
 @login_required
 def add_edit_question(request, question_id=None):
     question = None
@@ -675,9 +711,11 @@ def add_edit_question(request, question_id=None):
         }
     )
 
-
 @login_required
 def inline_add_question(request, test_id):
+    """
+    Create question inline with full LO support
+    """
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
 
@@ -692,6 +730,7 @@ def inline_add_question(request, test_id):
         if not data.get("grade") or not data.get("subject") or not data.get("topic"):
             return JsonResponse({"error": "Grade, subject, and topic are required"}, status=400)
 
+        # Create question
         question = Question.objects.create(
             question_text=data["question_text"],
             answer_text=data.get("answer_text", ""),
@@ -704,10 +743,17 @@ def inline_add_question(request, test_id):
             created_by=request.user,
         )
         
+        # âœ… UPDATED: Handle learning objectives
         lo_ids = data.get("learning_objectives", [])
         if lo_ids:
-            question.learning_objectives.set(lo_ids)
+            # Validate LO IDs belong to the selected topic
+            valid_los = LearningObjective.objects.filter(
+                id__in=lo_ids,
+                topic_id=data["topic"]
+            )
+            question.learning_objectives.set(valid_los)
 
+        # Add to test
         last_order = (
             TestQuestion.objects
             .filter(test=test)
@@ -725,7 +771,7 @@ def inline_add_question(request, test_id):
             "status": "ok",
             "question_id": question.id,
             "order": tq.order,
-            "message": "Question added successfully"
+            "message": "Question added successfully with learning objectives"
         })
         
     except Exception as e:
@@ -804,14 +850,13 @@ def add_student(request):
             school=school,
             created_by=request.user
         )
-        return redirect("school_users_list")
-
+        messages.success(request, f"Student '{request.POST['full_name']}' added successfully!")
+        return redirect("school_users_list")  # ✅ FIXED: Changed from students_list
 
     return render(request, "teacher/students/add_student.html", {
         "grades": Grade.objects.all(),
         "school": school
     })
-
 
 @login_required
 def edit_student(request, student_id):
@@ -825,8 +870,8 @@ def edit_student(request, student_id):
         student.grade_id = request.POST.get("grade")
         student.section = request.POST.get("section")
         student.save()
-        return redirect("school_users_list")
-
+        messages.success(request, f"Student '{student.full_name}' updated successfully!")
+        return redirect("school_users_list")  # ✅ FIXED: Changed from students_list
 
     return render(
         request,
@@ -837,7 +882,6 @@ def edit_student(request, student_id):
             "school": school,
         }
     )
-
 
 # ===================== GROUPS =====================
 
@@ -904,6 +948,9 @@ def ajax_topics(request):
 @login_required
 @require_GET
 def ajax_learning_objectives(request):
+    """
+    Get learning objectives for a topic
+    """
     topic_id = request.GET.get("topic_id")
 
     if not topic_id:
@@ -923,8 +970,7 @@ def ajax_learning_objectives(request):
             for lo in los
         ]
     })
-
-
+    
 @staff_member_required
 def admin_dashboard(request):
     return render(request, "admin_panel/admin_dashboard.html")
@@ -1008,3 +1054,91 @@ def delete_group(request, group_id):
     group.delete()
     
     return JsonResponse({"status": "success", "message": f"Group '{group_name}' deleted successfully"})
+    
+@login_required
+def bulk_import_upload(request):
+    """
+    Handle PDF upload and initiate parsing
+    """
+    if request.method == "POST":
+        pdf_file = request.FILES['pdf']
+        grade_id = request.POST.get('grade')
+        subject_id = request.POST.get('subject')
+        
+        # Save temporarily
+        import_session = ImportSession.objects.create(
+            uploaded_by=request.user,
+            pdf_file=pdf_file,
+            grade_id=grade_id,
+            subject_id=subject_id,
+            status='processing'
+        )
+        
+        # Trigger async task
+        parse_pdf_questions.delay(import_session.id)
+        
+        return JsonResponse({
+            'session_id': import_session.id,
+            'status': 'processing'
+        })
+        
+@login_required
+def bulk_import_preview(request, session_id):
+    """
+    Get parsed questions for review
+    """
+    session = get_object_or_404(ImportSession, id=session_id)
+    
+    questions = ParsedQuestion.objects.filter(
+        import_session=session
+    ).order_by('order')
+    
+    return JsonResponse({
+        'questions': [
+            {
+                'id': q.id,
+                'question_text': q.question_text,
+                'answer_text': q.answer_text,
+                'marks': q.marks,
+                'question_type': q.question_type,
+                'topic_id': q.topic_id
+            }
+            for q in questions
+        ]
+    })
+    
+@login_required
+def bulk_import_confirm(request, session_id):
+    """
+    Import validated questions to library
+    """
+    session = get_object_or_404(ImportSession, id=session_id)
+    data = json.loads(request.body)
+    
+    imported_count = 0
+    for q_data in data['questions']:
+        question = Question.objects.create(
+            question_text=q_data['question_text'],
+            answer_text=q_data.get('answer_text', ''),
+            marks=q_data['marks'],
+            question_type=q_data['question_type'],
+            grade_id=session.grade_id,
+            subject_id=session.subject_id,
+            topic_id=q_data.get('topic_id'),
+            created_by=request.user
+        )
+        
+        # Set LOs
+        if 'learning_objective_ids' in q_data:
+            question.learning_objectives.set(q_data['learning_objective_ids'])
+        
+        imported_count += 1
+    
+    session.status = 'completed'
+    session.imported_count = imported_count
+    session.save()
+    
+    return JsonResponse({
+        'status': 'success',
+        'imported_count': imported_count
+    })

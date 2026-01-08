@@ -23,7 +23,7 @@ urlpatterns = [
 
     # Django auth (login, logout)
     path("accounts/", include("django.contrib.auth.urls")),
-
+    
     
 ]
 

@@ -1364,5 +1364,310 @@ function showToast(message, type = 'info') {
   }
 }
 </script>
+<!-- Partial update for the question modal in create_test.html -->
+<!-- This shows only the updated section with LO support -->
 
+<script>
+// Add this to the existing script section in create_test.html
+
+// Track selected LOs
+const selectedLOs = new Set();
+
+function loadTopicsForModal() {
+  const gradeId = document.getElementById('gradeSelect').value;
+  const subjectId = document.getElementById('subjectSelect').value;
+  const topicSelect = document.getElementById('topicSelect');
+  
+  topicSelect.innerHTML = '<option value="">Loading...</option>';
+  
+  // Clear LOs when grade/subject changes
+  document.getElementById('loContainer').innerHTML = 
+    '<p style="color: #9ca3af; text-align: center;">Select topic to load learning objectives</p>';
+  selectedLOs.clear();
+  
+  if (!gradeId || !subjectId) {
+    topicSelect.innerHTML = '<option value="">Select grade & subject first</option>';
+    return;
+  }
+  
+  fetch(`/ajax/topics/?grade_id=${gradeId}&subject_id=${subjectId}`)
+    .then(r => r.json())
+    .then(data => {
+      topicSelect.innerHTML = '<option value="">Select topic</option>';
+      data.topics.forEach(topic => {
+        const opt = document.createElement('option');
+        opt.value = topic.id;
+        opt.textContent = topic.name;
+        topicSelect.appendChild(opt);
+      });
+    })
+    .catch(err => {
+      console.error('Error loading topics:', err);
+      topicSelect.innerHTML = '<option value="">Error loading topics</option>';
+    });
+}
+
+// Load LOs when topic is selected
+document.getElementById('topicSelect').addEventListener('change', function() {
+  const topicId = this.value;
+  const loContainer = document.getElementById('loContainer');
+  
+  if (!topicId) {
+    loContainer.innerHTML = 
+      '<p style="color: #9ca3af; text-align: center;">Select topic to load learning objectives</p>';
+    selectedLOs.clear();
+    return;
+  }
+  
+  loContainer.innerHTML = '<p style="color: #9ca3af; text-align: center;">Loading...</p>';
+  
+  fetch(`/ajax/los/?topic_id=${topicId}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.los.length === 0) {
+        loContainer.innerHTML = 
+          '<p style="color: #9ca3af; text-align: center;">No learning objectives found for this topic</p>';
+        return;
+      }
+      
+      loContainer.innerHTML = '';
+      data.los.forEach(lo => {
+        const checkItem = document.createElement('div');
+        checkItem.style.cssText = `
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 8px;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: background 0.2s;
+        `;
+        
+        checkItem.onmouseover = () => checkItem.style.background = '#f3f4f6';
+        checkItem.onmouseout = () => checkItem.style.background = 'transparent';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `lo_${lo.id}`;
+        checkbox.value = lo.id;
+        checkbox.style.cssText = 'margin-top: 2px; width: 16px; height: 16px; cursor: pointer;';
+        
+        checkbox.onchange = function() {
+          if (this.checked) {
+            selectedLOs.add(lo.id);
+          } else {
+            selectedLOs.delete(lo.id);
+          }
+        };
+        
+        const label = document.createElement('label');
+        label.htmlFor = `lo_${lo.id}`;
+        label.style.cssText = 'flex: 1; cursor: pointer; font-size: 14px;';
+        label.innerHTML = `<strong>${lo.code}</strong> — ${lo.description}`;
+        
+        checkItem.appendChild(checkbox);
+        checkItem.appendChild(label);
+        loContainer.appendChild(checkItem);
+      });
+    })
+    .catch(err => {
+      console.error('Error loading LOs:', err);
+      loContainer.innerHTML = 
+        '<p style="color: #ef4444; text-align: center;">Error loading learning objectives</p>';
+    });
+});
+
+// Updated handleQuestionSubmit to include LOs
+function handleQuestionSubmit(event) {
+  event.preventDefault();
+  
+  const editor = document.getElementById('questionEditor');
+  const questionText = editor.innerHTML;
+  
+  if (!questionText || questionText.trim() === '<p>Type your question here...</p>') {
+    showToast('Please enter question text', 'error');
+    return;
+  }
+  
+  const formData = {
+    question_text: questionText,
+    answer_text: document.getElementById('answerText').value,
+    grade: document.getElementById('gradeSelect').value,
+    subject: document.getElementById('subjectSelect').value,
+    topic: document.getElementById('topicSelect').value,
+    marks: document.getElementById('marksInput').value,
+    question_type: document.getElementById('typeSelect').value,
+    year: document.getElementById('yearInput').value || null,
+    learning_objectives: Array.from(selectedLOs)  // âœ… Added LOs
+  };
+  
+  // Validate required fields
+  if (!formData.grade || !formData.subject || !formData.topic) {
+    showToast('Please fill in all required fields', 'error');
+    return;
+  }
+  
+  showToast('Adding question...', 'saving');
+  
+  fetch(`/teacher/tests/{{ test.id }}/inline-add-question/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ csrf_token }}'
+    },
+    body: JSON.stringify(formData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'ok') {
+      showToast('Question added successfully! Reloading...', 'success');
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      showToast('Error: ' + (data.error || 'Unknown error'), 'error');
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    showToast('Failed to add question', 'error');
+  });
+}
+</script>
+
+<!-- Updated modal HTML section -->
+<div class="modal" id="questionModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modalTitle">Create Question</h3>
+      <button type="button" class="close-btn" onclick="closeQuestionModal()">×</button>
+    </div>
+    
+    <form id="questionForm" onsubmit="handleQuestionSubmit(event)">
+      <!-- Rich Text Editor -->
+      <div class="form-group">
+        <label>Question Text *</label>
+        <div class="editor-container">
+          <div class="editor-toolbar" id="editorToolbar">
+            <button type="button" class="toolbar-btn" onclick="formatText('bold')" title="Bold">
+              <strong>B</strong>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="formatText('italic')" title="Italic">
+              <em>I</em>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="formatText('underline')" title="Underline">
+              <u>U</u>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="formatText('subscript')" title="Subscript">
+              X<sub>2</sub>
+            </button>
+            <button type="button" class="toolbar-btn" onclick="formatText('superscript')" title="Superscript">
+              X<sup>2</sup>
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="formatText('insertUnorderedList')" title="Bullet List">
+              •
+            </button>
+            <button type="button" class="toolbar-btn" onclick="formatText('insertOrderedList')" title="Numbered List">
+              1.
+            </button>
+            <div class="toolbar-divider"></div>
+            <button type="button" class="toolbar-btn" onclick="insertTable()" title="Insert Table">
+              ⊞
+            </button>
+            <button type="button" class="toolbar-btn" onclick="insertImage()" title="Insert Image">
+              🖼️
+            </button>
+          </div>
+          <div class="ProseMirror" id="questionEditor" contenteditable="true">
+            <p>Type your question here...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Answer -->
+      <div class="form-group">
+        <label>Answer/Solution</label>
+        <textarea name="answer_text" id="answerText" placeholder="Enter the correct answer or solution"></textarea>
+      </div>
+
+      <!-- Grade, Subject, Topic -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Grade *</label>
+          <select name="grade" id="gradeSelect" required onchange="loadTopicsForModal()">
+            <option value="">Select Grade</option>
+            {% for grade in grades %}
+              <option value="{{ grade.id }}">{{ grade.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Subject *</label>
+          <select name="subject" id="subjectSelect" required onchange="loadTopicsForModal()">
+            <option value="">Select Subject</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.id }}">{{ subject.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Topic *</label>
+          <select name="topic" id="topicSelect" required>
+            <option value="">Select topic</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Marks, Type, Year -->
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Marks *</label>
+          <input type="number" name="marks" id="marksInput" value="1" min="1" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Question Type *</label>
+          <select name="question_type" id="typeSelect" required>
+            <option value="theory">Theory</option>
+            <option value="mcq">MCQ</option>
+            <option value="structured">Structured</option>
+            <option value="practical">Practical</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Year</label>
+          <input type="number" name="year" id="yearInput" placeholder="2026" min="1990" max="2100">
+        </div>
+      </div>
+
+      <!-- âœ… NEW: Learning Objectives Section -->
+      <div class="form-group">
+        <label>Learning Objectives</label>
+        <div id="loContainer" style="
+          max-height: 200px;
+          overflow-y: auto;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          padding: 12px;
+          background: #fafafa;
+        ">
+          <p style="color: #9ca3af; text-align: center;">Select topic to load learning objectives</p>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" onclick="closeQuestionModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn primary">
+          Save & Add to Test
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}

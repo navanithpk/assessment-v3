@@ -341,3 +341,31 @@ class StudentAnswer(models.Model):
     
     def __str__(self):
         return f"{self.student.full_name} - {self.test.title} - Q{self.question.id}"
+        
+class ImportSession(models.Model):
+    """Track bulk import sessions"""
+    uploaded_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    pdf_file = models.FileField(upload_to='imports/')
+    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
+    
+    status = models.CharField(max_length=20, choices=[
+        ('processing', 'Processing'),
+        ('ready', 'Ready for Review'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed')
+    ])
+    
+    imported_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+class ParsedQuestion(models.Model):
+    """Temporary storage for parsed questions"""
+    import_session = models.ForeignKey(ImportSession, on_delete=models.CASCADE)
+    order = models.IntegerField()
+    
+    question_text = models.TextField()
+    answer_text = models.TextField(blank=True)
+    marks = models.IntegerField(default=1)
+    question_type = models.CharField(max_length=20)
+    topic = models.ForeignKey(Topic, null=True, blank=True, on_delete=models.SET_NULL)

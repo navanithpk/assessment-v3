@@ -1,277 +1,293 @@
 {% extends "teacher/teacher_base.html" %}
 
-{% block title %}School Users - {{ school.name }}{% endblock %}
+{% block title %}All Users{% endblock %}
 
 {% block content %}
+
 <style>
+/* ===== Layout ===== */
 .users-container {
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.page-header {
   background: white;
   border-radius: 14px;
   padding: 24px;
-  margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,.08);
 }
 
-.page-header h1 {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 8px 0;
-}
-
-.page-header p {
-  color: #6b7280;
-  margin: 0;
-}
-
-.section {
-  background: white;
-  border-radius: 14px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-}
-
-.section-header {
+.users-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
-.section-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
+.users-header h2 {
   margin: 0;
 }
 
-.count-badge {
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 4px 12px;
-  border-radius: 6px;
+.search-input {
+  width: 260px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
   font-size: 14px;
-  font-weight: 600;
 }
 
-.users-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.user-card {
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  transition: all .2s;
-}
-
-.user-card:hover {
-  border-color: #2563eb;
-  background: #f9fafb;
-}
-
-.user-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.user-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: 700;
-  font-size: 20px;
-}
-
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  font-weight: 600;
-  color: #111827;
-  font-size: 16px;
-  margin: 0 0 4px 0;
-}
-
-.user-email {
-  font-size: 13px;
-  color: #6b7280;
-  margin: 0;
-}
-
-.user-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6b7280;
-}
-
-.role-badge {
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.role-badge.school-admin {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.role-badge.teacher {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.role-badge.student {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #9ca3af;
-}
-
-table {
+/* ===== Table ===== */
+.users-table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 16px;
 }
 
-table th {
-  background: #f9fafb;
-  padding: 12px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 13px;
-  color: #6b7280;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-table td {
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
+.users-table th,
+.users-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
   font-size: 14px;
 }
 
-table tr:hover {
+.users-table th {
   background: #f9fafb;
+  font-weight: 600;
+}
+
+/* ===== Badges ===== */
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-student { background:#dbeafe; color:#1e40af; }
+.badge-teacher { background:#dcfce7; color:#166534; }
+.badge-admin   { background:#fef3c7; color:#92400e; }
+
+/* ===== Actions ===== */
+.action-btn {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-weight: 500;
+  cursor: pointer;
+  margin-right: 10px;
+  padding: 0;
+}
+
+.action-btn:hover {
+  text-decoration: underline;
+}
+
+/* ===== Modal ===== */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active { display: flex; }
+
+.modal-content {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  width: 420px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 { margin: 0; }
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.modal-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.modal-actions button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
 }
 </style>
 
 <div class="users-container">
-  <div class="page-header">
-    <h1>🏫 {{ school.name }}</h1>
-    <p>View all teachers and students in your school</p>
-  </div>
 
-  <!-- TEACHERS SECTION -->
-  <div class="section">
-    <div class="section-header">
-      <h2>👨‍🏫 Teachers</h2>
-      <span class="count-badge">{{ teachers.count }} teacher{{ teachers.count|pluralize }}</span>
+  <div class="users-header">
+    <div>
+      <h2>All Users</h2>
+      <p style="color:#6b7280;font-size:14px;">
+        Students and staff belonging to <strong>{{ school.name }}</strong>
+      </p>
     </div>
 
-    {% if teachers %}
-      <div class="users-grid">
-        {% for profile in teachers %}
-          <div class="user-card">
-            <div class="user-header">
-              <div class="user-avatar">
-                {{ profile.user.first_name.0|default:profile.user.username.0|upper }}
-              </div>
-              <div class="user-info">
-                <h3 class="user-name">
-                  {{ profile.user.get_full_name|default:profile.user.username }}
-                </h3>
-                <p class="user-email">{{ profile.user.email }}</p>
-              </div>
-            </div>
-            
-            <div class="user-meta">
-              <div class="meta-item">
-                <span class="role-badge {{ profile.role }}">
-                  {{ profile.get_role_display }}
-                </span>
-              </div>
-              <div class="meta-item">
-                📧 {{ profile.user.username }}
-              </div>
-              <div class="meta-item">
-                📅 Joined {{ profile.created_at|date:"M d, Y" }}
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="empty-state">
-        <p>No other teachers in your school yet.</p>
-      </div>
-    {% endif %}
+    <input
+      type="text"
+      id="searchInput"
+      class="search-input"
+      placeholder="Search users…">
   </div>
 
-  <!-- STUDENTS SECTION -->
-  <div class="section">
-    <div class="section-header">
-      <h2>👨‍🎓 Students</h2>
-      <span class="count-badge">{{ students.count }} student{{ students.count|pluralize }}</span>
+  {% if all_users %}
+  <table class="users-table" id="usersTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Details</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in all_users %}
+      <tr class="user-row">
+        <td class="cell">{{ u.name }}</td>
+        <td class="cell">{{ u.username }}</td>
+        <td class="cell">
+          {% if u.type == 'student' %}
+            <span class="badge badge-student">Student</span>
+          {% elif u.role == 'School Admin' %}
+            <span class="badge badge-admin">School Admin</span>
+          {% else %}
+            <span class="badge badge-teacher">Teacher</span>
+          {% endif %}
+        </td>
+        <td class="cell">
+          {% if u.type == 'student' %}
+            Grade {{ u.additional_info.grade }},
+            {{ u.additional_info.section }},
+            Roll {{ u.additional_info.roll_number }}
+          {% else %}
+            {{ u.email|default:"—" }}
+          {% endif %}
+        </td>
+        <td>
+          {% if u.type == 'student' %}
+            <a class="action-btn"
+               href="{% url 'edit_student' u.additional_info.id %}">
+              ✏️ Edit
+            </a>
+          {% endif %}
+
+          <button class="action-btn"
+                  onclick="openPasswordModal({{ u.id }}, '{{ u.username }}')">
+            🔒 Change Password
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p>No users found.</p>
+  {% endif %}
+
+</div>
+
+<!-- ================= PASSWORD MODAL ================= -->
+<div class="modal" id="passwordModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Change Password</h3>
+      <button class="modal-close" onclick="closePasswordModal()">×</button>
     </div>
 
-    {% if students %}
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Roll Number</th>
-            <th>Grade</th>
-            <th>Section</th>
-            <th>Admission ID</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for student in students %}
-            <tr>
-              <td style="font-weight: 600;">{{ student.full_name }}</td>
-              <td>{{ student.roll_number }}</td>
-              <td>{{ student.grade.name }}</td>
-              <td>{{ student.section }}</td>
-              <td>{{ student.admission_id|default:"—" }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    {% else %}
-      <div class="empty-state">
-        <p>No students in your school yet.</p>
-      </div>
-    {% endif %}
+    <p style="margin-top:10px;">
+      Username: <strong id="modalUsername"></strong>
+    </p>
+
+    <input type="password" id="newPassword"
+           placeholder="New password"
+           style="width:100%;padding:10px;margin-top:12px;">
+
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closePasswordModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitPasswordChange()">Save</button>
+    </div>
   </div>
 </div>
+
+<script>
+// ================= SEARCH =================
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('.user-row').forEach(row => {
+    const text = row.innerText.toLowerCase();
+    row.style.display = text.includes(q) ? '' : 'none';
+  });
+});
+
+// ================= PASSWORD MODAL =================
+let selectedUserId = null;
+
+function openPasswordModal(userId, username) {
+  selectedUserId = userId;
+  document.getElementById('modalUsername').innerText = username;
+  document.getElementById('newPassword').value = '';
+  document.getElementById('passwordModal').classList.add('active');
+}
+
+function closePasswordModal() {
+  document.getElementById('passwordModal').classList.remove('active');
+}
+
+function submitPasswordChange() {
+  const pwd = document.getElementById('newPassword').value;
+  if (!pwd) {
+    alert("Password cannot be empty");
+    return;
+  }
+
+  fetch("{% url 'change_user_password' %}", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": "{{ csrf_token }}"
+    },
+    body: JSON.stringify({
+      user_id: selectedUserId,
+      new_password: pwd
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.status === "success") {
+      alert("Password updated successfully");
+      closePasswordModal();
+    } else {
+      alert(data.error || "Error updating password");
+    }
+  })
+  .catch(() => alert("Server error"));
+}
+</script>
 
 {% endblock %}
