@@ -47,16 +47,6 @@ body {
   color: white;
 }
 
-/* Section label */
-.sidebar .section {
-  margin-top: 18px;
-  margin-bottom: 6px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: #9ca3af;
-}
-
 /* Admin badge */
 .admin-badge {
   background: #fbbf24;
@@ -112,25 +102,8 @@ body {
     </h2>
 
     <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
-
-    <div class="section">Assessments</div>
-    <a href="{% url 'tests_list' %}">📝 My Tests</a>
+    <a href="{% url 'tests_list' %}">📝 Create Test</a>
     <a href="{% url 'question_library' %}">📚 Question Library</a>
-
-    <div class="section">Students</div>
-    <!-- CANONICAL replacement for legacy students_list -->
-    <a href="{% url 'school_users_list' %}">👥 Students</a>
-    <a href="{% url 'add_student' %}">➕ Add Student</a>
-    <a href="{% url 'groups_list' %}">🧩 Class Groups</a>
-
-    {% if request.user.profile.role == 'school_admin' %}
-    <div class="section">Administration</div>
-    <a href="{% url 'create_user_account' %}">👤 Create User Account</a>
-    <a href="{% url 'school_users_list' %}">👥 Manage Users</a>
-    {% endif %}
-
-    <div class="section">Performance</div>
-    <a href="{% url 'class_performance' %}">📊 Class Performance</a>
 
     <div class="spacer"></div>
 
