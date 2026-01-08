@@ -109,82 +109,28 @@ def student_dashboard(request):
 
 # ===================== USER MANAGEMENT =====================
 
+# Example view structure (you'll need to adapt to your models)
+
 @login_required
 def create_user_account(request):
-    """
-    Teachers can create student accounts
-    School admins can create both student and teacher accounts
-    """
-    role = get_user_role(request.user)
-    school = get_user_school(request.user)
+    if request.method == 'POST':
+        role = request.POST.get('role')
+        # Create user based on role
+        # Set school to request.user.profile.school
+        # Return success message
+    return render(request, 'teacher/create_user_account.html')
+
+@login_required
+def manage_users(request):
+    if request.method == 'POST':
+        # Handle password reset
+        user_id = request.POST.get('user_id')
+        new_password = request.POST.get('new_password')
+        # Update password
     
-    # Must be teacher or school admin
-    if role not in ['teacher', 'school_admin']:
-        messages.error(request, "You don't have permission to create accounts.")
-        return redirect("teacher_dashboard")
-    
-    is_school_admin = (role == 'school_admin')
-    
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        email = request.POST.get("email", "")
-        first_name = request.POST.get("first_name", "")
-        last_name = request.POST.get("last_name", "")
-        new_user_role = request.POST.get("role", "student")
-        
-        # CRITICAL: Teachers can ONLY create students
-        # School admins can create both students and teachers
-        if not is_school_admin and new_user_role != "student":
-            messages.error(request, "You can only create student accounts. Contact a school admin to create teacher accounts.")
-            return redirect("create_user_account")
-        
-        # Check if username already exists
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Username already exists.")
-            return redirect("create_user_account")
-        
-        try:
-            # Create user
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                email=email,
-                first_name=first_name,
-                last_name=last_name
-            )
-            
-            # Set staff status based on role
-            if new_user_role == "teacher":
-                user.is_staff = True
-                user.save()
-            else:
-                user.is_staff = False
-                user.save()
-            
-            # Create UserProfile
-            UserProfile.objects.create(
-                user=user,
-                role=new_user_role,
-                school=school
-            )
-            
-            # Redirect appropriately
-            if new_user_role == "student":
-                messages.success(request, f"Student account '{username}' created successfully. Please complete the student profile.")
-                return redirect("add_student")
-            else:
-                messages.success(request, f"Teacher account '{username}' created successfully.")
-                return redirect("create_user_account")
-                
-        except Exception as e:
-            messages.error(request, f"Error creating account: {str(e)}")
-            return redirect("create_user_account")
-    
-    return render(request, "teacher/accounts/create_user.html", {
-        "is_school_admin": is_school_admin,
-        "school": school
-    })
+    # Get all users from same school
+    users = User.objects.filter(profile__school=request.user.profile.school)
+    return render(request, 'teacher/manage_users.html', {'users': users})
 
 
 # ===================== SCHOOL USERS LIST =====================

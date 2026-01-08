@@ -105,6 +105,11 @@ body {
     <a href="{% url 'tests_list' %}">📝 Create Test</a>
     <a href="{% url 'question_library' %}">📚 Question Library</a>
 
+    {% if request.user.profile.role == 'school_admin' %}
+    <a href="{% url 'create_user_account' %}">➕ Create User Account</a>
+    {% endif %}
+    <a href="{% url 'manage_users' %}">👥 View & Manage Users</a>
+
     <div class="spacer"></div>
 
     <form method="post" action="{% url 'logout' %}">
