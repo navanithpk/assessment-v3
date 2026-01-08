@@ -118,7 +118,8 @@ body {
     <a href="{% url 'question_library' %}">📚 Question Library</a>
 
     <div class="section">Students</div>
-    <a href="{% url 'students_list' %}">👨‍🎓 Students List</a>
+    <!-- CANONICAL replacement for legacy students_list -->
+    <a href="{% url 'school_users_list' %}">👥 Students</a>
     <a href="{% url 'add_student' %}">➕ Add Student</a>
     <a href="{% url 'groups_list' %}">🧩 Class Groups</a>
 
