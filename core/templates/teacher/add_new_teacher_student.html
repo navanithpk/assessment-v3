@@ -1,0 +1,405 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Add New User{% endblock %}
+
+{% block content %}
+
+<style>
+.page-header {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.page-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.form-container {
+  background: white;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  max-width: 800px;
+}
+
+.role-selector {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.role-card {
+  flex: 1;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.role-card:hover {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+.role-card.active {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.role-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.role-card.disabled:hover {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+
+.role-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.role-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.role-description {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+  font-size: 14px;
+}
+
+.form-group label.required::after {
+  content: " *";
+  color: #ef4444;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-group small {
+  display: block;
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.student-fields,
+.teacher-fields {
+  display: none;
+}
+
+.student-fields.active,
+.teacher-fields.active {
+  display: contents;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.alert.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.permission-notice {
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #92400e;
+}
+</style>
+
+<div class="page-header">
+  <h1>➕ Add New User</h1>
+  <p>Create teacher or student accounts for {{ school.name }}</p>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert {% if message.tags %}{{ message.tags }}{% endif %}">
+      {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}✗{% else %}ℹ️{% endif %}
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% if not is_school_admin %}
+<div class="permission-notice">
+  ⚠️ <strong>Permission Notice:</strong> You can only create student accounts. Contact a school admin to create teacher accounts.
+</div>
+{% endif %}
+
+<div class="form-container">
+  <form method="post" id="addUserForm">
+    {% csrf_token %}
+    
+    <!-- Role Selector -->
+    <div class="role-selector">
+      <div class="role-card {% if not is_school_admin %}disabled{% endif %}" onclick="selectRole('teacher')" id="teacherRole">
+        <div class="role-icon">👨‍🏫</div>
+        <div class="role-title">Teacher</div>
+        <div class="role-description">
+          {% if is_school_admin %}
+            Can create tests and manage students
+          {% else %}
+            Only school admins can create teachers
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="role-card active" onclick="selectRole('student')" id="studentRole">
+        <div class="role-icon">👨‍🎓</div>
+        <div class="role-title">Student</div>
+        <div class="role-description">Takes tests and views results</div>
+      </div>
+    </div>
+    
+    <input type="hidden" name="role" id="roleInput" value="student">
+    
+    <!-- Common Fields -->
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label class="required">Full Name</label>
+        <input type="text" name="full_name" required placeholder="Enter full name">
+      </div>
+      
+      <div class="form-group">
+        <label class="required">Email/Username</label>
+        <input type="email" name="email" required placeholder="user@example.com">
+        <small>This will be used as the username</small>
+      </div>
+      
+      <div class="form-group">
+        <label class="required">Password</label>
+        <input type="password" name="password" required placeholder="Enter password" minlength="8">
+        <small>Minimum 8 characters</small>
+      </div>
+    </div>
+    
+    <!-- Teacher-Specific Fields -->
+    <div class="teacher-fields" id="teacherFields">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Subject Specialization</label>
+          <select name="subject">
+            <option value="">Select Subject</option>
+            {% for subject in subjects %}
+              <option value="{{ subject.name }}">{{ subject.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Student-Specific Fields -->
+    <div class="student-fields active" id="studentFields">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="required">Grade</label>
+          <select name="grade" required>
+            <option value="">Select Grade</option>
+            {% for grade in grades %}
+              <option value="{{ grade.name }}">{{ grade.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="required">Section/Division</label>
+          <input type="text" name="division" required placeholder="e.g., A, B, C" maxlength="10">
+        </div>
+        
+        <div class="form-group">
+          <label>Roll Number</label>
+          <input type="text" name="roll_number" placeholder="e.g., 001">
+        </div>
+        
+        <div class="form-group">
+          <label>Admission ID</label>
+          <input type="text" name="admission_id" placeholder="e.g., STU2024001">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="submit" class="btn primary">
+        <span>✓</span>
+        <span>Create Account</span>
+      </button>
+      <a href="{% url 'manage_users' %}" class="btn secondary">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+<script>
+const isSchoolAdmin = {{ is_school_admin|yesno:"true,false" }};
+
+function selectRole(role) {
+  if (role === 'teacher' && !isSchoolAdmin) {
+    alert('Only school administrators can create teacher accounts.');
+    return;
+  }
+  
+  // Update role input
+  document.getElementById('roleInput').value = role;
+  
+  // Update role cards
+  document.getElementById('teacherRole').classList.remove('active');
+  document.getElementById('studentRole').classList.remove('active');
+  
+  if (role === 'teacher') {
+    document.getElementById('teacherRole').classList.add('active');
+  } else {
+    document.getElementById('studentRole').classList.add('active');
+  }
+  
+  // Show/hide role-specific fields
+  document.getElementById('teacherFields').classList.toggle('active', role === 'teacher');
+  document.getElementById('studentFields').classList.toggle('active', role === 'student');
+  
+  // Update required fields
+  const studentFields = document.querySelectorAll('#studentFields input[required], #studentFields select[required]');
+  studentFields.forEach(field => {
+    field.required = (role === 'student');
+  });
+}
+
+// Initialize form
+document.addEventListener('DOMContentLoaded', () => {
+  selectRole('student');
+});
+
+// Form validation
+document.getElementById('addUserForm').addEventListener('submit', (e) => {
+  const role = document.getElementById('roleInput').value;
+  
+  if (role === 'teacher' && !isSchoolAdmin) {
+    e.preventDefault();
+    alert('You do not have permission to create teacher accounts.');
+    return false;
+  }
+  
+  return true;
+});
+</script>
+
+{% endblock %}

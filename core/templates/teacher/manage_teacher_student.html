@@ -1,0 +1,585 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Manage Users{% endblock %}
+
+{% block content %}
+
+<style>
+.page-header {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-bar {
+  background: white;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-bar input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.filter-bar select {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  min-width: 150px;
+}
+
+.users-table {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-card.teachers {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.stat-card.students {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: #f9fafb;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #6b7280;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+td {
+  padding: 14px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+tr:hover {
+  background: #f9fafb;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.user-details {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #111827;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.teacher {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.badge.student {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn.danger:hover {
+  background: #fecaca;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  max-width: 500px;
+  width: 90%;
+  padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alert.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+</style>
+
+<div class="page-header">
+  <h1>👥 Manage Users</h1>
+  <div class="header-actions">
+    <a href="{% url 'add_user' %}" class="btn primary">
+      ➕ Add New User
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert {% if message.tags %}{{ message.tags }}{% endif %}">
+      {% if message.tags == 'success' %}✓{% elif message.tags == 'error' %}✗{% else %}ℹ️{% endif %}
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endif %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ total_users }}</div>
+    <div class="stat-label">Total Users</div>
+  </div>
+  <div class="stat-card teachers">
+    <div class="stat-value">{{ total_teachers }}</div>
+    <div class="stat-label">Teachers</div>
+  </div>
+  <div class="stat-card students">
+    <div class="stat-value">{{ total_students }}</div>
+    <div class="stat-label">Students</div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <input type="text" id="searchInput" placeholder="🔍 Search by name, email, or username..." onkeyup="filterTable()">
+  <select id="roleFilter" onchange="filterTable()">
+    <option value="">All Roles</option>
+    <option value="school_admin">School Admin</option>
+    <option value="teacher">Teacher</option>
+    <option value="student">Student</option>
+  </select>
+</div>
+
+<!-- Users Table -->
+<div class="users-table">
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>Role</th>
+        <th>Details</th>
+        <th>Joined</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user_data in all_users %}
+      <tr data-role="{{ user_data.role }}" data-search="{{ user_data.name|lower }} {{ user_data.email|lower }} {{ user_data.username|lower }}">
+        <td>
+          <div class="user-info">
+            <div class="user-avatar">{{ user_data.name|slice:":1"|upper }}</div>
+            <div class="user-details">
+              <span class="user-name">{{ user_data.name }}</span>
+              <span class="user-email">{{ user_data.username }}</span>
+            </div>
+          </div>
+        </td>
+        <td>
+          <span class="badge {% if user_data.role == 'school_admin' %}admin{% elif user_data.role == 'teacher' %}teacher{% else %}student{% endif %}">
+            {{ user_data.role_display }}
+          </span>
+        </td>
+        <td>
+          {% if user_data.additional_info %}
+            <small style="color: #6b7280;">
+              Grade {{ user_data.additional_info.grade }}-{{ user_data.additional_info.section }}
+              {% if user_data.additional_info.roll_number %}
+                | Roll: {{ user_data.additional_info.roll_number }}
+              {% endif %}
+            </small>
+          {% else %}
+            <small style="color: #6b7280;">{{ user_data.email }}</small>
+          {% endif %}
+        </td>
+        <td>
+          <small style="color: #6b7280;">{{ user_data.joined|date:"M d, Y" }}</small>
+        </td>
+        <td>
+          <div class="action-buttons">
+            {% if user_data.role == 'teacher' and is_school_admin or user_data.role == 'student' %}
+              <button class="btn-icon" onclick="openPasswordModal({{ user_data.user_id }}, '{{ user_data.name }}', '{{ user_data.role }}')" title="Change Password">
+                🔑
+              </button>
+            {% endif %}
+            
+            {% if user_data.role == 'student' %}
+              <a href="{% url 'edit_student' user_data.student_id %}" class="btn-icon" title="Edit">
+                ✏️
+              </a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            <div class="empty-state-icon">👥</div>
+            <h3>No users found</h3>
+            <p>Start by adding teachers and students to your school</p>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal" id="passwordModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🔑 Change Password</h3>
+      <button type="button" class="close-btn" onclick="closePasswordModal()">×</button>
+    </div>
+    
+    <form id="passwordForm" method="post" action="{% url 'change_password' %}">
+      {% csrf_token %}
+      <input type="hidden" name="user_id" id="passwordUserId">
+      
+      <div class="form-group">
+        <label>User</label>
+        <input type="text" id="passwordUserName" readonly style="background: #f3f4f6;">
+      </div>
+      
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" name="new_password" id="newPassword" required minlength="8" placeholder="Enter new password">
+        <small style="color: #6b7280; display: block; margin-top: 6px;">Minimum 8 characters</small>
+      </div>
+      
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="confirmPassword" required placeholder="Re-enter password">
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" onclick="closePasswordModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn primary">
+          ✓ Change Password
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const isSchoolAdmin = {{ is_school_admin|yesno:"true,false" }};
+
+function filterTable() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const roleFilter = document.getElementById('roleFilter').value.toLowerCase();
+  const rows = document.querySelectorAll('#usersTable tbody tr');
+  
+  rows.forEach(row => {
+    const searchData = row.getAttribute('data-search');
+    const roleData = row.getAttribute('data-role');
+    
+    const matchesSearch = !searchTerm || searchData.includes(searchTerm);
+    const matchesRole = !roleFilter || roleData === roleFilter;
+    
+    row.style.display = (matchesSearch && matchesRole) ? '' : 'none';
+  });
+}
+
+function openPasswordModal(userId, userName, role) {
+  // Check permissions
+  if (role === 'teacher' && !isSchoolAdmin) {
+    alert('Only school administrators can change teacher passwords.');
+    return;
+  }
+  
+  document.getElementById('passwordUserId').value = userId;
+  document.getElementById('passwordUserName').value = userName;
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  document.getElementById('passwordModal').classList.add('active');
+}
+
+function closePasswordModal() {
+  document.getElementById('passwordModal').classList.remove('active');
+}
+
+// Password form validation
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  
+  if (newPassword !== confirmPassword) {
+    e.preventDefault();
+    alert('Passwords do not match!');
+    return false;
+  }
+  
+  if (newPassword.length < 8) {
+    e.preventDefault();
+    alert('Password must be at least 8 characters long!');
+    return false;
+  }
+  
+  return true;
+});
+
+// Close modal on background click
+document.getElementById('passwordModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closePasswordModal();
+  }
+});
+</script>
+
+{% endblock %}

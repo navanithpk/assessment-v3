@@ -26,13 +26,6 @@ from .models import (
     UserProfile,
 )
 
-def get_user_role(user):
-    """Helper function to get user's role"""
-    try:
-        return user.profile.role
-    except:
-        return 'student' if not user.is_staff else 'teacher'
-
 
 # ===================== AUTHENTICATION & REDIRECTS =====================
 
@@ -100,146 +93,430 @@ def student_dashboard(request):
 
 # ===================== USER MANAGEMENT =====================
 # Replace your create_user_account view with this fixed version
+from django.db import transaction
+
+def enforce_staff_flag(user):
+    if hasattr(user, "profile"):
+        user.is_staff = user.profile.role in ("teacher", "school_admin")
+        user.save(update_fields=["is_staff"])
+
+@transaction.atomic
+def create_user_with_role(
+    *,
+    email,
+    password,
+    full_name,
+    role,
+    school,
+    created_by,
+    grade=None,
+    division=None,
+    subject=None,
+):
+    email = email.lower().strip()
+
+    # Create auth user
+    user = User.objects.create_user(
+        username=email,
+        email=email,
+        password=password,
+        first_name=full_name.split()[0],
+        last_name=" ".join(full_name.split()[1:]),
+    )
+
+    # 🔒 STAFF RULE (HARD)
+    user.is_staff = role in ("teacher", "school_admin")
+    user.save()
+
+    # Create profile (ALWAYS)
+    profile = UserProfile.objects.create(
+        user=user,
+        role=role,
+        school=school,
+        grade=int(grade) if role == "student" and grade else None,
+        division=division if role == "student" else None,
+        subject=subject if role == "teacher" else None,
+    )
+
+    # Create Student record ONLY for students
+    if role == "student":
+        grade_obj = Grade.objects.get(name=str(grade))
+        Student.objects.create(
+            user=user,
+            full_name=full_name,
+            grade=grade_obj,
+            section=division,
+            school=school,
+            created_by=created_by,
+        )
+
+    return user
 
 @login_required
 def create_user_account(request):
     school = get_user_school(request.user)
-    
+
+    # 🔁 Pull confirmation from session (if any)
+    created_user = request.session.pop("created_user", None)
+    created_password = request.session.pop("created_password", None)
+
     if request.method == 'POST':
         role = request.POST.get('role', 'student')
-        
-        # Get username and password - these are required
-        username = request.POST.get('username', '').strip()
+
+        email = request.POST.get('username', '').strip().lower()
         password = request.POST.get('password', '').strip()
-        name = request.POST.get('name', '').strip()
-        
-        # Validate required fields
-        if not username:
-            messages.error(request, 'Username is required')
+        full_name = request.POST.get('name', '').strip()
+
+        if not email or not password or not full_name:
+            messages.error(request, 'All fields are required')
             return redirect('create_user_account')
-        
-        if not password:
-            messages.error(request, 'Password is required')
+
+        if User.objects.filter(username=email).exists():
+            messages.error(request, f'Account with {email} already exists')
             return redirect('create_user_account')
-        
-        if not name:
-            messages.error(request, 'Name is required')
-            return redirect('create_user_account')
-        
-        # Check if username already exists
-        if User.objects.filter(username=username).exists():
-            messages.error(request, f'Username "{username}" is already taken')
-            return redirect('create_user_account')
-        
-        # Permission check: Only admins can create teachers
+
         if role == 'teacher' and request.user.profile.role != 'school_admin':
             messages.error(request, 'Only school admins can create teacher accounts')
             return redirect('create_user_account')
+
+        try:
+            create_user_with_role(
+                email=email,
+                password=password,
+                full_name=full_name,
+                role=role,
+                school=school,
+                created_by=request.user,
+                grade=request.POST.get('grade'),
+                division=request.POST.get('division'),
+                subject=request.POST.get('subject'),
+            )
+
+            # ✅ STORE confirmation in session
+            request.session["created_user"] = email
+            request.session["created_password"] = password
+
+            return redirect('create_user_account')
+
+        except Exception as e:
+            messages.error(request, f'Error creating account: {str(e)}')
+            return redirect('create_user_account')
+
+    return render(request, 'teacher/create_user_account.html', {
+        'school': school,
+        'is_school_admin': request.user.profile.role == 'school_admin',
+        'created_user': created_user,
+        'created_password': created_password,
+    })
+
+
+# Add these views to your views.py
+
+from django.db import transaction
+from django.contrib.auth.models import User
+from core.models import UserProfile, Student, Grade, Subject, School
+
+def get_user_school(user):
+    """Helper function to get user's school"""
+    try:
+        return user.profile.school
+    except:
+        return None
+
+def get_user_role(user):
+    """Helper function to get user's role"""
+    if user.is_superuser:
+        return 'superuser'
+    try:
+        return user.profile.role
+    except:
+        return 'student' if not user.is_staff else 'teacher'
+
+
+@login_required
+def add_user(request):
+    """
+    Add new teacher or student account
+    - School admins can create teachers and students
+    - Teachers can only create students
+    """
+    school = get_user_school(request.user)
+    role = get_user_role(request.user)
+    is_school_admin = (role == 'school_admin')
+    
+    if not school:
+        messages.error(request, "You are not assigned to a school.")
+        return redirect("teacher_dashboard")
+    
+    if request.method == "POST":
+        new_user_role = request.POST.get("role", "student")
+        full_name = request.POST.get("full_name", "").strip()
+        email = request.POST.get("email", "").strip().lower()
+        password = request.POST.get("password", "").strip()
+        
+        # Validation
+        if not full_name or not email or not password:
+            messages.error(request, "All required fields must be filled.")
+            return redirect("add_user")
+        
+        if len(password) < 8:
+            messages.error(request, "Password must be at least 8 characters long.")
+            return redirect("add_user")
+        
+        # Permission check: Only school admin can create teachers
+        if new_user_role == 'teacher' and not is_school_admin:
+            messages.error(request, "Only school administrators can create teacher accounts.")
+            return redirect("add_user")
+        
+        # Check if user already exists
+        if User.objects.filter(username=email).exists():
+            messages.error(request, f"An account with email {email} already exists.")
+            return redirect("add_user")
         
         try:
             with transaction.atomic():
-                # Create the User
+                # Split name
+                name_parts = full_name.split()
+                first_name = name_parts[0] if name_parts else ""
+                last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+                
+                # Create User
                 user = User.objects.create_user(
-                    username=username,
+                    username=email,
+                    email=email,
                     password=password,
-                    first_name=name.split()[0] if name else '',
-                    last_name=' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_staff=(new_user_role in ['teacher', 'school_admin'])
                 )
                 
-                # Create/get UserProfile
-                profile, created = UserProfile.objects.get_or_create(user=user)
-                profile.school = school
-                profile.role = role
+                # Create UserProfile
+                profile = UserProfile.objects.create(
+                    user=user,
+                    role=new_user_role,
+                    school=school
+                )
                 
-                if role == 'student':
-                    # Student-specific fields
-                    grade_num = request.POST.get('grade', '')
-                    division = request.POST.get('division', '')
+                # Handle role-specific data
+                if new_user_role == 'teacher':
+                    # Teacher-specific
+                    subject = request.POST.get("subject", "")
+                    if subject:
+                        profile.subject = subject
+                        profile.save()
                     
-                    profile.grade = int(grade_num) if grade_num else None
+                    messages.success(
+                        request,
+                        f'✓ Teacher account created successfully!\n'
+                        f'Username: {email}\n'
+                        f'Password: {password}'
+                    )
+                
+                elif new_user_role == 'student':
+                    # Student-specific
+                    grade_name = request.POST.get("grade", "")
+                    division = request.POST.get("division", "").strip()
+                    roll_number = request.POST.get("roll_number", "").strip()
+                    admission_id = request.POST.get("admission_id", "").strip()
+                    
+                    if not grade_name or not division:
+                        raise ValueError("Grade and section are required for students")
+                    
+                    # Update profile
+                    profile.grade = int(grade_name) if grade_name.isdigit() else None
                     profile.division = division
                     profile.save()
                     
-                    # Create Student record - CRITICAL for listing
-                    # Find or create the Grade object
-                    grade_obj = None
-                    if grade_num:
-                        # Try to find existing grade or create new one
-                        try:
-                            grade_obj = Grade.objects.get(name=str(grade_num))
-                        except Grade.DoesNotExist:
-                            grade_obj = Grade.objects.create(name=str(grade_num))
-                    
-                    # Create the Student record
-                    student = Student.objects.create(
-                        full_name=name,
-                        roll_number='',  # Can be updated later via manage students
-                        admission_id='',  # Can be updated later via manage students
+                    # Create Student record
+                    grade_obj = Grade.objects.get(name=grade_name)
+                    Student.objects.create(
+                        user=user,
+                        full_name=full_name,
+                        roll_number=roll_number,
+                        admission_id=admission_id,
                         grade=grade_obj,
                         section=division,
                         school=school,
-                        user=user,  # Link to User account
                         created_by=request.user
                     )
                     
                     messages.success(
-                        request, 
-                        f'Student account created successfully! Username: {username}, Password: {password}'
-                    )
-                    
-                elif role == 'teacher':
-                    # Teacher-specific fields
-                    profile.subject = request.POST.get('subject', '')
-                    profile.save()
-                    
-                    messages.success(
-                        request, 
-                        f'Teacher account created successfully! Username: {username}, Password: {password}'
+                        request,
+                        f'✓ Student account created successfully!\n'
+                        f'Username: {email}\n'
+                        f'Password: {password}'
                     )
                 
-                return redirect('manage_users')  # Redirect to "View All Users" page
-                
+                return redirect("manage_users")
+        
+        except Grade.DoesNotExist:
+            messages.error(request, "Selected grade does not exist.")
         except Exception as e:
-            messages.error(request, f'Error creating account: {str(e)}')
-            return redirect('create_user_account')
+            messages.error(request, f"Error creating account: {str(e)}")
+        
+        return redirect("add_user")
     
-    # GET request - show form
-    return render(request, 'teacher/create_user_account.html', {
+    # GET request
+    context = {
         'school': school,
-        'is_school_admin': request.user.profile.role == 'school_admin'
-    })
+        'is_school_admin': is_school_admin,
+        'grades': Grade.objects.all(),
+        'subjects': Subject.objects.all()
+    }
+    
+    return render(request, "teacher/add_new_teacher_student.html", context)
 
-
-# Helper function (add if not exists)
-def get_user_school(user):
-    """Get the school for the current user"""
-    if hasattr(user, 'profile') and user.profile.school:
-        return user.profile.school
-    return None
 
 @login_required
 def manage_users(request):
+    """
+    View and manage all teachers and students
+    - Show all users from the same school
+    - Allow password changes based on permissions
+    """
     school = get_user_school(request.user)
+    role = get_user_role(request.user)
+    is_school_admin = (role == 'school_admin')
     
-    if request.method == 'POST':
-        user_id = request.POST.get('user_id')
-        new_password = request.POST.get('new_password')
+    if not school:
+        messages.error(request, "You are not assigned to a school.")
+        return redirect("teacher_dashboard")
+    
+    # Get all user profiles from same school
+    teachers = UserProfile.objects.filter(
+        school=school,
+        role__in=['teacher', 'school_admin']
+    ).select_related('user').order_by('user__first_name', 'user__last_name')
+    
+    # Get student records
+    students = Student.objects.filter(
+        school=school
+    ).select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
+    
+    # Combine into unified list
+    all_users = []
+    
+    for teacher in teachers:
+        all_users.append({
+            'user_id': teacher.user.id,
+            'name': f"{teacher.user.first_name} {teacher.user.last_name}".strip() or teacher.user.username,
+            'username': teacher.user.username,
+            'email': teacher.user.email,
+            'role': teacher.role,
+            'role_display': teacher.get_role_display(),
+            'joined': teacher.created_at,
+            'additional_info': None,
+            'student_id': None
+        })
+    
+    for student in students:
+        all_users.append({
+            'user_id': student.user.id if student.user else None,
+            'name': student.full_name,
+            'username': student.user.username if student.user else 'No account',
+            'email': student.user.email if student.user else '',
+            'role': 'student',
+            'role_display': 'Student',
+            'joined': student.created_at,
+            'additional_info': {
+                'grade': student.grade.name,
+                'section': student.section,
+                'roll_number': student.roll_number,
+                'admission_id': student.admission_id
+            },
+            'student_id': student.id
+        })
+    
+    # Sort by name
+    all_users.sort(key=lambda x: x['name'].lower())
+    
+    context = {
+        'school': school,
+        'all_users': all_users,
+        'is_school_admin': is_school_admin,
+        'role': role,
+        'total_users': len(all_users),
+        'total_teachers': teachers.count(),
+        'total_students': students.count()
+    }
+    
+    return render(request, "teacher/manage_teacher_student.html", context)
+
+
+@login_required
+def change_password(request):
+    """
+    Change password for users
+    - School admin can change teacher and student passwords
+    - Teacher can only change student passwords
+    """
+    if request.method != "POST":
+        return redirect("manage_users")
+    
+    school = get_user_school(request.user)
+    role = get_user_role(request.user)
+    is_school_admin = (role == 'school_admin')
+    
+    user_id = request.POST.get("user_id")
+    new_password = request.POST.get("new_password", "").strip()
+    
+    if not user_id or not new_password:
+        messages.error(request, "User ID and password are required.")
+        return redirect("manage_users")
+    
+    if len(new_password) < 8:
+        messages.error(request, "Password must be at least 8 characters long.")
+        return redirect("manage_users")
+    
+    try:
+        user = User.objects.get(id=user_id)
         
+        # Get the target user's role
         try:
-            user = User.objects.get(id=user_id, profile__school=school)
-            user.set_password(new_password)
-            user.save()
-            messages.success(request, f'Password updated for {user.username}')
-        except User.DoesNotExist:
-            messages.error(request, 'User not found')
+            target_role = user.profile.role
+        except:
+            # Check if it's a student
+            try:
+                student = user.student_profile
+                target_role = 'student'
+            except:
+                messages.error(request, "User profile not found.")
+                return redirect("manage_users")
+        
+        # Permission check
+        if target_role in ['teacher', 'school_admin'] and not is_school_admin:
+            messages.error(request, "Only school administrators can change teacher passwords.")
+            return redirect("manage_users")
+        
+        # Verify user belongs to same school
+        try:
+            user_profile = user.profile
+            if user_profile.school != school:
+                messages.error(request, "You can only change passwords for users in your school.")
+                return redirect("manage_users")
+        except:
+            # Check student
+            try:
+                student = user.student_profile
+                if student.school != school:
+                    messages.error(request, "You can only change passwords for users in your school.")
+                    return redirect("manage_users")
+            except:
+                messages.error(request, "User not found in your school.")
+                return redirect("manage_users")
+        
+        # Change password
+        user.set_password(new_password)
+        user.save()
+        
+        messages.success(request, f"✓ Password changed successfully for {user.username}")
     
-    # Get all users from same school
-    users = User.objects.filter(profile__school=school).select_related('profile')
+    except User.DoesNotExist:
+        messages.error(request, "User not found.")
+    except Exception as e:
+        messages.error(request, f"Error changing password: {str(e)}")
     
-    return render(request, 'teacher/manage_users.html', {
-        'users': users,
-        'school': school
-    })
+    return redirect("manage_users")
 
 # ===================== SCHOOL USERS LIST =====================
 # Add this to your views.py
@@ -1021,7 +1298,7 @@ def manage_class_groups(request):
             
             if not name:
                 messages.error(request, 'Group name is required')
-                return redirect('manage_class_groups')
+                return redirect('groups_list')
             
             try:
                 group = ClassGroup.objects.create(
@@ -1054,11 +1331,11 @@ def manage_class_groups(request):
                     group.students.set(students)
                 
                 messages.success(request, f'Group "{name}" created successfully with {len(student_ids)} students')
-                return redirect('manage_class_groups')
+                return redirect('groups_list')
                 
             except Exception as e:
                 messages.error(request, f'Error creating group: {str(e)}')
-                return redirect('manage_class_groups')
+                return redirect('groups_list')
         
         elif action == 'edit':
             # Edit existing group
@@ -1091,7 +1368,7 @@ def manage_class_groups(request):
                 group.students.clear()
             
             messages.success(request, f'Group "{group.name}" updated successfully')
-            return redirect('manage_class_groups')
+            return redirect('groups_list')
         
         elif action == 'delete':
             # Delete group
@@ -1101,7 +1378,7 @@ def manage_class_groups(request):
             group.delete()
             
             messages.success(request, f'Group "{group_name}" deleted successfully')
-            return redirect('manage_class_groups')
+            return redirect('groups_list')
     
     # GET request - display groups
     # ✅ Fixed ordering - use 'name' instead of 'created_at'

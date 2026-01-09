@@ -1,7 +1,5 @@
 {% extends "teacher/teacher_base.html" %}
-
 {% block title %}Create User Account{% endblock %}
-
 {% block content %}
 
 <style>
@@ -165,22 +163,23 @@
   box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
 }
 
-.success-message {
-  background: #d1fae5;
-  color: #065f46;
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  border-left: 4px solid #10b981;
+.confirmation-box {
+  background: #ecfeff;
+  border-left: 5px solid #06b6d4;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
 }
 
-.error-message {
-  background: #fee;
-  color: #c33;
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 20px;
-  border-left: 4px solid #ef4444;
+.confirmation-box h3 {
+  margin: 0 0 10px 0;
+  color: #0f172a;
+}
+
+.confirmation-box p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #334155;
 }
 </style>
 
@@ -189,15 +188,14 @@
   <p>Add new students or teachers to your school</p>
 </div>
 
-{% if success %}
-<div class="success-message">
-  ✓ Account created successfully! Username: <strong>{{ created_username }}</strong>
-</div>
-{% endif %}
-
-{% if error %}
-<div class="error-message">
-  {{ error }}
+{% if created_user %}
+<div class="confirmation-box">
+  <h3>✅ Account Created Successfully</h3>
+  <p><strong>Email (Username):</strong> {{ created_user }}</p>
+  <p><strong>Password:</strong> {{ created_password }}</p>
+  <p style="font-size:13px;color:#64748b;margin-top:8px;">
+    Please copy and share these credentials securely.
+  </p>
 </div>
 {% endif %}
 
@@ -207,15 +205,15 @@
     <h3>Student</h3>
     <p>Create a student account</p>
   </div>
-  
-  <div class="role-card {% if request.user.profile.role != 'school_admin' %}disabled{% endif %}" 
-       onclick="{% if request.user.profile.role == 'school_admin' %}selectRole('teacher'){% endif %}" 
+
+  <div class="role-card {% if request.user.profile.role != 'school_admin' %}disabled{% endif %}"
+       onclick="{% if request.user.profile.role == 'school_admin' %}selectRole('teacher'){% endif %}"
        id="teacher-card">
     <div class="icon">👨‍🏫</div>
     <h3>Teacher</h3>
     <p>Create a teacher account</p>
     {% if request.user.profile.role != 'school_admin' %}
-    <p style="color: #ef4444; margin-top: 8px; font-weight: 600;">Admin Only</p>
+      <p style="color:#ef4444;font-weight:600;margin-top:6px;">Admin Only</p>
     {% endif %}
   </div>
 </div>
@@ -224,172 +222,142 @@
   <form method="post">
     {% csrf_token %}
     <input type="hidden" name="role" id="role-input" value="student">
-    
+
     <!-- STUDENT FORM -->
     <div class="form-section active" id="student-form">
       <div class="form-grid">
         <div class="form-group">
           <label for="student-name">Full Name *</label>
-          <input type="text" id="student-name" name="name" placeholder="e.g. John Doe" required>
+          <input type="text" id="student-name" name="name" required>
         </div>
-        
-        <div class="form-group">
-          <label for="student-sex">Sex *</label>
-          <select id="student-sex" name="sex" required>
-            <option value="">Select...</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-            <option value="O">Other</option>
-          </select>
-        </div>
-        
+
         <div class="form-group">
           <label for="student-grade">Grade *</label>
-          <input type="number" id="student-grade" name="grade" placeholder="e.g. 10" min="1" max="12" required>
+          <input type="number" id="student-grade" name="grade" required>
         </div>
-        
+
         <div class="form-group">
           <label for="student-division">Division *</label>
-          <input type="text" id="student-division" name="division" placeholder="e.g. A" required>
+          <input type="text" id="student-division" name="division" required>
         </div>
-        
+
         <div class="form-group full-width">
-          <label for="student-username">Username *</label>
-          <input type="text" id="student-username" name="username" placeholder="e.g. john.doe2024" required>
+          <label for="student-username">Email (Username) *</label>
+          <input type="email" id="student-username" name="username" required>
         </div>
       </div>
-      
+
       <div class="password-generator">
         <div class="form-group">
           <label for="student-password">Password *</label>
-          <input type="text" id="student-password" name="password" placeholder="Enter or generate password" required>
+          <input type="text" id="student-password" name="password" required>
         </div>
-        <button type="button" class="btn btn-generate" onclick="generatePassword('student-password')">
+        <button type="button" class="btn btn-generate"
+                onclick="generatePassword('student-password')">
           🎲 Generate
         </button>
       </div>
     </div>
-    
+
     <!-- TEACHER FORM -->
     <div class="form-section" id="teacher-form">
       <div class="form-grid">
         <div class="form-group">
           <label for="teacher-name">Full Name *</label>
-          <input type="text" id="teacher-name" name="name" placeholder="e.g. Jane Smith">
+          <input type="text" id="teacher-name" name="name">
         </div>
-        
-        <div class="form-group">
-          <label for="teacher-sex">Sex *</label>
-          <select id="teacher-sex" name="sex">
-            <option value="">Select...</option>
-            <option value="M">Male</option>
-            <option value="F">Female</option>
-            <option value="O">Other</option>
-          </select>
-        </div>
-        
+
         <div class="form-group">
           <label for="teacher-subject">Subject *</label>
-          <input type="text" id="teacher-subject" name="subject" placeholder="e.g. Mathematics">
+          <input type="text" id="teacher-subject" name="subject">
         </div>
-        
-        <div class="form-group">
-          <label for="teacher-username">Username *</label>
-          <input type="text" id="teacher-username" name="username" placeholder="e.g. jane.smith">
+
+        <div class="form-group full-width">
+          <label for="teacher-username">Email (Username) *</label>
+          <input type="email" id="teacher-username" name="username">
         </div>
       </div>
-      
+
       <div class="password-generator">
         <div class="form-group">
           <label for="teacher-password">Password *</label>
-          <input type="text" id="teacher-password" name="password" placeholder="Enter or generate password">
+          <input type="text" id="teacher-password" name="password">
         </div>
-        <button type="button" class="btn btn-generate" onclick="generatePassword('teacher-password')">
+        <button type="button" class="btn btn-generate"
+                onclick="generatePassword('teacher-password')">
           🎲 Generate
         </button>
       </div>
     </div>
-    
+
     <button type="submit" class="btn btn-primary">
-      ➕ Create Account
+      Submit
     </button>
   </form>
 </div>
-
 <script>
 function selectRole(role) {
-  // Update cards
+  // Toggle cards
   document.getElementById('student-card').classList.remove('active');
   document.getElementById('teacher-card').classList.remove('active');
   document.getElementById(role + '-card').classList.add('active');
-  
-  // Update forms
+
+  // Toggle forms
   document.getElementById('student-form').classList.remove('active');
   document.getElementById('teacher-form').classList.remove('active');
   document.getElementById(role + '-form').classList.add('active');
-  
-  // Update hidden input
+
+  // Hidden role input
   document.getElementById('role-input').value = role;
-  
-  // ✅ IMPORTANT: Disable inactive form fields to prevent submission
+
+  // ---- CRITICAL FIX ----
+  const studentFields = [
+    'student-name',
+    'student-grade',
+    'student-division',
+    'student-username',
+    'student-password'
+  ];
+
+  const teacherFields = [
+    'teacher-name',
+    'teacher-subject',
+    'teacher-username',
+    'teacher-password'
+  ];
+
   if (role === 'student') {
-    // Enable student fields
-    document.getElementById('student-name').disabled = false;
-    document.getElementById('student-sex').disabled = false;
-    document.getElementById('student-grade').disabled = false;
-    document.getElementById('student-division').disabled = false;
-    document.getElementById('student-username').disabled = false;
-    document.getElementById('student-password').disabled = false;
-    
-    // Disable teacher fields
-    document.getElementById('teacher-name').disabled = true;
-    document.getElementById('teacher-sex').disabled = true;
-    document.getElementById('teacher-subject').disabled = true;
-    document.getElementById('teacher-username').disabled = true;
-    document.getElementById('teacher-password').disabled = true;
-    
-    // Set required
-    document.getElementById('student-name').required = true;
-    document.getElementById('student-sex').required = true;
-    document.getElementById('student-grade').required = true;
-    document.getElementById('student-division').required = true;
-    document.getElementById('student-username').required = true;
-    document.getElementById('student-password').required = true;
-    
-    document.getElementById('teacher-name').required = false;
-    document.getElementById('teacher-sex').required = false;
-    document.getElementById('teacher-subject').required = false;
-    document.getElementById('teacher-username').required = false;
-    document.getElementById('teacher-password').required = false;
+    studentFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = false;
+        el.required = true;
+      }
+    });
+
+    teacherFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = true;
+        el.required = false;
+      }
+    });
   } else {
-    // Enable teacher fields
-    document.getElementById('teacher-name').disabled = false;
-    document.getElementById('teacher-sex').disabled = false;
-    document.getElementById('teacher-subject').disabled = false;
-    document.getElementById('teacher-username').disabled = false;
-    document.getElementById('teacher-password').disabled = false;
-    
-    // Disable student fields
-    document.getElementById('student-name').disabled = true;
-    document.getElementById('student-sex').disabled = true;
-    document.getElementById('student-grade').disabled = true;
-    document.getElementById('student-division').disabled = true;
-    document.getElementById('student-username').disabled = true;
-    document.getElementById('student-password').disabled = true;
-    
-    // Set required
-    document.getElementById('teacher-name').required = true;
-    document.getElementById('teacher-sex').required = true;
-    document.getElementById('teacher-subject').required = true;
-    document.getElementById('teacher-username').required = true;
-    document.getElementById('teacher-password').required = true;
-    
-    document.getElementById('student-name').required = false;
-    document.getElementById('student-sex').required = false;
-    document.getElementById('student-grade').required = false;
-    document.getElementById('student-division').required = false;
-    document.getElementById('student-username').required = false;
-    document.getElementById('student-password').required = false;
+    teacherFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = false;
+        el.required = true;
+      }
+    });
+
+    studentFields.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.disabled = true;
+        el.required = false;
+      }
+    });
   }
 }
 
@@ -402,10 +370,10 @@ function generatePassword(fieldId) {
   document.getElementById(fieldId).value = password;
 }
 
-// Initialize: Make sure student form is active by default and teacher fields are disabled
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   selectRole('student');
 });
 </script>
+
 
 {% endblock %}

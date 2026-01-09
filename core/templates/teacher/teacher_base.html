@@ -24,6 +24,7 @@ body {
   padding: 22px;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .sidebar h2 {
@@ -32,19 +33,36 @@ body {
   font-weight: 600;
 }
 
+/* Section headings */
+.sidebar .section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+  margin: 16px 0 8px 0;
+  padding: 0 8px;
+}
+
 .sidebar a {
   display: block;
   color: #e5e7eb;
   text-decoration: none;
-  margin: 8px 0;
-  padding: 6px 8px;
+  margin: 4px 0;
+  padding: 8px 10px;
   border-radius: 6px;
   font-size: 14px;
+  transition: all 0.2s;
 }
 
 .sidebar a:hover {
   background: rgba(255,255,255,0.08);
   color: white;
+}
+
+.sidebar a.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
 }
 
 /* Admin badge */
@@ -67,13 +85,15 @@ body {
 .sidebar button {
   margin-top: 12px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 10px;
   border-radius: 8px;
   border: none;
   background: #ef4444;
   color: white;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 .sidebar button:hover {
@@ -101,26 +121,39 @@ body {
       {% endif %}
     </h2>
 
-    <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
-    <a href="{% url 'tests_list' %}">📝 Create Test</a>
-    <a href="{% url 'question_library' %}">📚 Question Library</a>
-		<!-- In your sidebar - available to ALL teachers -->
-	<a href="{% url 'manage_class_groups' %}">
-	  👥 Class Groups
-	</a>
-    {% if request.user.profile.role == 'school_admin' or request.user.profile.role == 'teacher' %}
-	<a href="{% url 'create_user_account' %}">	  ➕ Create User Account</a>
-	{% endif %}
-    <a href="{% url 'manage_users' %}">👥 View & Manage Teacher Accounts</a>
-	<a href="{% url 'manage_students' %}" class="nav-link">
-	👨‍🎓 Manage Students
-	</a>
+    <!-- Dashboard -->
+    <a href="{% url 'teacher_dashboard' %}" 
+       class="{% if request.path == '/teacher/' %}active{% endif %}">
+      🏠 Dashboard
+    </a>
+
+    <!-- Assessments Section -->
+    <div class="section-title">Assessments</div>
+    <a href="{% url 'tests_list' %}" 
+       class="{% if '/tests/' in request.path %}active{% endif %}">
+      📝 Create Test
+    </a>
+    <a href="{% url 'question_library' %}" 
+       class="{% if '/questions/' in request.path %}active{% endif %}">
+      📚 Question Library
+    </a>
+
+    <!-- User Management Section -->
+    <div class="section-title">User Management</div>
+    <a href="{% url 'add_user' %}" 
+       class="{% if '/users/add/' in request.path %}active{% endif %}">
+      ➕ Create Profile
+    </a>
+    <a href="{% url 'manage_users' %}" 
+       class="{% if '/users/manage/' in request.path %}active{% endif %}">
+      👥 View & Manage Profiles
+    </a>
 
     <div class="spacer"></div>
 
     <form method="post" action="{% url 'logout' %}">
       {% csrf_token %}
-      <button type="submit">Logout</button>
+      <button type="submit">🚪 Logout</button>
     </form>
   </aside>
 
