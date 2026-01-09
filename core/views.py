@@ -1287,6 +1287,7 @@ def manage_class_groups(request):
     
     if request.method == 'POST':
         action = request.POST.get('action')
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         
         if action == 'create':
             # Create new group
@@ -1297,8 +1298,10 @@ def manage_class_groups(request):
             student_ids = request.POST.getlist('students')
             
             if not name:
+                if is_ajax:
+                    return JsonResponse({'error': 'Group name is required'}, status=400)
                 messages.error(request, 'Group name is required')
-                return redirect('groups_list')
+                return redirect('manage_class_groups')
             
             try:
                 group = ClassGroup.objects.create(
@@ -1306,9 +1309,6 @@ def manage_class_groups(request):
                     school=school,
                     created_by=request.user,
                     grade_id=grade_id if grade_id else None,
-                    # Add these if your model has them:
-                    # section=request.POST.get('section', ''),
-                    # subject_id=request.POST.get('subject'),
                 )
                 
                 # Add color if the field exists
@@ -1330,58 +1330,100 @@ def manage_class_groups(request):
                     )
                     group.students.set(students)
                 
+                if is_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Group "{name}" created successfully',
+                        'group_id': group.id
+                    })
+                
                 messages.success(request, f'Group "{name}" created successfully with {len(student_ids)} students')
-                return redirect('groups_list')
+                return redirect('manage_class_groups')
                 
             except Exception as e:
+                if is_ajax:
+                    return JsonResponse({'error': str(e)}, status=500)
                 messages.error(request, f'Error creating group: {str(e)}')
-                return redirect('groups_list')
+                return redirect('manage_class_groups')
         
         elif action == 'edit':
             # Edit existing group
             group_id = request.POST.get('group_id')
-            group = get_object_or_404(ClassGroup, id=group_id, school=school)
             
-            group.name = request.POST.get('name', group.name)
-            grade_id = request.POST.get('grade')
-            group.grade_id = grade_id if grade_id else None
+            if not group_id:
+                if is_ajax:
+                    return JsonResponse({'error': 'Group ID is required'}, status=400)
+                messages.error(request, 'Group ID is required')
+                return redirect('manage_class_groups')
             
-            # Update optional fields if they exist
-            if hasattr(group, 'description'):
-                group.description = request.POST.get('description', '')
-            
-            if hasattr(group, 'color'):
-                group.color = request.POST.get('color', group.color if hasattr(group, 'color') else '#3b82f6')
-            
-            group.save()
-            
-            # Update students
-            student_ids = request.POST.getlist('students')
-            if student_ids:
-                students = User.objects.filter(
-                    id__in=student_ids,
-                    profile__school=school,
-                    profile__role='student'
-                )
-                group.students.set(students)
-            else:
-                group.students.clear()
-            
-            messages.success(request, f'Group "{group.name}" updated successfully')
-            return redirect('groups_list')
+            try:
+                group = get_object_or_404(ClassGroup, id=group_id, school=school)
+                
+                group.name = request.POST.get('name', group.name)
+                grade_id = request.POST.get('grade')
+                group.grade_id = grade_id if grade_id else None
+                
+                # Update optional fields if they exist
+                if hasattr(group, 'description'):
+                    group.description = request.POST.get('description', '')
+                
+                if hasattr(group, 'color'):
+                    group.color = request.POST.get('color', group.color if hasattr(group, 'color') else '#3b82f6')
+                
+                group.save()
+                
+                # Update students
+                student_ids = request.POST.getlist('students')
+                if student_ids:
+                    students = User.objects.filter(
+                        id__in=student_ids,
+                        profile__school=school,
+                        profile__role='student'
+                    )
+                    group.students.set(students)
+                else:
+                    group.students.clear()
+                
+                if is_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Group "{group.name}" updated successfully'
+                    })
+                
+                messages.success(request, f'Group "{group.name}" updated successfully')
+                return redirect('manage_class_groups')
+                
+            except Exception as e:
+                if is_ajax:
+                    return JsonResponse({'error': str(e)}, status=500)
+                messages.error(request, f'Error updating group: {str(e)}')
+                return redirect('manage_class_groups')
         
         elif action == 'delete':
             # Delete group
             group_id = request.POST.get('group_id')
-            group = get_object_or_404(ClassGroup, id=group_id, school=school)
-            group_name = group.name
-            group.delete()
             
-            messages.success(request, f'Group "{group_name}" deleted successfully')
-            return redirect('groups_list')
+            try:
+                group = get_object_or_404(ClassGroup, id=group_id, school=school)
+                group_name = group.name
+                group.delete()
+                
+                if is_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'message': f'Group "{group_name}" deleted successfully'
+                    })
+                
+                messages.success(request, f'Group "{group_name}" deleted successfully')
+                return redirect('manage_class_groups')
+                
+            except Exception as e:
+                if is_ajax:
+                    return JsonResponse({'error': str(e)}, status=500)
+                messages.error(request, f'Error deleting group: {str(e)}')
+                return redirect('manage_class_groups')
     
     # GET request - display groups
-    # ✅ Fixed ordering - use 'name' instead of 'created_at'
     groups = ClassGroup.objects.filter(
         school=school
     ).prefetch_related('students').order_by('name')

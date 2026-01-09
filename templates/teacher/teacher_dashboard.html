@@ -1,750 +1,146 @@
 {% extends "teacher/teacher_base.html" %}
-{% load static %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Teacher Dashboard{% endblock %}
 
 {% block content %}
+
 <style>
-.dashboard-container {
-  max-width: 1400px;
-  margin: 0 auto;
+.welcome-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 16px;
+  padding: 40px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
 }
 
-.dashboard-header {
-  margin-bottom: 32px;
-}
-
-.dashboard-header h1 {
-  font-size: 32px;
-  font-weight: 700;
-  color: #111827;
+.welcome-header h1 {
   margin: 0 0 8px 0;
+  font-size: 32px;
 }
 
-.dashboard-header p {
-  color: #6b7280;
+.welcome-header p {
   margin: 0;
+  opacity: 0.9;
+  font-size: 16px;
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
 }
 
-.widget-card {
+.card {
   background: white;
   border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  transition: all .3s ease;
-  border: 2px solid transparent;
+  padding: 28px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.widget-card:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  border-color: #e5e7eb;
-  transform: translateY(-2px);
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.widget-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+.card-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
 }
 
-.widget-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
+.card h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #1f2937;
 }
 
-.widget-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-}
-
-.icon-blue { background: #dbeafe; }
-.icon-green { background: #d1fae5; }
-.icon-purple { background: #e0e7ff; }
-.icon-orange { background: #fed7aa; }
-
-.widget-stat {
-  font-size: 36px;
-  font-weight: 700;
-  color: #111827;
-  margin: 16px 0 8px 0;
-}
-
-.widget-description {
+.card p {
   color: #6b7280;
-  font-size: 14px;
   margin: 0 0 20px 0;
-}
-
-.widget-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 20px;
-}
-
-.btn {
-  padding: 10px 18px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all .2s;
+  line-height: 1.6;
 }
 
-.btn.primary {
+.card-btn {
+  display: inline-block;
+  padding: 10px 20px;
   background: #2563eb;
   color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
 }
 
-.btn.primary:hover {
+.card-btn:hover {
   background: #1d4ed8;
 }
 
-.btn.secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.btn.secondary:hover {
-  background: #e5e7eb;
-}
-
-.btn.success {
-  background: #10b981;
-  color: white;
-}
-
-.btn.success:hover {
-  background: #059669;
-}
-
-.quick-actions {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  padding: 32px;
-  color: white;
-  margin-bottom: 32px;
-}
-
-.quick-actions h2 {
-  margin: 0 0 24px 0;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.actions-grid {
+.quick-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: 20px;
+  margin-bottom: 30px;
 }
 
-.action-btn {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 20px;
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
   text-align: center;
-  transition: all .3s;
-  cursor: pointer;
-  text-decoration: none;
-  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.action-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-4px);
+.stat-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 4px;
 }
 
-.action-btn-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
-}
-
-.action-btn-text {
-  font-size: 16px;
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
   font-weight: 500;
-}
-
-.add-student-section {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  margin-bottom: 32px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.section-header h3 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.add-student-form {
-  background: #f9fafb;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 20px;
-  border: 2px solid #e5e7eb;
-}
-
-.form-section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.form-section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.form-section-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 16px 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.form-row:last-child {
-  margin-bottom: 0;
-}
-
-.form-group {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: #374151;
-  font-size: 14px;
-}
-
-.form-group label .required {
-  color: #dc2626;
-  margin-left: 2px;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: all .2s;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.form-group .helper-text {
-  color: #6b7280;
-  font-size: 12px;
-  margin-top: 4px;
-  display: block;
-}
-
-.login-credentials-section {
-  background: #fef3c7;
-  border-radius: 10px;
-  padding: 20px;
-  border: 2px solid #fde68a;
-}
-
-.students-list {
-  margin-top: 20px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.student-item {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all .2s;
-}
-
-.student-item:hover {
-  border-color: #2563eb;
-  background: #f9fafb;
-}
-
-.student-info {
-  flex: 1;
-}
-
-.student-name {
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 4px 0;
-}
-
-.student-details {
-  color: #6b7280;
-  font-size: 13px;
-  margin: 0;
-}
-
-.username-badge {
-  background: #dbeafe;
-  color: #1e40af;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-left: 8px;
-}
-
-.student-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  color: #6b7280;
-  transition: all .2s;
-  font-size: 18px;
-}
-
-.icon-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-.icon-btn.delete:hover {
-  background: #fee;
-  color: #dc2626;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
-}
-
-.empty-state-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  opacity: .3;
-}
-
-.success-message {
-  background: #d1fae5;
-  color: #065f46;
-  padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  display: none;
-}
-
-.success-message.show {
-  display: block;
 }
 </style>
 
-<div class="dashboard-container">
-  <div class="dashboard-header">
-    <h1>Welcome back, {{ user.first_name|default:user.username }}! 👋</h1>
-    <p>Here's what's happening with your classes today</p>
-  </div>
-
-  <div class="quick-actions">
-    <h2>Quick Actions</h2>
-    <div class="actions-grid">
-      <a href="{% url 'create_test' %}" class="action-btn">
-        <div class="action-btn-icon">📝</div>
-        <div class="action-btn-text">Create Test</div>
-      </a>
-      <a href="{% url 'question_library' %}" class="action-btn">
-        <div class="action-btn-icon">📚</div>
-        <div class="action-btn-text">Question Library</div>
-      </a>
-      <a href="{% url 'add_group' %}" class="action-btn">
-        <div class="action-btn-icon">👥</div>
-        <div class="action-btn-text">Create Group</div>
-      </a>
-      <a href="{% url 'class_performance' %}" class="action-btn">
-        <div class="action-btn-icon">📊</div>
-        <div class="action-btn-text">View Analytics</div>
-      </a>
-    </div>
-  </div>
-
-  <div class="dashboard-grid">
-    <div class="widget-card">
-      <div class="widget-header">
-        <h3 class="widget-title">Tests</h3>
-        <div class="widget-icon icon-blue">📋</div>
-      </div>
-      <div class="widget-stat">{{ tests_count }}</div>
-      <p class="widget-description">Total tests created</p>
-      <div class="widget-actions">
-        <a href="{% url 'tests_list' %}" class="btn secondary">View All</a>
-        <a href="{% url 'create_test' %}" class="btn primary">Create New</a>
-      </div>
-    </div>
-
-    <div class="widget-card">
-      <div class="widget-header">
-        <h3 class="widget-title">Questions</h3>
-        <div class="widget-icon icon-green">❓</div>
-      </div>
-      <div class="widget-stat">{{ questions_count }}</div>
-      <p class="widget-description">Questions in your library</p>
-      <div class="widget-actions">
-        <a href="{% url 'question_library' %}" class="btn secondary">Browse</a>
-        <a href="{% url 'add_question' %}" class="btn success">Add Question</a>
-      </div>
-    </div>
-
-    <div class="widget-card">
-      <div class="widget-header">
-        <h3 class="widget-title">Students</h3>
-        <div class="widget-icon icon-purple">👨‍🎓</div>
-      </div>
-      <div class="widget-stat" id="studentCount">{{ students_count }}</div>
-      <p class="widget-description">Total students enrolled</p>
-      <div class="widget-actions">
-        <a href="{% url 'students_list' %}" class="btn secondary">View All</a>
-      </div>
-    </div>
-
-    <div class="widget-card">
-      <div class="widget-header">
-        <h3 class="widget-title">Class Groups</h3>
-        <div class="widget-icon icon-orange">👥</div>
-      </div>
-      <div class="widget-stat">{{ groups_count }}</div>
-      <p class="widget-description">Active class groups</p>
-      <div class="widget-actions">
-        <a href="{% url 'groups_list' %}" class="btn secondary">View All</a>
-        <a href="{% url 'add_group' %}" class="btn primary">Create Group</a>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add Student Section -->
-  <div class="add-student-section">
-    <div class="section-header">
-      <h3>Quick Add Student</h3>
-      <a href="{% url 'students_list' %}" class="btn secondary">Manage All Students →</a>
-    </div>
-
-    <div id="successMessage" class="success-message">
-      Student added successfully!
-    </div>
-
-    <form id="addStudentForm" class="add-student-form">
-      {% csrf_token %}
-      
-      <!-- Personal Information -->
-      <div class="form-section">
-        <div class="form-section-title">👤 Personal Information</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="fullName">Full Name <span class="required">*</span></label>
-            <input type="text" id="fullName" name="full_name" required placeholder="e.g., John Doe">
-          </div>
-          <div class="form-group">
-            <label for="rollNumber">Roll Number</label>
-            <input type="text" id="rollNumber" name="roll_number" placeholder="e.g., 001">
-          </div>
-          <div class="form-group">
-            <label for="admissionId">Admission ID</label>
-            <input type="text" id="admissionId" name="admission_id" placeholder="e.g., ADM2024001">
-          </div>
-        </div>
-      </div>
-
-      <!-- Academic Information -->
-      <div class="form-section">
-        <div class="form-section-title">🎓 Academic Information</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="grade">Grade <span class="required">*</span></label>
-            <select id="grade" name="grade" required>
-              <option value="">Select Grade</option>
-              {% for grade in grades %}
-                <option value="{{ grade.id }}">{{ grade.name }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="section">Section <span class="required">*</span></label>
-            <input type="text" id="section" name="section" required placeholder="e.g., A" maxlength="10">
-          </div>
-        </div>
-      </div>
-
-      <!-- Login Credentials -->
-      <div class="form-section login-credentials-section">
-        <div class="form-section-title">🔐 Login Credentials</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="username">Email/Username <span class="required">*</span></label>
-            <input 
-              type="email" 
-              id="username" 
-              name="username" 
-              required
-              placeholder="e.g., john.doe@school.com"
-            >
-            <span class="helper-text">Student will use this email to log in</span>
-          </div>
-          <div class="form-group">
-            <label for="password">Password <span class="required">*</span></label>
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              required
-              placeholder="Enter a secure password"
-              minlength="6"
-            >
-            <span class="helper-text">Minimum 6 characters. Student will use this to log in.</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Submit Button -->
-      <div style="margin-top: 24px;">
-        <button type="submit" class="btn success" style="width: 100%; padding: 14px; font-size: 15px;">
-          ➕ Add Student with Login Account
-        </button>
-      </div>
-    </form>
-
-    <!-- Recent Students List -->
-    <div class="section-header" style="margin-top: 32px;">
-      <h3>Recent Students</h3>
-    </div>
-
-    <div class="students-list" id="studentsList">
-      {% if recent_students %}
-        {% for student in recent_students %}
-          <div class="student-item" data-student-id="{{ student.id }}">
-            <div class="student-info">
-              <p class="student-name">
-                {{ student.full_name }}
-                {% if student.user %}
-                  <span class="username-badge">📧 {{ student.user.username }}</span>
-                {% endif %}
-              </p>
-              <p class="student-details">
-                {{ student.grade.name }} - Section {{ student.section }}
-                {% if student.roll_number %} • Roll: {{ student.roll_number }}{% endif %}
-              </p>
-            </div>
-            <div class="student-actions">
-              <a href="{% url 'edit_student' student.id %}" class="icon-btn" title="Edit">
-                ✏️
-              </a>
-              <button class="icon-btn delete" onclick="deleteStudent({{ student.id }})" title="Delete">
-                🗑️
-              </button>
-            </div>
-          </div>
-        {% endfor %}
-      {% else %}
-        <div class="empty-state">
-          <div class="empty-state-icon">👨‍🎓</div>
-          <p>No students added yet. Add your first student above!</p>
-        </div>
-      {% endif %}
-    </div>
-  </div>
+<div class="welcome-header">
+  <h1>👋 Welcome back, {{ request.user.first_name|default:request.user.username }}!</h1>
+  <p>{{ school.name }}</p>
 </div>
 
-<script>
-document.getElementById('addStudentForm').addEventListener('submit', function(e) {
-  e.preventDefault();
-  
-  const formData = new FormData(this);
-  const data = {};
-  formData.forEach((value, key) => {
-    data[key] = value;
-  });
-  
-  // Validate email format
-  const email = data.username;
-  if (!email || !email.includes('@')) {
-    alert('Please enter a valid email address');
-    return;
-  }
-  
-  // Validate password
-  if (data.password.length < 6) {
-    alert('Password must be at least 6 characters long');
-    return;
-  }
-  
-  fetch('{% url "add_student" %}', {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}',
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => {
-    if (!response.ok) {
-      return response.json().then(err => { throw err; });
-    }
-    return response.json();
-  })
-  .then(data => {
-    if (data.status === 'success') {
-      const successMsg = document.getElementById('successMessage');
-      successMsg.classList.add('show');
-      setTimeout(() => successMsg.classList.remove('show'), 3000);
-      
-      document.getElementById('addStudentForm').reset();
-      addStudentToList(data.student);
-      updateStudentCount();
-    } else {
-      alert('Error: ' + (data.error || 'Unknown error'));
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Failed to add student: ' + (error.error || 'Please try again'));
-  });
-});
+<div class="dashboard-grid">
+  <div class="card">
+    <div class="card-icon">📝</div>
+    <h3>Create Test</h3>
+    <p>Build a new assessment with questions from your library or create new ones.</p>
+    <a href="{% url 'create_test' %}" class="card-btn">Create New Test</a>
+  </div>
 
-function addStudentToList(student) {
-  const studentsList = document.getElementById('studentsList');
-  const emptyState = studentsList.querySelector('.empty-state');
-  if (emptyState) {
-    emptyState.remove();
-  }
-  
-  const studentItem = document.createElement('div');
-  studentItem.className = 'student-item';
-  studentItem.dataset.studentId = student.id;
-  studentItem.innerHTML = `
-    <div class="student-info">
-      <p class="student-name">
-        ${student.full_name}
-        ${student.username ? '<span class="username-badge">📧 ' + student.username + '</span>' : ''}
-      </p>
-      <p class="student-details">
-        ${student.grade} - Section ${student.section}
-        ${student.roll_number ? ' • Roll: ' + student.roll_number : ''}
-      </p>
-    </div>
-    <div class="student-actions">
-      <a href="/teacher/students/${student.id}/edit/" class="icon-btn" title="Edit">
-        ✏️
-      </a>
-      <button class="icon-btn delete" onclick="deleteStudent(${student.id})" title="Delete">
-        🗑️
-      </button>
-    </div>
-  `;
-  
-  studentsList.insertBefore(studentItem, studentsList.firstChild);
-}
+  <div class="card">
+    <div class="card-icon">📚</div>
+    <h3>Question Library</h3>
+    <p>Browse, search, and manage all your questions in one place.</p>
+    <a href="{% url 'question_library' %}" class="card-btn">View Questions</a>
+  </div>
 
-function updateStudentCount() {
-  const currentCount = parseInt(document.getElementById('studentCount').textContent);
-  document.getElementById('studentCount').textContent = currentCount + 1;
-}
+  <div class="card">
+    <div class="card-icon">👥</div>
+    <h3>Manage Users</h3>
+    <p>Create and manage teacher and student profiles for your school.</p>
+    <a href="{% url 'manage_users' %}" class="card-btn">Manage Profiles</a>
+  </div>
 
-function deleteStudent(studentId) {
-  if (!confirm('Are you sure you want to delete this student? This will also delete their login account.')) {
-    return;
-  }
-  
-  fetch(`/teacher/students/${studentId}/delete/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': '{{ csrf_token }}'
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.status === 'success') {
-      const studentItem = document.querySelector(`[data-student-id="${studentId}"]`);
-      if (studentItem) {
-        studentItem.remove();
-      }
-      
-      const currentCount = parseInt(document.getElementById('studentCount').textContent);
-      document.getElementById('studentCount').textContent = Math.max(0, currentCount - 1);
-      
-      const studentsList = document.getElementById('studentsList');
-      if (studentsList.children.length === 0) {
-        studentsList.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">👨‍🎓</div>
-            <p>No students added yet. Add your first student above!</p>
-          </div>
-        `;
-      }
-    } else {
-      alert('Error deleting student');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Failed to delete student');
-  });
-}
-</script>
+  <div class="card">
+    <div class="card-icon">🎓</div>
+    <h3>Class Groups</h3>
+    <p>Organize students into groups for easier test assignment.</p>
+    <a href="{% url 'manage_class_groups' %}" class="card-btn">Manage Groups</a>
+  </div>
+</div>
 
 {% endblock %}

@@ -131,6 +131,18 @@
   transition: all 0.3s ease;
   border-left: 4px solid;
   position: relative;
+  animation: slideIn 0.4s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .group-card:hover {
@@ -222,24 +234,6 @@
   background: #fecaca;
 }
 
-.menu-icon {
-  background: #f3f4f6;
-  border: none;
-  border-radius: 8px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 18px;
-  color: #6b7280;
-}
-
-.menu-icon:hover {
-  background: #e5e7eb;
-}
-
 .empty-state {
   text-align: center;
   padding: 80px 20px;
@@ -289,10 +283,10 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: slideIn 0.3s ease;
+  animation: modalSlideIn 0.3s ease;
 }
 
-@keyframes slideIn {
+@keyframes modalSlideIn {
   from {
     opacity: 0;
     transform: translateY(-30px);
@@ -487,6 +481,36 @@
 .select-actions button:hover {
   background: #e5e7eb;
 }
+
+/* Success notification */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #10b981;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  animation: slideInRight 0.3s ease;
+  display: none;
+}
+
+.notification.show {
+  display: block;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 </style>
 
 <div class="page-header">
@@ -535,7 +559,7 @@
     
     <div class="group-stats">
       <div class="stat">
-        <div class="stat-value">{{ group.student_count }}</div>
+        <div class="stat-value">{{ group.students.count }}</div>
         <div class="stat-label">Students</div>
       </div>
       {% if group.grade %}
@@ -558,7 +582,7 @@
     </div>
   </div>
   {% empty %}
-  <div class="empty-state" style="grid-column: 1 / -1;">
+  <div class="empty-state" id="emptyState" style="grid-column: 1 / -1;">
     <div class="empty-icon">📚</div>
     <h3>No class groups yet</h3>
     <p>Create your first class group to organize students</p>
@@ -575,6 +599,11 @@
   <p>Try adjusting your search or filters</p>
 </div>
 
+<!-- Success Notification -->
+<div class="notification" id="notification">
+  <span id="notificationText">✓ Group created successfully!</span>
+</div>
+
 <!-- Create/Edit Group Modal -->
 <div class="modal" id="groupModal">
   <div class="modal-content">
@@ -583,7 +612,7 @@
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     
-    <form method="post" id="groupForm">
+    <form id="groupForm" onsubmit="handleSubmit(event)">
       {% csrf_token %}
       <input type="hidden" name="group_id" id="groupId">
       <input type="hidden" name="action" id="formAction" value="create">
@@ -597,7 +626,6 @@
         <div class="form-group">
           <label for="groupDescription">Description (Optional)</label>
           <textarea id="groupDescription" name="description" placeholder="Optional description for this group"></textarea>
-          <small style="color: #6b7280; font-size: 12px;">Note: Description may not be saved if not supported by your model</small>
         </div>
         
         <div class="form-group">
@@ -616,7 +644,6 @@
             <input type="color" id="groupColor" name="color" value="#3b82f6">
             <input type="text" class="color-preview" id="colorPreview" value="#3b82f6" readonly>
           </div>
-          <small style="color: #6b7280; font-size: 12px;">Note: Color may not be saved if not supported by your model</small>
         </div>
         
         <div class="form-group">
@@ -638,9 +665,6 @@
                 <div class="student-name">{{ student.get_full_name|default:student.username }}</div>
                 <div class="student-meta">
                   Grade {{ student.profile.grade }} - {{ student.profile.division }}
-                  {% if student.profile.roll_number %}
-                    | Roll: {{ student.profile.roll_number }}
-                  {% endif %}
                 </div>
               </div>
             </label>
@@ -662,10 +686,109 @@
 </div>
 
 <script>
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
 // Color picker sync
 document.getElementById('groupColor').addEventListener('input', function(e) {
   document.getElementById('colorPreview').value = e.target.value;
 });
+
+// Handle form submission with AJAX
+async function handleSubmit(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const submitBtn = document.getElementById('submitBtn');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = '⏳ Saving...';
+  
+  const formData = new FormData(event.target);
+  
+  try {
+    const response = await fetch(window.location.href, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    // Try to parse JSON response
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      
+      if (data.success) {
+        const action = document.getElementById('formAction').value;
+        const groupName = document.getElementById('groupName').value;
+        
+        // Close modal
+        closeModal();
+        
+        // Show notification
+        showNotification(data.message || 
+          (action === 'create' 
+            ? `✓ Group "${groupName}" created successfully!` 
+            : `✓ Group "${groupName}" updated successfully!`)
+        );
+        
+        // Reload page after short delay to show new group
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        alert(data.error || 'Error saving group. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    } else {
+      // Non-JSON response, likely an error page
+      const errorText = await response.text();
+      console.error('Server response:', errorText);
+      alert('Error saving group. Please check console for details.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error saving group: ' + error.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+  
+  return false;
+}
+
+// Show notification
+function showNotification(message) {
+  const notification = document.getElementById('notification');
+  const notificationText = document.getElementById('notificationText');
+  notificationText.textContent = message;
+  notification.classList.add('show');
+  
+  setTimeout(() => {
+    notification.classList.remove('show');
+  }, 3000);
+}
 
 // Filter groups
 function filterGroups() {
@@ -673,6 +796,7 @@ function filterGroups() {
   const gradeFilter = document.getElementById('gradeFilter').value;
   const cards = document.querySelectorAll('.group-card');
   const noResults = document.getElementById('noResults');
+  const emptyState = document.getElementById('emptyState');
   let visibleCount = 0;
   
   cards.forEach(card => {
@@ -690,7 +814,12 @@ function filterGroups() {
     }
   });
   
-  noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+  // Hide empty state if there are cards
+  if (emptyState && cards.length > 0) {
+    emptyState.style.display = 'none';
+  }
+  
+  noResults.style.display = (visibleCount === 0 && cards.length > 0) ? 'block' : 'none';
 }
 
 // Modal functions
@@ -756,18 +885,49 @@ function updateSelectedCount() {
   document.getElementById('selectedCount').textContent = count;
 }
 
-function confirmDelete(id, name) {
+async function confirmDelete(id, name) {
   if (confirm(`Are you sure you want to delete the group "${name}"?\n\nThis action cannot be undone.`)) {
-    // Submit delete form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = `
-      {% csrf_token %}
-      <input type="hidden" name="action" value="delete">
-      <input type="hidden" name="group_id" value="${id}">
-    `;
-    document.body.appendChild(form);
-    form.submit();
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrftoken);
+    formData.append('action', 'delete');
+    formData.append('group_id', id);
+    
+    try {
+      const response = await fetch(window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        showNotification(data.message || `✓ Group "${name}" deleted successfully!`);
+        
+        // Remove the card from DOM with animation
+        const card = document.querySelector(`[data-group-id="${id}"]`);
+        if (card) {
+          card.style.animation = 'slideOut 0.3s ease';
+          setTimeout(() => {
+            card.remove();
+            
+            // Check if grid is empty
+            const remainingCards = document.querySelectorAll('.group-card');
+            if (remainingCards.length === 0) {
+              window.location.reload();
+            }
+          }, 300);
+        }
+      } else {
+        alert(data.error || 'Error deleting group. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error deleting group: ' + error.message);
+    }
   }
 }
 
@@ -785,5 +945,14 @@ document.getElementById('groupModal').addEventListener('click', function(e) {
   }
 });
 </script>
+
+<style>
+@keyframes slideOut {
+  to {
+    opacity: 0;
+    transform: translateX(-100px);
+  }
+}
+</style>
 
 {% endblock %}
