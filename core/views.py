@@ -215,6 +215,40 @@ def manage_users(request):
     })
 
 # ===================== SCHOOL USERS LIST =====================
+# Add this to your views.py
+@login_required
+def manage_students(request):
+    """
+    View and manage all students in the school
+    """
+    school = get_user_school(request.user)
+    
+    if not school:
+        messages.error(request, "You are not assigned to a school.")
+        return redirect("teacher_dashboard")
+    
+    # Get all students from the same school
+    students = Student.objects.filter(
+        school=school
+    ).select_related('grade', 'school', 'created_by', 'user').order_by('grade', 'section', 'roll_number')
+    
+    # Get all grades for the edit modal dropdown
+    grades = Grade.objects.all()
+    
+    context = {
+        'students': students,
+        'grades': grades,
+        'school': school,
+        'role': get_user_role(request.user)
+    }
+    
+    return render(request, 'teacher/manage_students.html', context)
+
+
+
+# You'll also need to add this URL pattern to urls.py:
+# path("teacher/students/manage/", views.manage_students, name="manage_students"),
+
 
 @login_required
 def school_users_list(request):
@@ -238,7 +272,7 @@ def school_users_list(request):
         school=school,
         role='student'
     ).select_related('user')
-    
+    print(">>> SCHOOL USERS LIST VIEW HIT <<<")
     # Get student details
     students = Student.objects.filter(school=school).select_related('grade')
     

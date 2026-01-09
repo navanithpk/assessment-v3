@@ -1,0 +1,635 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Manage Students{% endblock %}
+
+{% block content %}
+
+<style>
+.header {
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  margin: 0 0 8px 0;
+  font-size: 28px;
+  color: #1f2937;
+}
+
+.header p {
+  color: #6b7280;
+  margin: 0;
+}
+
+.search-bar {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.search-bar input {
+  width: 100%;
+  max-width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 14px center;
+  box-sizing: border-box;
+}
+
+.search-bar input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+th {
+  text-align: left;
+  padding: 16px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+td {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.student-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.student-name {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.student-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.grade-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.btn {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background: #3b82f6;
+  color: white;
+  margin-right: 8px;
+}
+
+.btn-edit:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-password {
+  background: #8b5cf6;
+  color: white;
+}
+
+.btn-password:hover {
+  background: #7c3aed;
+  transform: translateY(-1px);
+}
+
+.no-results {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.no-results .icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+/* Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 480px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+}
+
+.modal-close:hover {
+  color: #374151;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group input[readonly] {
+  background: #f9fafb;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.password-generator {
+  display: flex;
+  gap: 10px;
+}
+
+.password-generator input {
+  flex: 1;
+}
+
+.btn-generate {
+  background: #f3f4f6;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.btn-generate:hover {
+  background: #e5e7eb;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  flex: 1;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  flex: 1;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 12px;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.success-toast {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  background: #10b981;
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+  display: none;
+  align-items: center;
+  gap: 12px;
+  animation: slideUp 0.3s ease;
+  z-index: 1001;
+}
+
+.success-toast.active {
+  display: flex;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
+
+<div class="header">
+  <h1>Manage Students</h1>
+  <p>View and manage student accounts in your school</p>
+</div>
+
+<div class="search-bar">
+  <input type="text" id="search-input" placeholder="Search by name, roll number, or admission ID..." onkeyup="filterTable()">
+</div>
+
+<div class="table-container">
+  <table id="students-table">
+    <thead>
+      <tr>
+        <th>Student Name</th>
+        <th>Roll Number</th>
+        <th>Admission ID</th>
+        <th>Grade & Section</th>
+        <th>Username</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      {% for student in students %}
+      <tr>
+        <td>
+          <div class="student-info">
+            <span class="student-name">{{ student.full_name }}</span>
+          </div>
+        </td>
+        <td>{{ student.roll_number|default:"—" }}</td>
+        <td>{{ student.admission_id|default:"—" }}</td>
+        <td>
+          <span class="grade-badge">{{ student.grade }} - {{ student.section }}</span>
+        </td>
+        <td>
+          <div class="student-meta">
+            {% if student.user %}
+              {{ student.user.username }}
+            {% else %}
+              <span style="color: #9ca3af;">No account</span>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <button class="btn btn-edit" onclick="openEditModal({{ student.id }}, '{{ student.full_name }}', '{{ student.roll_number }}', '{{ student.admission_id }}', {{ student.grade.id }}, '{{ student.section }}')">
+            ✏️ Edit
+          </button>
+          {% if student.user %}
+          <button class="btn btn-password" onclick="openPasswordModal({{ student.user.id }}, '{{ student.full_name }}')">
+            🔒 Password
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6">
+          <div class="no-results">
+            <div class="icon">🔍</div>
+            <p>No students found</p>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  
+  <div id="no-results" class="no-results" style="display: none;">
+    <div class="icon">🔍</div>
+    <p>No students match your search</p>
+  </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div class="modal" id="edit-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Edit Student</h2>
+      <button class="modal-close" onclick="closeEditModal()">×</button>
+    </div>
+    
+    <form method="post" action="{% url 'edit_student' 0 %}" id="edit-form">
+      {% csrf_token %}
+      
+      <div class="form-group">
+        <label for="edit-name">Full Name *</label>
+        <input type="text" id="edit-name" name="full_name" required>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="edit-roll">Roll Number</label>
+          <input type="text" id="edit-roll" name="roll_number">
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-admission">Admission ID</label>
+          <input type="text" id="edit-admission" name="admission_id">
+        </div>
+      </div>
+      
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="edit-grade">Grade *</label>
+          <select id="edit-grade" name="grade" required>
+            {% for grade in grades %}
+            <option value="{{ grade.id }}">{{ grade.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="edit-section">Section *</label>
+          <input type="text" id="edit-section" name="section" required>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeEditModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          ✓ Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Password Reset Modal -->
+<div class="modal" id="password-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>Reset Password</h2>
+      <button class="modal-close" onclick="closePasswordModal()">×</button>
+    </div>
+    
+    <form method="post" action="{% url 'manage_users' %}" id="password-form">
+      {% csrf_token %}
+      <input type="hidden" name="user_id" id="modal-user-id">
+      
+      <div class="form-group">
+        <label>Student</label>
+        <input type="text" id="modal-user-name" readonly>
+      </div>
+      
+      <div class="password-generator">
+        <div class="form-group" style="margin: 0;">
+          <label for="new-password">New Password</label>
+          <input type="text" id="new-password" name="new_password" placeholder="Enter or generate password" required>
+        </div>
+        <div style="padding-top: 28px;">
+          <button type="button" class="btn btn-generate" onclick="generatePassword()">
+            🎲 Generate
+          </button>
+        </div>
+      </div>
+      
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">
+          Cancel
+        </button>
+        <button type="submit" class="btn btn-primary">
+          ✓ Update & Copy
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Success Toast -->
+<div class="success-toast" id="success-toast">
+  <span style="font-size: 20px;">✓</span>
+  <span id="toast-message">Password copied to clipboard!</span>
+</div>
+
+<script>
+function filterTable() {
+  const input = document.getElementById('search-input');
+  const filter = input.value.toLowerCase();
+  const table = document.getElementById('table-body');
+  const rows = table.getElementsByTagName('tr');
+  const noResults = document.getElementById('no-results');
+  let hasResults = false;
+
+  for (let i = 0; i < rows.length; i++) {
+    const cells = rows[i].getElementsByTagName('td');
+    
+    if (cells.length > 0) {
+      const nameText = cells[0].textContent || cells[0].innerText;
+      const rollText = cells[1].textContent || cells[1].innerText;
+      const admissionText = cells[2].textContent || cells[2].innerText;
+      
+      if (nameText.toLowerCase().indexOf(filter) > -1 || 
+          rollText.toLowerCase().indexOf(filter) > -1 ||
+          admissionText.toLowerCase().indexOf(filter) > -1) {
+        rows[i].style.display = '';
+        hasResults = true;
+      } else {
+        rows[i].style.display = 'none';
+      }
+    }
+  }
+  
+  noResults.style.display = hasResults ? 'none' : 'block';
+  table.style.display = hasResults ? '' : 'none';
+}
+
+function openEditModal(studentId, name, roll, admission, gradeId, section) {
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-roll').value = roll;
+  document.getElementById('edit-admission').value = admission;
+  document.getElementById('edit-grade').value = gradeId;
+  document.getElementById('edit-section').value = section;
+  
+  // Update form action URL
+  const form = document.getElementById('edit-form');
+  form.action = form.action.replace('/0/', '/' + studentId + '/');
+  
+  document.getElementById('edit-modal').classList.add('active');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('active');
+}
+
+function openPasswordModal(userId, studentName) {
+  document.getElementById('modal-user-id').value = userId;
+  document.getElementById('modal-user-name').value = studentName;
+  document.getElementById('new-password').value = '';
+  document.getElementById('password-modal').classList.add('active');
+}
+
+function closePasswordModal() {
+  document.getElementById('password-modal').classList.remove('active');
+}
+
+function generatePassword() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  document.getElementById('new-password').value = password;
+}
+
+function showToast(message) {
+  const toast = document.getElementById('success-toast');
+  document.getElementById('toast-message').textContent = message;
+  toast.classList.add('active');
+  
+  setTimeout(function() {
+    toast.classList.remove('active');
+  }, 3000);
+}
+
+// Handle password form submission
+document.getElementById('password-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const password = document.getElementById('new-password').value;
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(password).then(function() {
+    showToast('Password copied to clipboard!');
+    closePasswordModal();
+    
+    // Submit form
+    document.getElementById('password-form').submit();
+  });
+});
+
+// Close modals when clicking outside
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeEditModal();
+  }
+});
+
+document.getElementById('password-modal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closePasswordModal();
+  }
+});
+</script>
+
+{% endblock %}

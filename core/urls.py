@@ -53,6 +53,7 @@ urlpatterns = [
     path("teacher/students/add/", views.add_student, name="add_student"),
     path("teacher/students/<int:student_id>/edit/", views.edit_student, name="edit_student"),
     path("teacher/users/manage/", views.manage_users, name="manage_users"),
+    path("teacher/students/manage/", views.manage_students, name="manage_students"),
     # Groups
     path("teacher/groups/", views.groups_list, name="groups_list"),
     path("teacher/groups/add/", views.add_group, name="add_group"),

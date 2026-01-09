@@ -111,7 +111,10 @@ body {
     {% if request.user.profile.role == 'school_admin' or request.user.profile.role == 'teacher' %}
 	<a href="{% url 'create_user_account' %}">	  ➕ Create User Account</a>
 	{% endif %}
-    <a href="{% url 'manage_users' %}">👥 View & Manage Users</a>
+    <a href="{% url 'manage_users' %}">👥 View & Manage Teacher Accounts</a>
+	<a href="{% url 'manage_students' %}" class="nav-link">
+	👨‍🎓 Manage Students
+	</a>
 
     <div class="spacer"></div>
 
