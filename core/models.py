@@ -168,6 +168,8 @@ class Question(models.Model):
         return f"Q{self.id} | {self.grade}.{self.subject}.{self.topic}"
 
 
+# Update your Test model in models.py to add this field:
+
 class Test(models.Model):
     title = models.CharField(max_length=255)
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
@@ -204,6 +206,22 @@ class Test(models.Model):
         related_name="excluded_from_tests"
     )
     
+    # NEW FIELD for descriptive tests
+    descriptive_structure = models.TextField(
+        blank=True,
+        null=True,
+        help_text="JSON structure for descriptive/hierarchical questions"
+    )
+    
+    test_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('standard', 'Standard Question Bank'),
+            ('descriptive', 'Descriptive/Hierarchical')
+        ],
+        default='standard'
+    )
+    
     def __str__(self):
         return self.title
     
@@ -225,6 +243,11 @@ class Test(models.Model):
         excluded = self.excluded_students.all()
         
         return all_students.exclude(id__in=excluded)
+
+
+# After adding this field, run migrations:
+# python manage.py makemigrations
+# python manage.py migrate
 
 
 class TestQuestion(models.Model):

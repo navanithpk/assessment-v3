@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Take Test - Student View</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f4f6f8;
+  padding: 20px;
+}
+
+.test-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.test-header {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.test-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+/* Question Page */
+.question-page {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-height: 600px;
+  margin-bottom: 20px;
+}
+
+.page-number {
+  display: inline-block;
+  background: #2563eb;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* Question Styling */
+.main-question {
+  margin-bottom: 32px;
+}
+
+.question-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 12px;
+}
+
+.question-content {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #374151;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
+}
+
+/* Sub-questions with indentation */
+.sub-question {
+  margin-left: 24px;
+  margin-bottom: 24px;
+  padding-left: 16px;
+  border-left: 3px solid #e5e7eb;
+}
+
+.sub-question .question-number {
+  font-size: 16px;
+  color: #1e40af;
+}
+
+.sub-sub-question {
+  margin-left: 48px;
+  margin-bottom: 20px;
+  padding-left: 12px;
+  border-left: 2px solid #f3f4f6;
+}
+
+.sub-sub-question .question-number {
+  font-size: 14px;
+  color: #3730a3;
+}
+
+/* Marks badge */
+.marks-badge {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* Answer Field using ProseMirror */
+.answer-field {
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.answer-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.ProseMirror {
+  min-height: 120px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ProseMirror:focus {
+  border-color: #2563eb;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ProseMirror p {
+  margin: 0 0 8px 0;
+}
+
+.ProseMirror-focused {
+  outline: none;
+}
+
+/* Navigation */
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+}
+
+.nav-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.nav-btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.nav-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.nav-btn.success {
+  background: #10b981;
+  color: white;
+}
+
+.nav-btn.success:hover {
+  background: #059669;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Progress Bar */
+.progress-container {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Auto-save indicator */
+.save-indicator {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  font-size: 13px;
+  display: none;
+}
+
+.save-indicator.visible {
+  display: block;
+}
+
+.save-indicator.saving {
+  color: #2563eb;
+}
+
+.save-indicator.saved {
+  color: #10b981;
+}
+</style>
+</head>
+<body>
+
+<div class="test-container">
+  <!-- Header -->
+  <div class="test-header">
+    <div class="test-title">Cambridge IGCSE Physics - Paper 4 Theory</div>
+    <div class="timer">
+      ⏱️ <span id="timeRemaining">1:15:00</span>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="progress-text">
+      Question <span id="currentPage">1</span> of <span id="totalPages">10</span>
+    </div>
+  </div>
+
+  <!-- Question Page -->
+  <div class="question-page" id="questionPage">
+    <!-- Content will be dynamically loaded here -->
+  </div>
+
+  <!-- Navigation -->
+  <div class="navigation">
+    <button class="nav-btn secondary" id="prevBtn" onclick="previousPage()">
+      ← Previous
+    </button>
+    
+    <div class="page-indicator">
+      Page <span id="pageNum">1</span> of <span id="totalPagesNav">10</span>
+    </div>
+    
+    <button class="nav-btn primary" id="nextBtn" onclick="nextPage()">
+      Next →
+    </button>
+  </div>
+</div>
+
+<!-- Auto-save indicator -->
+<div class="save-indicator" id="saveIndicator">
+  <span id="saveText">Saving...</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-model/1.19.0/prosemirror-model.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-state/1.4.2/prosemirror-state.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.js"></script>
+
+<script>
+// Test data structure (would come from backend)
+const testData = {
+  pages: [
+    {
+      pageNumber: 1,
+      questions: [
+        {
+          number: '1',
+          content: 'Fig. 1.1 shows sea water flowing down a channel into a tank without splashing. The water is flowing at a rate of 800kg/min.',
+          marks: 9,
+          subQuestions: [
+            {
+              number: '1(a)',
+              content: 'Initially, the tank is empty. Calculate the depth of water in the tank after 1.00 minute. Give your answer to three significant figures.',
+              marks: 3,
+              answerId: 'q1a'
+            },
+            {
+              number: '1(b)',
+              content: 'The height of the water decreases by 0.420m as it flows down the channel. Calculate the decrease in gravitational potential energy of the water each second.',
+              marks: 3,
+              answerId: 'q1b'
+            },
+            {
+              number: '1(c)',
+              content: 'The water stops flowing. The depth of water in the tank is 0.800m. Calculate the pressure at the bottom of the tank due to the water.',
+              marks: 3,
+              answerId: 'q1c'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      pageNumber: 2,
+      questions: [
+        {
+          number: '2',
+          content: 'A pendulum swings with a time period of approximately one second.',
+          marks: 6,
+          subQuestions: [
+            {
+              number: '2(a)',
+              content: 'Describe how to use a stop-watch to determine the time period of the pendulum.',
+              marks: 3,
+              answerId: 'q2a'
+            },
+            {
+              number: '2(b)',
+              content: 'Complete Table 2.1 by writing in each space of the right-hand column which one of the following devices is used to measure the quantity in the left-hand column.',
+              marks: 3,
+              answerId: 'q2b'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      pageNumber: 3,
+      questions: [
+        {
+          number: '3',
+          content: 'Tidal power derives most of its energy from the Moon and part of its energy from the Sun.',
+          marks: 8,
+          subQuestions: [
+            {
+              number: '3(a)',
+              content: 'Answer the following:',
+              marks: 2,
+              subQuestions: [
+                {
+                  number: '3(a)(i)',
+                  content: 'State one other source of power which derives its energy from the Sun.',
+                  marks: 1,
+                  answerId: 'q3ai'
+                },
+                {
+                  number: '3(a)(ii)',
+                  content: 'State one source of power which does not derive its energy from the Sun.',
+                  marks: 1,
+                  answerId: 'q3aii'
+                }
+              ]
+            },
+            {
+              number: '3(b)',
+              content: 'Fig. 3.1 shows a small water turbine driven by a tidal flow of water to generate electrical power.',
+              marks: 6,
+              subQuestions: [
+                {
+                  number: '3(b)(i)',
+                  content: 'Explain whether this method of generation of electrical power is renewable.',
+                  marks: 2,
+                  answerId: 'q3bi'
+                },
+                {
+                  number: '3(b)(ii)',
+                  content: 'The mass of water passing through the turbine each second is 6.0 × 10³ kg. Calculate the electrical power generated.',
+                  marks: 4,
+                  answerId: 'q3bii'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+
+let currentPageIndex = 0;
+const editors = {}; // Store ProseMirror editor instances
+
+// Initialize ProseMirror editor
+function createEditor(elementId) {
+  const { schema } = ProseMirror.model;
+  const { EditorState } = ProseMirror.state;
+  const { EditorView } = ProseMirror.view;
+
+  const state = EditorState.create({
+    schema: schema,
+    doc: schema.node('doc', null, [schema.node('paragraph')])
+  });
+
+  const view = new EditorView(document.getElementById(elementId), {
+    state: state,
+    dispatchTransaction: (transaction) => {
+      const newState = view.state.apply(transaction);
+      view.updateState(newState);
+      autoSave();
+    }
+  });
+
+  editors[elementId] = view;
+  return view;
+}
+
+// Render question page
+function renderPage(pageIndex) {
+  const page = testData.pages[pageIndex];
+  const container = document.getElementById('questionPage');
+  
+  let html = `<div class="page-number">Question ${page.pageNumber}</div>`;
+  
+  page.questions.forEach(q => {
+    html += `
+      <div class="main-question">
+        <div class="question-number">
+          ${q.number}
+          <span class="marks-badge">[${q.marks} marks]</span>
+        </div>
+        <div class="question-content">${q.content}</div>
+    `;
+    
+    // Render sub-questions
+    q.subQuestions.forEach(sub => {
+      if (sub.subQuestions) {
+        // Has nested sub-questions (like 3(a)(i), 3(a)(ii))
+        html += `
+          <div class="sub-question">
+            <div class="question-number">
+              ${sub.number}
+              <span class="marks-badge">[${sub.marks} marks]</span>
+            </div>
+            <div class="question-content">${sub.content}</div>
+        `;
+        
+        sub.subQuestions.forEach(subsub => {
+          html += `
+            <div class="sub-sub-question">
+              <div class="question-number">
+                ${subsub.number}
+                <span class="marks-badge">[${subsub.marks} marks]</span>
+              </div>
+              <div class="question-content">${subsub.content}</div>
+              <div class="answer-field">
+                <label class="answer-label">Your Answer:</label>
+                <div id="${subsub.answerId}" class="answer-editor"></div>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += `</div>`;
+      } else {
+        // Regular sub-question
+        html += `
+          <div class="sub-question">
+            <div class="question-number">
+              ${sub.number}
+              <span class="marks-badge">[${sub.marks} marks]</span>
+            </div>
+            <div class="question-content">${sub.content}</div>
+            <div class="answer-field">
+              <label class="answer-label">Your Answer:</label>
+              <div id="${sub.answerId}" class="answer-editor"></div>
+            </div>
+          </div>
+        `;
+      }
+    });
+    
+    html += `</div>`;
+  });
+  
+  container.innerHTML = html;
+  
+  // Initialize ProseMirror editors for all answer fields
+  setTimeout(() => {
+    page.questions.forEach(q => {
+      q.subQuestions.forEach(sub => {
+        if (sub.subQuestions) {
+          sub.subQuestions.forEach(subsub => {
+            createEditor(subsub.answerId);
+          });
+        } else {
+          createEditor(sub.answerId);
+        }
+      });
+    });
+  }, 0);
+  
+  // Update progress
+  updateProgress();
+  updateNavButtons();
+}
+
+function updateProgress() {
+  const progress = ((currentPageIndex + 1) / testData.pages.length) * 100;
+  document.getElementById('progressFill').style.width = progress + '%';
+  document.getElementById('currentPage').textContent = currentPageIndex + 1;
+  document.getElementById('totalPages').textContent = testData.pages.length;
+  document.getElementById('pageNum').textContent = currentPageIndex + 1;
+  document.getElementById('totalPagesNav').textContent = testData.pages.length;
+}
+
+function updateNavButtons() {
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  prevBtn.disabled = currentPageIndex === 0;
+  
+  if (currentPageIndex === testData.pages.length - 1) {
+    nextBtn.textContent = 'Submit Test';
+    nextBtn.className = 'nav-btn success';
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.className = 'nav-btn primary';
+  }
+}
+
+function nextPage() {
+  if (currentPageIndex < testData.pages.length - 1) {
+    currentPageIndex++;
+    renderPage(currentPageIndex);
+    window.scrollTo(0, 0);
+  } else {
+    submitTest();
+  }
+}
+
+function previousPage() {
+  if (currentPageIndex > 0) {
+    currentPageIndex--;
+    renderPage(currentPageIndex);
+    window.scrollTo(0, 0);
+  }
+}
+
+function submitTest() {
+  if (confirm('Are you sure you want to submit your test? You cannot make changes after submission.')) {
+    alert('Test submitted successfully!');
+    // Here you would send all answers to the backend
+  }
+}
+
+// Auto-save functionality
+let saveTimeout;
+function autoSave() {
+  clearTimeout(saveTimeout);
+  
+  const indicator = document.getElementById('saveIndicator');
+  const saveText = document.getElementById('saveText');
+  
+  indicator.className = 'save-indicator visible saving';
+  saveText.textContent = 'Saving...';
+  
+  saveTimeout = setTimeout(() => {
+    // Simulate save to backend
+    indicator.className = 'save-indicator visible saved';
+    saveText.textContent = '✓ Saved';
+    
+    setTimeout(() => {
+      indicator.className = 'save-indicator';
+    }, 2000);
+  }, 1000);
+}
+
+// Timer functionality
+let timeLeft = 75 * 60; // 75 minutes in seconds
+function updateTimer() {
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+  
+  const display = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  document.getElementById('timeRemaining').textContent = display;
+  
+  if (timeLeft > 0) {
+    timeLeft--;
+    setTimeout(updateTimer, 1000);
+  } else {
+    alert('Time is up! Your test will be submitted automatically.');
+    submitTest();
+  }
+}
+
+// Initialize
+renderPage(0);
+updateTimer();
+</script>
+
+</body>
+</html>

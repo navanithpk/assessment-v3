@@ -364,6 +364,7 @@
           <div class="divider"></div>
 
           <div class="test-actions">
+			
             {% if item.attempted %}
               <a href="#" class="btn secondary">
                 📊 View Results
@@ -372,9 +373,9 @@
                 🔄 Retake Test
               </a>
             {% else %}
-              <a href="#" class="btn primary">
-                ▶️ Start Test
-              </a>
+              <a href="{% url 'take_test' item.test.id %}" class="btn btn-primary">
+			▶️ Start Test
+			</a>
             {% endif %}
           </div>
         </div>

@@ -1,0 +1,614 @@
+{% extends "student/student_base.html" %}
+
+{% block title %}Take Test - {{ test.title }}{% endblock %}
+
+{% block content %}
+
+<style>
+* { box-sizing: border-box; }
+
+.test-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.test-header {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.test-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fef3c7;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+/* Progress */
+.progress-container {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* Question Page */
+.question-page {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-height: 600px;
+  margin-bottom: 20px;
+}
+
+.page-number {
+  display: inline-block;
+  background: #2563eb;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+/* Question Styling */
+.main-question {
+  margin-bottom: 32px;
+}
+
+.question-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2563eb;
+  margin-bottom: 12px;
+}
+
+.question-content {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #374151;
+  margin-bottom: 20px;
+  white-space: pre-wrap;
+}
+
+/* Sub-questions with indentation */
+.sub-question {
+  margin-left: 24px;
+  margin-bottom: 24px;
+  padding-left: 16px;
+  border-left: 3px solid #e5e7eb;
+}
+
+.sub-question .question-number {
+  font-size: 16px;
+  color: #1e40af;
+}
+
+.sub-sub-question {
+  margin-left: 48px;
+  margin-bottom: 20px;
+  padding-left: 12px;
+  border-left: 2px solid #f3f4f6;
+}
+
+.sub-sub-question .question-number {
+  font-size: 14px;
+  color: #3730a3;
+}
+
+/* Marks badge */
+.marks-badge {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* Answer Field */
+.answer-field {
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+.answer-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.answer-textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  font-size: 14px;
+  line-height: 1.6;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.2s;
+}
+
+.answer-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Navigation */
+.navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.nav-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.nav-btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.nav-btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.nav-btn.secondary:hover {
+  background: #e5e7eb;
+}
+
+.nav-btn.success {
+  background: #10b981;
+  color: white;
+}
+
+.nav-btn.success:hover {
+  background: #059669;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-indicator {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Auto-save indicator */
+.save-indicator {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  font-size: 13px;
+  display: none;
+  z-index: 1000;
+}
+
+.save-indicator.visible {
+  display: block;
+}
+
+.save-indicator.saving {
+  color: #2563eb;
+}
+
+.save-indicator.saved {
+  color: #10b981;
+}
+</style>
+
+<div class="test-container">
+  <!-- Header -->
+  <div class="test-header">
+    <div class="test-title">{{ test.title }}</div>
+    {% if test.duration_minutes %}
+    <div class="timer">
+      ⏱️ <span id="timeRemaining">{{ test.duration_minutes }}:00</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-container">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="progress-text">
+      Question <span id="currentPage">1</span> of <span id="totalPages">1</span>
+    </div>
+  </div>
+
+  <!-- Question Page -->
+  <div class="question-page" id="questionPage">
+    <!-- Content will be dynamically loaded here -->
+  </div>
+
+  <!-- Navigation -->
+  <div class="navigation">
+    <button class="nav-btn secondary" id="prevBtn" onclick="previousPage()" disabled>
+      ← Previous
+    </button>
+    
+    <div class="page-indicator">
+      Page <span id="pageNum">1</span> of <span id="totalPagesNav">1</span>
+    </div>
+    
+    <button class="nav-btn primary" id="nextBtn" onclick="nextPage()">
+      Next →
+    </button>
+  </div>
+</div>
+
+<!-- Auto-save indicator -->
+<div class="save-indicator" id="saveIndicator">
+  <span id="saveText">Saving...</span>
+</div>
+
+<script>
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Test data from backend
+const testData = {{ test_data|safe }};
+const testId = {{ test.id }};
+
+let currentPageIndex = 0;
+const answers = {}; // Store answers keyed by question ID
+
+// Load saved answers if resuming
+async function loadSavedAnswers() {
+  try {
+    const response = await fetch(`/student/tests/${testId}/answers/`, {
+      headers: {
+        'X-CSRFToken': csrftoken
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      Object.assign(answers, data.answers || {});
+    }
+  } catch (error) {
+    console.error('Error loading answers:', error);
+  }
+}
+
+// Render question page
+function renderPage(pageIndex) {
+  const page = testData.pages[pageIndex];
+  const container = document.getElementById('questionPage');
+  
+  let html = `<div class="page-number">Question ${page.pageNumber}</div>`;
+  
+  page.questions.forEach(q => {
+    html += renderQuestion(q);
+  });
+  
+  container.innerHTML = html;
+  
+  // Restore saved answers
+  restoreAnswers();
+  
+  // Update progress
+  updateProgress();
+  updateNavButtons();
+}
+
+function renderQuestion(question, isSubQuestion = false, isSubSubQuestion = false) {
+  const className = isSubSubQuestion ? 'sub-sub-question' : (isSubQuestion ? 'sub-question' : 'main-question');
+  
+  let html = `<div class="${className}">`;
+  
+  html += `
+    <div class="question-number">
+      ${question.number}
+      <span class="marks-badge">[${question.marks} marks]</span>
+    </div>
+    <div class="question-content">${question.content}</div>
+  `;
+  
+  // If question has an answer field
+  if (question.answerId) {
+    const savedAnswer = answers[question.answerId] || '';
+    html += `
+      <div class="answer-field">
+        <label class="answer-label">Your Answer:</label>
+        <textarea 
+          class="answer-textarea" 
+          id="${question.answerId}"
+          data-question-id="${question.answerId}"
+          placeholder="Type your answer here..."
+          oninput="handleAnswerInput('${question.answerId}')"
+        >${savedAnswer}</textarea>
+      </div>
+    `;
+  }
+  
+  // Render sub-questions
+  if (question.subQuestions) {
+    question.subQuestions.forEach(sub => {
+      html += renderQuestion(sub, true, isSubQuestion);
+    });
+  }
+  
+  html += `</div>`;
+  return html;
+}
+
+function restoreAnswers() {
+  Object.keys(answers).forEach(questionId => {
+    const textarea = document.getElementById(questionId);
+    if (textarea) {
+      textarea.value = answers[questionId];
+    }
+  });
+}
+
+function handleAnswerInput(questionId) {
+  const textarea = document.getElementById(questionId);
+  if (textarea) {
+    answers[questionId] = textarea.value;
+    autoSave();
+  }
+}
+
+// Update progress
+function updateProgress() {
+  const progress = ((currentPageIndex + 1) / testData.pages.length) * 100;
+  document.getElementById('progressFill').style.width = progress + '%';
+  document.getElementById('currentPage').textContent = currentPageIndex + 1;
+  document.getElementById('totalPages').textContent = testData.pages.length;
+  document.getElementById('pageNum').textContent = currentPageIndex + 1;
+  document.getElementById('totalPagesNav').textContent = testData.pages.length;
+}
+
+function updateNavButtons() {
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  
+  prevBtn.disabled = currentPageIndex === 0;
+  
+  if (currentPageIndex === testData.pages.length - 1) {
+    nextBtn.textContent = 'Submit Test ✓';
+    nextBtn.className = 'nav-btn success';
+  } else {
+    nextBtn.textContent = 'Next →';
+    nextBtn.className = 'nav-btn primary';
+  }
+}
+
+function nextPage() {
+  // Save current answers
+  saveCurrentPageAnswers();
+  
+  if (currentPageIndex < testData.pages.length - 1) {
+    currentPageIndex++;
+    renderPage(currentPageIndex);
+    window.scrollTo(0, 0);
+  } else {
+    submitTest();
+  }
+}
+
+function previousPage() {
+  // Save current answers
+  saveCurrentPageAnswers();
+  
+  if (currentPageIndex > 0) {
+    currentPageIndex--;
+    renderPage(currentPageIndex);
+    window.scrollTo(0, 0);
+  }
+}
+
+function saveCurrentPageAnswers() {
+  const textareas = document.querySelectorAll('textarea[data-question-id]');
+  textareas.forEach(textarea => {
+    const questionId = textarea.getAttribute('data-question-id');
+    answers[questionId] = textarea.value;
+  });
+}
+
+async function submitTest() {
+  if (!confirm('Are you sure you want to submit your test? You cannot make changes after submission.')) {
+    return;
+  }
+  
+  // Save all answers one final time
+  saveCurrentPageAnswers();
+  
+  try {
+    const response = await fetch(`/student/tests/${testId}/submit/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify({
+        answers: answers,
+        submitted: true
+      })
+    });
+    
+    if (response.ok) {
+      alert('Test submitted successfully!');
+      window.location.href = '{% url "student_tests_list" %}';
+    } else {
+      alert('Error submitting test. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error submitting test. Please try again.');
+  }
+}
+
+// Auto-save functionality
+let saveTimeout;
+async function autoSave() {
+  clearTimeout(saveTimeout);
+  
+  const indicator = document.getElementById('saveIndicator');
+  const saveText = document.getElementById('saveText');
+  
+  indicator.className = 'save-indicator visible saving';
+  saveText.textContent = 'Saving...';
+  
+  saveTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch(`/student/tests/${testId}/autosave/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({ answers: answers })
+      });
+      
+      if (response.ok) {
+        indicator.className = 'save-indicator visible saved';
+        saveText.textContent = '✓ Saved';
+        
+        setTimeout(() => {
+          indicator.className = 'save-indicator';
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      indicator.className = 'save-indicator';
+    }
+  }, 1000);
+}
+
+// Timer functionality
+{% if test.duration_minutes %}
+let timeLeft = {{ test.duration_minutes }} * 60; // Convert to seconds
+
+function updateTimer() {
+  const hours = Math.floor(timeLeft / 3600);
+  const minutes = Math.floor((timeLeft % 3600) / 60);
+  const seconds = timeLeft % 60;
+  
+  const display = hours > 0 
+    ? `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    : `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  
+  document.getElementById('timeRemaining').textContent = display;
+  
+  if (timeLeft > 0) {
+    timeLeft--;
+    setTimeout(updateTimer, 1000);
+  } else {
+    alert('Time is up! Your test will be submitted automatically.');
+    submitTest();
+  }
+}
+
+updateTimer();
+{% endif %}
+
+// Initialize
+(async function() {
+  await loadSavedAnswers();
+  renderPage(0);
+})();
+
+// Warn before leaving page
+window.addEventListener('beforeunload', function (e) {
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+</script>
+
+{% endblock %}

@@ -1457,3 +1457,273 @@ def get_group_students(request, group_id):
         'student_ids': student_ids,
         'count': len(student_ids)
     })
+
+# Add these new views to your views.py
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+# ===================== DESCRIPTIVE TESTS (TEACHER) =====================
+
+@login_required
+def create_descriptive_test(request):
+    """
+    Create a new descriptive test with hierarchical questions
+    """
+    school = get_user_school(request.user)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            title = data.get('title', '').strip()
+            questions_data = data.get('questions', [])
+            
+            if not title:
+                return JsonResponse({'error': 'Title is required'}, status=400)
+            
+            if not questions_data:
+                return JsonResponse({'error': 'At least one question is required'}, status=400)
+            
+            # Create the test
+            test = Test.objects.create(
+                title=title,
+                created_by=request.user,
+                is_published=False
+            )
+            
+            # Store the hierarchical structure as JSON in a TextField
+            # You'll need to add this field to your Test model
+            test.descriptive_structure = json.dumps(questions_data)
+            test.save()
+            
+            return JsonResponse({
+                'success': True,
+                'test_id': test.id,
+                'message': 'Test created successfully'
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    # GET request - show the editor
+    return render(request, 'teacher/create_descriptive_test.html', {
+        'school': school
+    })
+
+
+@login_required
+def edit_descriptive_test(request, test_id):
+    """
+    Edit an existing descriptive test
+    """
+    school = get_user_school(request.user)
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            test.title = data.get('title', test.title)
+            test.descriptive_structure = json.dumps(data.get('questions', []))
+            test.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Test updated successfully'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    # GET request - show editor with existing data
+    questions_data = []
+    if hasattr(test, 'descriptive_structure') and test.descriptive_structure:
+        try:
+            questions_data = json.loads(test.descriptive_structure)
+        except:
+            questions_data = []
+    
+    return render(request, 'teacher/create_descriptive_test.html', {
+        'school': school,
+        'test': test,
+        'questions_data': json.dumps(questions_data)
+    })
+
+
+# ===================== STUDENT TEST TAKING =====================
+
+@login_required
+def take_test(request, test_id):
+    """
+    Student interface for taking a test
+    """
+    try:
+        student = Student.objects.get(user=request.user)
+    except Student.DoesNotExist:
+        messages.error(request, "Student profile not found")
+        return redirect("student_dashboard")
+    
+    test = get_object_or_404(Test, id=test_id, is_published=True)
+    
+    # Check if student is assigned to this test
+    assigned_students = test.get_all_assigned_students()
+    if student not in assigned_students:
+        messages.error(request, "You are not assigned to this test")
+        return redirect("student_tests_list")
+    
+    # Check if already submitted
+    # You'll need to add a submission tracking model
+    
+    # Prepare test data for frontend
+    if hasattr(test, 'descriptive_structure') and test.descriptive_structure:
+        # Descriptive test
+        questions_structure = json.loads(test.descriptive_structure)
+        test_data = convert_to_pages(questions_structure)
+    else:
+        # Regular test with question bank questions
+        test_data = convert_regular_test_to_pages(test)
+    
+    return render(request, 'student/student_take_test.html', {
+        'test': test,
+        'test_data': json.dumps(test_data),
+        'student': student
+    })
+
+
+def convert_to_pages(questions_structure):
+    """
+    Convert hierarchical question structure to paginated format for student view
+    Each main question becomes a page
+    """
+    pages = []
+    
+    for idx, main_question in enumerate(questions_structure, 1):
+        page = {
+            'pageNumber': idx,
+            'questions': [convert_question_to_display_format(main_question)]
+        }
+        pages.append(page)
+    
+    return {'pages': pages}
+
+
+def convert_question_to_display_format(question, parent_number=''):
+    """
+    Recursively convert question structure to display format
+    """
+    result = {
+        'number': question.get('number', ''),
+        'content': question.get('content', ''),
+        'marks': question.get('marks', 1),
+        'subQuestions': []
+    }
+    
+    # Add answer field if this is a leaf question (no children)
+    if not question.get('children') or len(question.get('children', [])) == 0:
+        result['answerId'] = f"q{question.get('id', '')}"
+    
+    # Process children
+    if question.get('children'):
+        for child in question['children']:
+            sub_q = convert_question_to_display_format(child, result['number'])
+            result['subQuestions'].append(sub_q)
+    
+    return result
+
+
+def convert_regular_test_to_pages(test):
+    """
+    Convert regular question-bank test to paginated format
+    """
+    pages = []
+    test_questions = TestQuestion.objects.filter(test=test).select_related('question').order_by('order')
+    
+    for idx, tq in enumerate(test_questions, 1):
+        page = {
+            'pageNumber': idx,
+            'questions': [{
+                'number': str(idx),
+                'content': tq.question.question_text,
+                'marks': tq.question.marks,
+                'answerId': f'q{tq.question.id}',
+                'subQuestions': []
+            }]
+        }
+        pages.append(page)
+    
+    return {'pages': pages}
+
+
+@login_required
+@require_POST
+def autosave_test_answers(request, test_id):
+    """
+    Auto-save student answers
+    """
+    try:
+        student = Student.objects.get(user=request.user)
+        test = get_object_or_404(Test, id=test_id)
+        
+        data = json.loads(request.body)
+        answers = data.get('answers', {})
+        
+        # Store answers in session or database
+        # You can create a StudentTestProgress model for this
+        request.session[f'test_{test_id}_answers'] = answers
+        
+        return JsonResponse({'success': True, 'message': 'Answers saved'})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def get_saved_answers(request, test_id):
+    """
+    Retrieve saved answers for a test
+    """
+    try:
+        answers = request.session.get(f'test_{test_id}_answers', {})
+        return JsonResponse({'answers': answers})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_POST
+def submit_test(request, test_id):
+    """
+    Submit completed test
+    """
+    try:
+        student = Student.objects.get(user=request.user)
+        test = get_object_or_404(Test, id=test_id)
+        
+        data = json.loads(request.body)
+        answers = data.get('answers', {})
+        
+        # Save all answers to StudentAnswer model
+        # You'll need to modify this based on your question structure
+        
+        for question_id, answer_text in answers.items():
+            # Extract actual question ID from answerId format (e.g., "q1a" -> "1a")
+            # This depends on your question identification scheme
+            
+            # For now, store as JSON in a submission tracking model
+            pass
+        
+        # Clear session answers
+        if f'test_{test_id}_answers' in request.session:
+            del request.session[f'test_{test_id}_answers']
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Test submitted successfully'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

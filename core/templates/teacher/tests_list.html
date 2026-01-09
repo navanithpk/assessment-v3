@@ -106,14 +106,64 @@ tr:not(:last-child) td {
   vertical-align: middle;
 }
 </style>
+<!-- Add this button to your tests_list.html header section -->
 
-<div class="action-bar">
-  <h1>My Tests</h1>
-  <a href="{% url 'create_test' %}" class="btn green">
-    ➕ Create Test
-  </a>
+<!-- In the header where you have "Create New Test" button, add this: -->
+
+<div class="tests-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+  <div>
+    <h1>My Tests</h1>
+    <p style="color: #6b7280; margin-top: 4px;">Create and manage your tests</p>
+  </div>
+  
+  <div style="display: flex; gap: 12px;">
+    <!-- Standard Test Button -->
+    <a href="{% url 'create_test' %}" class="btn btn-primary">
+      ➕ Create Standard Test
+    </a>
+    
+    <!-- NEW: Descriptive Test Button -->
+    <a href="{% url 'create_descriptive_test' %}" class="btn btn-success" style="background: #10b981;">
+      📝 Create Descriptive Test
+    </a>
+  </div>
 </div>
 
+<style>
+.btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+</style>
 <div class="table-wrap">
   <table>
     <thead>

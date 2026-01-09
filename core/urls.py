@@ -65,4 +65,12 @@ urlpatterns = [
     
     
     path("teacher/groups/", views.groups_list, name="groups_list"),
+    path("teacher/tests/create-descriptive/", views.create_descriptive_test, name="create_descriptive_test"),
+    path("teacher/tests/<int:test_id>/edit-descriptive/", views.edit_descriptive_test, name="edit_descriptive_test"),
+    
+    # Student Test Taking
+    path("student/tests/<int:test_id>/take/", views.take_test, name="take_test"),
+    path("student/tests/<int:test_id>/autosave/", views.autosave_test_answers, name="autosave_test_answers"),
+    path("student/tests/<int:test_id>/answers/", views.get_saved_answers, name="get_saved_answers"),
+    path("student/tests/<int:test_id>/submit/", views.submit_test, name="submit_test"),
 ]
