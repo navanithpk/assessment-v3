@@ -170,7 +170,7 @@ class Question(models.Model):
 
 class Test(models.Model):
     title = models.CharField(max_length=255)
-    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)  # Added for filtering
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     is_published = models.BooleanField(default=False)
 
@@ -249,7 +249,6 @@ class TestQuestion(models.Model):
     def __str__(self):
         return f"{self.test.title} – Q{self.order}"
 
-# Update your Student model in models.py
 
 class Student(models.Model):
     full_name = models.CharField(max_length=200)
@@ -260,7 +259,7 @@ class Student(models.Model):
     section = models.CharField(max_length=10)  # A, B, C
     school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
     
-    # Add this field to link Student to User account
+    # Link Student to User account
     user = models.OneToOneField(
         User, 
         on_delete=models.SET_NULL, 
@@ -279,9 +278,7 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.grade}-{self.section})"
 
-# Add this to your models.py
 
-# In models.py - ClassGroup model
 class ClassGroup(models.Model):
     name = models.CharField(max_length=200)
     school = models.ForeignKey('School', on_delete=models.CASCADE)
@@ -289,17 +286,12 @@ class ClassGroup(models.Model):
     grade = models.ForeignKey('Grade', on_delete=models.SET_NULL, null=True, blank=True)
     students = models.ManyToManyField(User, related_name='student_groups', blank=True)
     
-    # Add these if you want them:
     section = models.CharField(max_length=10, blank=True)  # e.g., "A", "B", "Morning"
     subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
     
     def __str__(self):
         return self.name
 
-
-# Migration command:
-# python manage.py makemigrations
-# python manage.py migrate
 
 class StudentAnswer(models.Model):
     """

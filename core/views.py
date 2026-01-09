@@ -101,12 +101,6 @@ def student_dashboard(request):
 # ===================== USER MANAGEMENT =====================
 # Replace your create_user_account view with this fixed version
 
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.contrib.auth.models import User
-from django.contrib import messages
-from django.db import transaction
-
 @login_required
 def create_user_account(request):
     school = get_user_school(request.user)
@@ -117,6 +111,7 @@ def create_user_account(request):
         # Get username and password - these are required
         username = request.POST.get('username', '').strip()
         password = request.POST.get('password', '').strip()
+        name = request.POST.get('name', '').strip()
         
         # Validate required fields
         if not username:
@@ -125,6 +120,10 @@ def create_user_account(request):
         
         if not password:
             messages.error(request, 'Password is required')
+            return redirect('create_user_account')
+        
+        if not name:
+            messages.error(request, 'Name is required')
             return redirect('create_user_account')
         
         # Check if username already exists
@@ -143,34 +142,62 @@ def create_user_account(request):
                 user = User.objects.create_user(
                     username=username,
                     password=password,
-                    first_name=request.POST.get('name', '').split()[0] if request.POST.get('name') else '',
-                    last_name=' '.join(request.POST.get('name', '').split()[1:]) if request.POST.get('name') else ''
+                    first_name=name.split()[0] if name else '',
+                    last_name=' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
                 )
                 
-                # Update the profile based on role
-                profile = user.profile
+                # Create/get UserProfile
+                profile, created = UserProfile.objects.get_or_create(user=user)
                 profile.school = school
                 profile.role = role
-                profile.sex = request.POST.get('sex', '')
                 
                 if role == 'student':
                     # Student-specific fields
-                    profile.grade = request.POST.get('grade', '')
-                    profile.division = request.POST.get('division', '')
-                    # Add roll_number if your model has it
-                    # profile.roll_number = request.POST.get('roll_number', '')
+                    grade_num = request.POST.get('grade', '')
+                    division = request.POST.get('division', '')
+                    
+                    profile.grade = int(grade_num) if grade_num else None
+                    profile.division = division
+                    profile.save()
+                    
+                    # Create Student record - CRITICAL for listing
+                    # Find or create the Grade object
+                    grade_obj = None
+                    if grade_num:
+                        # Try to find existing grade or create new one
+                        try:
+                            grade_obj = Grade.objects.get(name=str(grade_num))
+                        except Grade.DoesNotExist:
+                            grade_obj = Grade.objects.create(name=str(grade_num))
+                    
+                    # Create the Student record
+                    student = Student.objects.create(
+                        full_name=name,
+                        roll_number='',  # Can be updated later via manage students
+                        admission_id='',  # Can be updated later via manage students
+                        grade=grade_obj,
+                        section=division,
+                        school=school,
+                        user=user,  # Link to User account
+                        created_by=request.user
+                    )
+                    
+                    messages.success(
+                        request, 
+                        f'Student account created successfully! Username: {username}, Password: {password}'
+                    )
                     
                 elif role == 'teacher':
                     # Teacher-specific fields
                     profile.subject = request.POST.get('subject', '')
+                    profile.save()
+                    
+                    messages.success(
+                        request, 
+                        f'Teacher account created successfully! Username: {username}, Password: {password}'
+                    )
                 
-                profile.save()
-                
-                messages.success(
-                    request, 
-                    f'{role.capitalize()} account created successfully! Username: {username}'
-                )
-                return redirect('manage_class_groups')  # or wherever you want to redirect
+                return redirect('manage_users')  # Redirect to "View All Users" page
                 
         except Exception as e:
             messages.error(request, f'Error creating account: {str(e)}')
@@ -749,28 +776,81 @@ def add_questions_to_test(request, test_id):
 
 # ===================== STUDENTS =====================
 
+# Replace your add_student view in views.py with this
+
 @login_required
 def add_student(request):
     school = get_user_school(request.user)
     
     if request.method == "POST":
-        Student.objects.create(
-            full_name=request.POST["full_name"],
-            roll_number=request.POST.get("roll_number", ""),
-            admission_id=request.POST.get("admission_id", ""),
-            grade_id=request.POST["grade"],
-            section=request.POST["section"],
-            school=school,
-            created_by=request.user
-        )
+        from django.db import transaction
+        
+        try:
+            with transaction.atomic():
+                full_name = request.POST["full_name"]
+                roll_number = request.POST.get("roll_number", "")
+                admission_id = request.POST.get("admission_id", "")
+                grade_id = request.POST["grade"]
+                section = request.POST["section"]
+                
+                # Get the Grade object
+                grade = Grade.objects.get(id=grade_id)
+                
+                # Create student record
+                student = Student.objects.create(
+                    full_name=full_name,
+                    roll_number=roll_number,
+                    admission_id=admission_id,
+                    grade=grade,
+                    section=section,
+                    school=school,
+                    created_by=request.user
+                )
+                
+                # Generate username
+                base_username = admission_id if admission_id else \
+                               full_name.lower().replace(' ', '_')
+                username = base_username
+                counter = 1
+                
+                while User.objects.filter(username=username).exists():
+                    username = f"{base_username}_{counter}"
+                    counter += 1
+                
+                # Create user account
+                user = User.objects.create_user(
+                    username=username,
+                    first_name=full_name.split()[0] if full_name else '',
+                    last_name=' '.join(full_name.split()[1:]) if len(full_name.split()) > 1 else '',
+                    password='student123'  # Default password
+                )
+                
+                # Create UserProfile with student role
+                profile, created = UserProfile.objects.get_or_create(user=user)
+                profile.role = 'student'
+                profile.school = school
+                profile.grade = int(grade.name) if grade.name.isdigit() else None
+                profile.division = section
+                profile.save()
+                
+                # Link user to student
+                student.user = user
+                student.save()
+                
+                messages.success(
+                    request, 
+                    f'Student "{full_name}" added successfully! Username: {username}, Password: student123'
+                )
+                
+        except Exception as e:
+            messages.error(request, f'Error creating student: {str(e)}')
+            
         return redirect("students_list")
 
     return render(request, "teacher/students/add_student.html", {
         "grades": Grade.objects.all(),
         "school": school
     })
-
-
 @login_required
 def students_list(request):
     school = get_user_school(request.user)
