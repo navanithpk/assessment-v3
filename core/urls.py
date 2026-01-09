@@ -58,7 +58,8 @@ urlpatterns = [
     path("teacher/groups/add/", views.add_group, name="add_group"),
     path("teacher/users/create/", views.create_user_account, name="create_user_account"),
     path("teacher/users/manage/", views.manage_users, name="manage_users"),  # ADD THIS LINE
-
+    path('class-groups/', views.manage_class_groups, name='manage_class_groups'),
+    path('class-groups/<int:group_id>/students/', views.get_group_students, name='get_group_students'),
     # Performance
     path("teacher/performance/class/", views.class_performance, name="class_performance"),
     #path("teacher/performance/student/<int:student_id>/", views.student_performance, name="student_performance"),

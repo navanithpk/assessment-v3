@@ -122,6 +122,11 @@ tbody tr:last-child td {
   color: #6b21a8;
 }
 
+.role-badge.admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .btn {
   padding: 8px 14px;
   border: none;
@@ -140,6 +145,22 @@ tbody tr:last-child td {
 .btn-edit:hover {
   background: #2563eb;
   transform: translateY(-1px);
+}
+
+.btn-disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-disabled:hover {
+  transform: none;
+}
+
+.no-access-text {
+  font-size: 12px;
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .no-results {
@@ -360,7 +381,9 @@ tbody tr:last-child td {
         <td>
           {% if user.profile.role == 'student' %}
             <span class="role-badge student">👨‍🎓 Student</span>
-          {% elif user.profile.role == 'teacher' or user.profile.role == 'school_admin' %}
+          {% elif user.profile.role == 'school_admin' %}
+            <span class="role-badge admin">👨‍💼 Admin</span>
+          {% elif user.profile.role == 'teacher' %}
             <span class="role-badge teacher">👨‍🏫 Teacher</span>
           {% endif %}
         </td>
@@ -376,9 +399,34 @@ tbody tr:last-child td {
           </div>
         </td>
         <td>
-          <button class="btn btn-edit" onclick="openPasswordModal('{{ user.id }}', '{{ user.get_full_name|default:user.username }}')">
-            🔑 Reset Password
-          </button>
+          {% comment %}
+          Permission Logic:
+          - School admins can reset anyone's password
+          - Regular teachers can reset:
+            - Their own password
+            - Student passwords
+            - BUT NOT other teachers' passwords
+          {% endcomment %}
+          
+          {% if request.user.profile.role == 'school_admin' %}
+            {# Admin can reset anyone's password #}
+            <button class="btn btn-edit" onclick="openPasswordModal('{{ user.id }}', '{{ user.get_full_name|default:user.username }}')">
+              🔑 Reset Password
+            </button>
+          {% elif user.profile.role == 'student' %}
+            {# Regular teachers can reset student passwords #}
+            <button class="btn btn-edit" onclick="openPasswordModal('{{ user.id }}', '{{ user.get_full_name|default:user.username }}')">
+              🔑 Reset Password
+            </button>
+          {% elif user.id == request.user.id %}
+            {# Teachers can reset their own password #}
+            <button class="btn btn-edit" onclick="openPasswordModal('{{ user.id }}', '{{ user.get_full_name|default:user.username }}')">
+              🔑 Reset My Password
+            </button>
+          {% else %}
+            {# Regular teachers cannot reset other teachers' passwords #}
+            <span class="no-access-text">🔒 Admin only</span>
+          {% endif %}
         </td>
       </tr>
       {% empty %}

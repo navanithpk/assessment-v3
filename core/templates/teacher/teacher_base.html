@@ -104,10 +104,13 @@ body {
     <a href="{% url 'teacher_dashboard' %}">🏠 Dashboard</a>
     <a href="{% url 'tests_list' %}">📝 Create Test</a>
     <a href="{% url 'question_library' %}">📚 Question Library</a>
-
-    {% if request.user.profile.role == 'school_admin' %}
-    <a href="{% url 'create_user_account' %}">➕ Create User Account</a>
-    {% endif %}
+		<!-- In your sidebar - available to ALL teachers -->
+	<a href="{% url 'manage_class_groups' %}">
+	  👥 Class Groups
+	</a>
+    {% if request.user.profile.role == 'school_admin' or request.user.profile.role == 'teacher' %}
+	<a href="{% url 'create_user_account' %}">	  ➕ Create User Account</a>
+	{% endif %}
     <a href="{% url 'manage_users' %}">👥 View & Manage Users</a>
 
     <div class="spacer"></div>

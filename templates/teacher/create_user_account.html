@@ -331,8 +331,24 @@ function selectRole(role) {
   // Update hidden input
   document.getElementById('role-input').value = role;
   
-  // Update required fields
+  // ✅ IMPORTANT: Disable inactive form fields to prevent submission
   if (role === 'student') {
+    // Enable student fields
+    document.getElementById('student-name').disabled = false;
+    document.getElementById('student-sex').disabled = false;
+    document.getElementById('student-grade').disabled = false;
+    document.getElementById('student-division').disabled = false;
+    document.getElementById('student-username').disabled = false;
+    document.getElementById('student-password').disabled = false;
+    
+    // Disable teacher fields
+    document.getElementById('teacher-name').disabled = true;
+    document.getElementById('teacher-sex').disabled = true;
+    document.getElementById('teacher-subject').disabled = true;
+    document.getElementById('teacher-username').disabled = true;
+    document.getElementById('teacher-password').disabled = true;
+    
+    // Set required
     document.getElementById('student-name').required = true;
     document.getElementById('student-sex').required = true;
     document.getElementById('student-grade').required = true;
@@ -346,6 +362,22 @@ function selectRole(role) {
     document.getElementById('teacher-username').required = false;
     document.getElementById('teacher-password').required = false;
   } else {
+    // Enable teacher fields
+    document.getElementById('teacher-name').disabled = false;
+    document.getElementById('teacher-sex').disabled = false;
+    document.getElementById('teacher-subject').disabled = false;
+    document.getElementById('teacher-username').disabled = false;
+    document.getElementById('teacher-password').disabled = false;
+    
+    // Disable student fields
+    document.getElementById('student-name').disabled = true;
+    document.getElementById('student-sex').disabled = true;
+    document.getElementById('student-grade').disabled = true;
+    document.getElementById('student-division').disabled = true;
+    document.getElementById('student-username').disabled = true;
+    document.getElementById('student-password').disabled = true;
+    
+    // Set required
     document.getElementById('teacher-name').required = true;
     document.getElementById('teacher-sex').required = true;
     document.getElementById('teacher-subject').required = true;
@@ -369,6 +401,11 @@ function generatePassword(fieldId) {
   }
   document.getElementById(fieldId).value = password;
 }
+
+// Initialize: Make sure student form is active by default and teacher fields are disabled
+document.addEventListener('DOMContentLoaded', function() {
+  selectRole('student');
+});
 </script>
 
 {% endblock %}

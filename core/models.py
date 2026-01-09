@@ -269,23 +269,27 @@ class Student(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.grade}-{self.section})"
 
+# Add this to your models.py
 
+# In models.py - ClassGroup model
 class ClassGroup(models.Model):
-    name = models.CharField(max_length=100)  # "Grade 8A Physics"
-    grade = models.ForeignKey(Grade, on_delete=models.CASCADE)
-    section = models.CharField(max_length=10)
-    subject = models.ForeignKey(Subject, on_delete=models.CASCADE)
-    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)  # Added
-
-    students = models.ManyToManyField(Student, blank=True)
+    name = models.CharField(max_length=200)
+    school = models.ForeignKey('School', on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
-
-    class Meta:
-        ordering = ["school", "name"]
-
+    grade = models.ForeignKey('Grade', on_delete=models.SET_NULL, null=True, blank=True)
+    students = models.ManyToManyField(User, related_name='student_groups', blank=True)
+    
+    # Add these if you want them:
+    section = models.CharField(max_length=10, blank=True)  # e.g., "A", "B", "Morning"
+    subject = models.ForeignKey('Subject', on_delete=models.SET_NULL, null=True, blank=True)
+    
     def __str__(self):
         return self.name
 
+
+# Migration command:
+# python manage.py makemigrations
+# python manage.py migrate
 
 class StudentAnswer(models.Model):
     """

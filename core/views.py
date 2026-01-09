@@ -26,15 +26,6 @@ from .models import (
     UserProfile,
 )
 
-
-def get_user_school(user):
-    """Helper function to get user's school"""
-    try:
-        return user.profile.school
-    except:
-        return None
-
-
 def get_user_role(user):
     """Helper function to get user's role"""
     try:
@@ -108,83 +99,96 @@ def student_dashboard(request):
 
 
 # ===================== USER MANAGEMENT =====================
+# Replace your create_user_account view with this fixed version
 
-# Example view structure (you'll need to adapt to your models)
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.db import transaction
 
 @login_required
 def create_user_account(request):
     school = get_user_school(request.user)
-    user_role = get_user_role(request.user)
     
     if request.method == 'POST':
-        role = request.POST.get('role')
-        name = request.POST.get('name')
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        sex = request.POST.get('sex')
+        role = request.POST.get('role', 'student')
+        
+        # Get username and password - these are required
+        username = request.POST.get('username', '').strip()
+        password = request.POST.get('password', '').strip()
+        
+        # Validate required fields
+        if not username:
+            messages.error(request, 'Username is required')
+            return redirect('create_user_account')
+        
+        if not password:
+            messages.error(request, 'Password is required')
+            return redirect('create_user_account')
         
         # Check if username already exists
         if User.objects.filter(username=username).exists():
-            return render(request, 'teacher/create_user_account.html', {
-                'error': 'Username already exists. Please choose a different username.',
-                'school': school
-            })
+            messages.error(request, f'Username "{username}" is already taken')
+            return redirect('create_user_account')
+        
+        # Permission check: Only admins can create teachers
+        if role == 'teacher' and request.user.profile.role != 'school_admin':
+            messages.error(request, 'Only school admins can create teacher accounts')
+            return redirect('create_user_account')
         
         try:
-            # Create Django User
-            user = User.objects.create_user(
-                username=username,
-                password=password,
-                first_name=name.split()[0] if name else '',
-                last_name=' '.join(name.split()[1:]) if len(name.split()) > 1 else ''
-            )
-            
-            # Create UserProfile
-            UserProfile.objects.create(
-                user=user,
-                role=role,
-                school=school
-            )
-            
-            # THIS IS WHERE THE LAST SNIPPET GOES:
-            if role == 'student':
-                grade_num = request.POST.get('grade')
-                division = request.POST.get('division')
-                
-                # Update UserProfile with student info
-                user.profile.grade = grade_num
-                user.profile.division = division
-                user.profile.save()
-                
-                # Create Student record
-                grade, _ = Grade.objects.get_or_create(name=f"Grade {grade_num}")
-                Student.objects.create(
-                    full_name=name,
-                    grade=grade,
-                    section=division,
-                    school=school,
-                    created_by=user  # Link to the created user, not request.user
+            with transaction.atomic():
+                # Create the User
+                user = User.objects.create_user(
+                    username=username,
+                    password=password,
+                    first_name=request.POST.get('name', '').split()[0] if request.POST.get('name') else '',
+                    last_name=' '.join(request.POST.get('name', '').split()[1:]) if request.POST.get('name') else ''
                 )
-            
-            elif role == 'teacher':
-                subject = request.POST.get('subject')
-                user.profile.subject = subject
-                user.profile.save()
-            
-            messages.success(request, f'Account created successfully! Username: {username}')
-            return render(request, 'teacher/create_user_account.html', {
-                'success': True,
-                'created_username': username,
-                'school': school
-            })
-            
+                
+                # Update the profile based on role
+                profile = user.profile
+                profile.school = school
+                profile.role = role
+                profile.sex = request.POST.get('sex', '')
+                
+                if role == 'student':
+                    # Student-specific fields
+                    profile.grade = request.POST.get('grade', '')
+                    profile.division = request.POST.get('division', '')
+                    # Add roll_number if your model has it
+                    # profile.roll_number = request.POST.get('roll_number', '')
+                    
+                elif role == 'teacher':
+                    # Teacher-specific fields
+                    profile.subject = request.POST.get('subject', '')
+                
+                profile.save()
+                
+                messages.success(
+                    request, 
+                    f'{role.capitalize()} account created successfully! Username: {username}'
+                )
+                return redirect('manage_class_groups')  # or wherever you want to redirect
+                
         except Exception as e:
-            return render(request, 'teacher/create_user_account.html', {
-                'error': f'Error creating account: {str(e)}',
-                'school': school
-            })
+            messages.error(request, f'Error creating account: {str(e)}')
+            return redirect('create_user_account')
     
-    return render(request, 'teacher/create_user_account.html', {'school': school})
+    # GET request - show form
+    return render(request, 'teacher/create_user_account.html', {
+        'school': school,
+        'is_school_admin': request.user.profile.role == 'school_admin'
+    })
+
+
+# Helper function (add if not exists)
+def get_user_school(user):
+    """Get the school for the current user"""
+    if hasattr(user, 'profile') and user.profile.school:
+        return user.profile.school
+    return None
 
 @login_required
 def manage_users(request):
@@ -874,4 +878,149 @@ def student_performance(request, student_id):
     return render(request, "teacher/performance/student_performance.html", {
         "school": school,
         "student": student
+    })
+
+# Add these views to your views.py
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Q
+
+@login_required
+def manage_class_groups(request):
+    """
+    Main page for managing class groups (all teachers can access)
+    """
+    school = get_user_school(request.user)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'create':
+            # Create new group
+            name = request.POST.get('name')
+            description = request.POST.get('description', '')
+            color = request.POST.get('color', '#3b82f6')
+            grade_id = request.POST.get('grade')
+            student_ids = request.POST.getlist('students')
+            
+            if not name:
+                messages.error(request, 'Group name is required')
+                return redirect('manage_class_groups')
+            
+            try:
+                group = ClassGroup.objects.create(
+                    name=name,
+                    school=school,
+                    created_by=request.user,
+                    grade_id=grade_id if grade_id else None,
+                    # Add these if your model has them:
+                    # section=request.POST.get('section', ''),
+                    # subject_id=request.POST.get('subject'),
+                )
+                
+                # Add color if the field exists
+                if hasattr(group, 'color'):
+                    group.color = color
+                    group.save()
+                
+                # Add description if the field exists
+                if hasattr(group, 'description'):
+                    group.description = description
+                    group.save()
+                
+                # Add students
+                if student_ids:
+                    students = User.objects.filter(
+                        id__in=student_ids,
+                        profile__school=school,
+                        profile__role='student'
+                    )
+                    group.students.set(students)
+                
+                messages.success(request, f'Group "{name}" created successfully with {len(student_ids)} students')
+                return redirect('manage_class_groups')
+                
+            except Exception as e:
+                messages.error(request, f'Error creating group: {str(e)}')
+                return redirect('manage_class_groups')
+        
+        elif action == 'edit':
+            # Edit existing group
+            group_id = request.POST.get('group_id')
+            group = get_object_or_404(ClassGroup, id=group_id, school=school)
+            
+            group.name = request.POST.get('name', group.name)
+            grade_id = request.POST.get('grade')
+            group.grade_id = grade_id if grade_id else None
+            
+            # Update optional fields if they exist
+            if hasattr(group, 'description'):
+                group.description = request.POST.get('description', '')
+            
+            if hasattr(group, 'color'):
+                group.color = request.POST.get('color', group.color if hasattr(group, 'color') else '#3b82f6')
+            
+            group.save()
+            
+            # Update students
+            student_ids = request.POST.getlist('students')
+            if student_ids:
+                students = User.objects.filter(
+                    id__in=student_ids,
+                    profile__school=school,
+                    profile__role='student'
+                )
+                group.students.set(students)
+            else:
+                group.students.clear()
+            
+            messages.success(request, f'Group "{group.name}" updated successfully')
+            return redirect('manage_class_groups')
+        
+        elif action == 'delete':
+            # Delete group
+            group_id = request.POST.get('group_id')
+            group = get_object_or_404(ClassGroup, id=group_id, school=school)
+            group_name = group.name
+            group.delete()
+            
+            messages.success(request, f'Group "{group_name}" deleted successfully')
+            return redirect('manage_class_groups')
+    
+    # GET request - display groups
+    # ✅ Fixed ordering - use 'name' instead of 'created_at'
+    groups = ClassGroup.objects.filter(
+        school=school
+    ).prefetch_related('students').order_by('name')
+    
+    # Get all students in the school
+    students = User.objects.filter(
+        profile__school=school,
+        profile__role='student'
+    ).select_related('profile').order_by('profile__grade', 'profile__division', 'first_name')
+    
+    grades = Grade.objects.all()
+    
+    return render(request, 'teacher/manage_class_groups.html', {
+        'groups': groups,
+        'students': students,
+        'grades': grades,
+        'school': school
+    })
+
+@login_required
+def get_group_students(request, group_id):
+    """
+    API endpoint to get students in a specific group
+    """
+    school = get_user_school(request.user)
+    group = get_object_or_404(ClassGroup, id=group_id, school=school)
+    
+    student_ids = list(group.students.values_list('id', flat=True))
+    
+    return JsonResponse({
+        'student_ids': student_ids,
+        'count': len(student_ids)
     })
