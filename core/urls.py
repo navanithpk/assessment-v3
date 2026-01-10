@@ -38,6 +38,8 @@ urlpatterns = [
     path("ajax/subjects/", views.ajax_subjects, name="ajax_subjects"),
     path("ajax/topics/", views.ajax_topics, name="ajax_topics"),
     path("ajax/los/", views.ajax_learning_objectives, name="ajax_los"),
+    path("ajax/students/", views.ajax_students, name="ajax_students"),
+    path("ajax/groups/", views.ajax_groups, name="ajax_groups"),
     
     # Students (Legacy - keep for compatibility)
     path("teacher/students/", views.students_list, name="students_list"),

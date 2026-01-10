@@ -941,6 +941,46 @@ def ajax_learning_objectives(request):
     ], safe=False)
 
 
+@login_required
+@require_GET
+def ajax_students(request):
+    """Get all students for the teacher's school"""
+    school = get_user_school(request.user)
+    if not school:
+        return JsonResponse([], safe=False)
+
+    students = Student.objects.filter(school=school).select_related('user')
+
+    return JsonResponse([
+        {
+            "id": s.id,
+            "name": s.user.get_full_name() or s.user.username,
+            "email": s.user.email,
+        }
+        for s in students
+    ], safe=False)
+
+
+@login_required
+@require_GET
+def ajax_groups(request):
+    """Get all class groups for the teacher's school"""
+    school = get_user_school(request.user)
+    if not school:
+        return JsonResponse([], safe=False)
+
+    groups = ClassGroup.objects.filter(school=school)
+
+    return JsonResponse([
+        {
+            "id": g.id,
+            "name": g.name,
+            "student_count": g.students.count(),
+        }
+        for g in groups
+    ], safe=False)
+
+
 @staff_member_required
 def admin_dashboard(request):
     return render(request, "admin_panel/admin_dashboard.html")
@@ -1215,7 +1255,7 @@ def create_descriptive_test(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     # GET request - show the editor
-    return render(request, 'teacher/create_descriptive_test.html', {
+    return render(request, 'teacher/create_descriptive_test_v2.html', {
         'school': school
     })
 
@@ -1271,7 +1311,7 @@ def edit_descriptive_test(request, test_id):
         except:
             questions_data = []
 
-    return render(request, 'teacher/create_descriptive_test.html', {
+    return render(request, 'teacher/create_descriptive_test_v2.html', {
         'school': school,
         'test': test,
         'questions_data': json.dumps(questions_data),
