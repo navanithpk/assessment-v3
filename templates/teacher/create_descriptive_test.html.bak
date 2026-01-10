@@ -1,0 +1,614 @@
+{% extends "teacher/teacher_base.html" %}
+
+{% block title %}Create Descriptive Test{% endblock %}
+
+{% block content %}
+
+<style>
+.test-editor-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.editor-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.title-input {
+  width: 100%;
+  font-size: 24px;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  outline: none;
+}
+
+.title-input:focus {
+  border-bottom-color: #2563eb;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-success {
+  background: #10b981;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Questions Container */
+.questions-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-height: 400px;
+}
+
+.questions-header {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+/* Question Node */
+.question-node {
+  margin-bottom: 8px;
+}
+
+.question-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.question-card:hover {
+  background: #f9fafb;
+}
+
+.question-card.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+}
+
+.grip-icon {
+  color: #9ca3af;
+  cursor: move;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #2563eb;
+  font-size: 14px;
+  min-width: 60px;
+}
+
+.marks-input {
+  width: 50px;
+  padding: 2px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.marks-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.question-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.action-btn {
+  padding: 6px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.action-btn.add {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.action-btn.add:hover {
+  background: #bfdbfe;
+}
+
+.action-btn.delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.action-btn.delete:hover {
+  background: #fecaca;
+}
+
+.question-content-area {
+  margin-top: 8px;
+}
+
+.question-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.question-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Children container with indentation */
+.question-children {
+  margin-left: 24px;
+  margin-top: 8px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+/* Info panel */
+.info-panel {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.info-title {
+  margin: 0 0 8px 0;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Icons */
+.icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+}
+</style>
+
+<div class="test-editor-container">
+  <!-- Header -->
+  <div class="editor-header">
+    <input 
+      type="text" 
+      class="title-input" 
+      id="testTitle"
+      placeholder="Untitled Descriptive Test"
+      value="Untitled Descriptive Test"
+    >
+    
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="addMainQuestion()">
+        ➕ Add Main Question
+      </button>
+      
+      <button class="btn btn-success" onclick="saveTest()">
+        💾 Save Test
+      </button>
+      
+      <button class="btn btn-secondary" onclick="window.location.href='{% url "tests_list" %}'">
+        ← Back to Tests
+      </button>
+    </div>
+  </div>
+
+  <!-- Questions Container -->
+  <div class="questions-container">
+    <h3 class="questions-header">
+      Questions (<span id="questionCount">0</span>)
+    </h3>
+    
+    <div id="questionsTree">
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No questions yet. Add your first question to get started.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Info Panel -->
+  <div class="info-panel">
+    <h4 class="info-title">💡 How to use this editor</h4>
+    <ul class="info-list">
+      <li>Click "Add Main Question" to add top-level questions (1, 2, 3...)</li>
+      <li>Click the ➕ button on any question to add sub-questions (a, b, c...)</li>
+      <li>Sub-questions can have their own sub-questions (i, ii, iii...)</li>
+      <li>Enter question text and marks for each question</li>
+      <li>Questions will be saved in a hierarchical structure</li>
+    </ul>
+  </div>
+</div>
+
+<script>
+// Get CSRF token
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+const csrftoken = getCookie('csrftoken');
+
+// Questions data structure
+let questions = [];
+let expandedNodes = new Set();
+let selectedQuestion = null;
+let questionIdCounter = 0;
+
+// Generate question numbering
+function getQuestionNumber(question, allQuestions) {
+  if (question.level === 0) {
+    return question.number;
+  }
+  
+  // Find parent
+  const parent = findParent(question.id, allQuestions);
+  if (!parent) return question.number;
+  
+  const parentNumber = getQuestionNumber(parent, allQuestions);
+  const index = parent.children.indexOf(question);
+  
+  if (question.level === 1) {
+    // a, b, c format
+    return `${parentNumber}(${String.fromCharCode(97 + index)})`;
+  } else if (question.level === 2) {
+    // i, ii, iii format
+    const roman = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+    return `${parentNumber}(${roman[index] || index + 1})`;
+  }
+  
+  return `${parentNumber}.${index + 1}`;
+}
+
+function findParent(questionId, questionsList) {
+  for (let q of questionsList) {
+    if (q.children.some(c => c.id === questionId)) {
+      return q;
+    }
+    const found = findParent(questionId, q.children);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Add main question
+function addMainQuestion() {
+  const newQuestion = {
+    id: `q-${++questionIdCounter}`,
+    level: 0,
+    number: questions.filter(q => q.level === 0).length + 1,
+    content: '',
+    marks: 1,
+    children: []
+  };
+  
+  questions.push(newQuestion);
+  expandedNodes.add(newQuestion.id);
+  renderQuestions();
+}
+
+// Add sub-question
+function addSubQuestion(parentId, level) {
+  const parent = findQuestionById(parentId, questions);
+  if (!parent) return;
+  
+  const newQuestion = {
+    id: `q-${++questionIdCounter}`,
+    level: level,
+    number: 'auto',
+    content: '',
+    marks: 1,
+    children: []
+  };
+  
+  parent.children.push(newQuestion);
+  expandedNodes.add(parentId);
+  renderQuestions();
+}
+
+// Delete question
+function deleteQuestion(questionId) {
+  if (!confirm('Delete this question and all sub-questions?')) return;
+  
+  questions = removeFromTree(questions, questionId);
+  if (selectedQuestion === questionId) {
+    selectedQuestion = null;
+  }
+  renderQuestions();
+}
+
+function removeFromTree(tree, id) {
+  return tree.filter(q => q.id !== id).map(q => ({
+    ...q,
+    children: removeFromTree(q.children, id)
+  }));
+}
+
+// Find question by ID
+function findQuestionById(id, tree) {
+  for (let q of tree) {
+    if (q.id === id) return q;
+    const found = findQuestionById(id, q.children);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Update question
+function updateQuestion(id, field, value) {
+  const question = findQuestionById(id, questions);
+  if (question) {
+    question[field] = value;
+  }
+}
+
+// Toggle expand
+function toggleExpand(id) {
+  if (expandedNodes.has(id)) {
+    expandedNodes.delete(id);
+  } else {
+    expandedNodes.add(id);
+  }
+  renderQuestions();
+}
+
+// Render questions tree
+function renderQuestions() {
+  const container = document.getElementById('questionsTree');
+  
+  if (questions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No questions yet. Add your first question to get started.</p>
+      </div>
+    `;
+    document.getElementById('questionCount').textContent = '0';
+    return;
+  }
+  
+  let html = '';
+  
+  function renderNode(question, indent = 0) {
+    const isExpanded = expandedNodes.has(question.id);
+    const hasChildren = question.children.length > 0;
+    const questionNumber = getQuestionNumber(question, questions);
+    const isSelected = selectedQuestion === question.id;
+    
+    let nodeHtml = `
+      <div class="question-node" style="margin-left: ${indent * 24}px">
+        <div class="question-card ${isSelected ? 'selected' : ''}" onclick="selectQuestion('${question.id}')">
+          <div class="question-header">
+            ${hasChildren ? `
+              <button class="expand-btn" onclick="event.stopPropagation(); toggleExpand('${question.id}')">
+                ${isExpanded ? '▼' : '▶'}
+              </button>
+            ` : '<span style="width: 20px"></span>'}
+            
+            <span class="grip-icon">⋮⋮</span>
+            
+            <span class="question-number">${questionNumber}</span>
+            
+            <input 
+              type="number" 
+              class="marks-input" 
+              value="${question.marks}"
+              onclick="event.stopPropagation()"
+              onchange="updateQuestion('${question.id}', 'marks', parseInt(this.value))"
+              min="1"
+            >
+            <span class="marks-label">marks</span>
+            
+            <div class="question-actions">
+              ${question.level < 3 ? `
+                <button class="action-btn add" onclick="event.stopPropagation(); addSubQuestion('${question.id}', ${question.level + 1})" title="Add sub-question">
+                  ➕
+                </button>
+              ` : ''}
+              
+              <button class="action-btn delete" onclick="event.stopPropagation(); deleteQuestion('${question.id}')" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </div>
+          
+          <div class="question-content-area">
+            <textarea 
+              class="question-textarea" 
+              placeholder="Enter question text..."
+              onclick="event.stopPropagation()"
+              oninput="updateQuestion('${question.id}', 'content', this.value)"
+            >${question.content}</textarea>
+          </div>
+        </div>
+        
+        ${isExpanded && hasChildren ? `
+          <div class="question-children">
+            ${question.children.map(child => renderNode(child, indent)).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+    
+    return nodeHtml;
+  }
+  
+  html = questions.map(q => renderNode(q, 0)).join('');
+  container.innerHTML = html;
+  
+  // Update count
+  const totalCount = countAllQuestions(questions);
+  document.getElementById('questionCount').textContent = totalCount;
+}
+
+function countAllQuestions(tree) {
+  let count = tree.length;
+  tree.forEach(q => {
+    count += countAllQuestions(q.children);
+  });
+  return count;
+}
+
+function selectQuestion(id) {
+  selectedQuestion = id;
+  renderQuestions();
+}
+
+// Save test
+async function saveTest() {
+  const title = document.getElementById('testTitle').value.trim();
+  
+  if (!title) {
+    alert('Please enter a test title');
+    return;
+  }
+  
+  if (questions.length === 0) {
+    alert('Please add at least one question');
+    return;
+  }
+  
+  const testData = {
+    title: title,
+    questions: questions,
+    test_type: 'descriptive'
+  };
+  
+  try {
+    const response = await fetch('{% url "create_descriptive_test" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify(testData)
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('Test saved successfully!');
+      window.location.href = '{% url "tests_list" %}';
+    } else {
+      alert('Error saving test: ' + (data.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error saving test. Please try again.');
+  }
+}
+
+// Initialize
+renderQuestions();
+</script>
+
+{% endblock %}

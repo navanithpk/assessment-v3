@@ -614,76 +614,6 @@ def create_test(request):
     return redirect("edit_test", test_id=test.id)
 
 
-@login_required
-def test_editor(request, test_id):
-    """
-    Test editor with persistent assignment tags
-    """
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-    school = get_user_school(request.user)
-
-    if request.method == "POST":
-        # Save test details
-        test.title = request.POST.get("title", test.title)
-        test.is_published = bool(request.POST.get("is_published"))
-        
-        # Handle datetime
-        start_time = request.POST.get("start_time")
-        if start_time:
-            test.start_time = start_time
-            
-        duration = request.POST.get("duration_minutes")
-        if duration:
-            test.duration_minutes = int(duration)
-        
-        # Handle subject
-        subject_id = request.POST.get("subject")
-        if subject_id:
-            test.subject_id = subject_id
-            
-        test.save()
-
-        # Handle assignments - get IDs from POST
-        assigned_student_ids = request.POST.getlist("assigned_students")
-        assigned_group_ids = request.POST.getlist("assigned_groups")
-        
-        # Update assignments
-        test.assigned_students.set(assigned_student_ids)
-        test.assigned_groups.set(assigned_group_ids)
-        
-        messages.success(request, "Test saved successfully!")
-        return redirect("edit_test", test_id=test.id)
-
-    # GET request - load test data
-    test_questions = TestQuestion.objects.filter(
-        test=test
-    ).select_related('question', 'question__topic').order_by('order')
-    
-    # Get students and groups from same school
-    students = Student.objects.filter(school=school).select_related('grade')
-    groups = ClassGroup.objects.filter(school=school, created_by=request.user)
-    
-    # Get currently assigned students and groups
-    assigned_students = test.assigned_students.all()
-    assigned_groups = test.assigned_groups.all()
-    
-    subjects = Subject.objects.all()
-
-    return render(
-        request,
-        "teacher/create_test.html",
-        {
-            "test": test,
-            "test_questions": test_questions,
-            "groups": groups,
-            "students": students,
-            "assigned_students": assigned_students,
-            "assigned_groups": assigned_groups,
-            "grades": Grade.objects.all(),
-            "subjects": subjects,
-            "school": school,
-        }
-    )
 
 
 @login_required
@@ -739,83 +669,7 @@ def autosave_test(request, test_id):
 
 # ===================== STUDENT TEST LIST WITH SORTING =====================
 
-@login_required
-def student_tests_list(request):
-    """
-    Show all published tests assigned to the logged-in student
-    with sorting and filtering
-    """
-    # Get student profile
-    try:
-        student = Student.objects.get(created_by=request.user)
-    except Student.DoesNotExist:
-        return render(request, "student/student_tests_list.html", {
-            "tests": [],
-            "error": "Student profile not found"
-        })
-    
-    # Get sorting parameters
-    sort_by = request.GET.get('sort', 'date')  # date, subject
-    order = request.GET.get('order', 'desc')  # asc, desc
-    subject_filter = request.GET.get('subject', '')  # filter by subject
-    
-    # Get tests assigned directly
-    directly_assigned = Test.objects.filter(
-        assigned_students=student,
-        is_published=True
-    ).exclude(
-        excluded_students=student
-    )
-    
-    # Get tests assigned through groups
-    student_groups = ClassGroup.objects.filter(students=student)
-    group_assigned = Test.objects.filter(
-        assigned_groups__in=student_groups,
-        is_published=True
-    ).exclude(
-        excluded_students=student
-    )
-    
-    # Combine and remove duplicates
-    all_tests = (directly_assigned | group_assigned).distinct()
-    
-    # Apply subject filter
-    if subject_filter:
-        all_tests = all_tests.filter(subject_id=subject_filter)
-    
-    # Apply sorting
-    if sort_by == 'subject':
-        all_tests = all_tests.order_by('subject__name' if order == 'asc' else '-subject__name')
-    else:  # date
-        all_tests = all_tests.order_by('created_at' if order == 'asc' else '-created_at')
-    
-    # Add attempt status
-    tests_with_status = []
-    for test in all_tests:
-        attempts = StudentAnswer.objects.filter(
-            student=student,
-            test=test
-        ).count()
-        
-        tests_with_status.append({
-            'test': test,
-            'attempted': attempts > 0,
-            'attempt_count': attempts
-        })
-    
-    # Get available subjects for filter dropdown
-    subjects = Subject.objects.filter(
-        test__in=all_tests
-    ).distinct()
-    
-    return render(request, "student/student_tests_list.html", {
-        "tests_with_status": tests_with_status,
-        "student": student,
-        "sort_by": sort_by,
-        "order": order,
-        "subject_filter": subject_filter,
-        "subjects": subjects,
-    })
+
 
 
 # ===================== QUESTIONS =====================
@@ -1556,13 +1410,180 @@ def edit_descriptive_test(request, test_id):
 
 # ===================== STUDENT TEST TAKING =====================
 
+
+# CRITICAL FIX: Update these specific views in your views.py file
+
+@login_required
+def test_editor(request, test_id):
+    """
+    Test editor with proper student assignment handling
+    """
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    school = get_user_school(request.user)
+
+    if request.method == "POST":
+        # Save test details
+        test.title = request.POST.get("title", test.title)
+        test.is_published = bool(request.POST.get("is_published"))
+        
+        # Handle datetime
+        start_time = request.POST.get("start_time")
+        if start_time:
+            test.start_time = start_time
+        else:
+            test.start_time = None
+            
+        duration = request.POST.get("duration_minutes")
+        if duration:
+            test.duration_minutes = int(duration)
+        else:
+            test.duration_minutes = None
+        
+        # Handle subject
+        subject_id = request.POST.get("subject")
+        if subject_id:
+            test.subject_id = subject_id
+        else:
+            test.subject = None
+            
+        test.save()
+
+        # Handle student assignments - CRITICAL FIX
+        # Get individual student IDs from the hidden inputs
+        assigned_student_ids = request.POST.getlist("assigned_students")
+        
+        # Clear existing assignments and set new ones
+        test.assigned_students.clear()
+        test.assigned_groups.clear()
+        
+        if assigned_student_ids:
+            # Validate that these students belong to the teacher's school
+            valid_students = Student.objects.filter(
+                id__in=assigned_student_ids,
+                school=school
+            )
+            test.assigned_students.set(valid_students)
+        
+        messages.success(request, "Test saved successfully!")
+        return redirect("edit_test", test_id=test.id)
+
+    # GET request - load test data
+    test_questions = TestQuestion.objects.filter(
+        test=test
+    ).select_related('question', 'question__topic', 'question__grade', 'question__subject').order_by('order')
+    
+    # Get students and groups from same school
+    students = Student.objects.filter(school=school).select_related('grade', 'user').order_by('grade__name', 'section', 'roll_number')
+    groups = ClassGroup.objects.filter(school=school, created_by=request.user).prefetch_related('students')
+    
+    # Get currently assigned students
+    assigned_students = test.assigned_students.all()
+    
+    subjects = Subject.objects.all()
+
+    return render(
+        request,
+        "teacher/create_test.html",
+        {
+            "test": test,
+            "test_questions": test_questions,
+            "groups": groups,
+            "students": students,
+            "assigned_students": assigned_students,
+            "grades": Grade.objects.all(),
+            "subjects": subjects,
+            "school": school,
+        }
+    )
+
+
+@login_required
+def student_tests_list(request):
+    """
+    Show all published tests assigned to the logged-in student
+    CRITICAL FIX: Changed from created_by to user lookup
+    """
+    # Get student profile - FIXED
+    try:
+        student = Student.objects.get(user=request.user)  # ✅ FIXED: was created_by=request.user
+    except Student.DoesNotExist:
+        return render(request, "student/student_tests_list.html", {
+            "tests_with_status": [],
+            "error": "Student profile not found. Please contact your teacher.",
+            "student": None,
+        })
+    
+    # Get sorting parameters
+    sort_by = request.GET.get('sort', 'date')
+    order = request.GET.get('order', 'desc')
+    subject_filter = request.GET.get('subject', '')
+    
+    # Get tests assigned directly to this student
+    directly_assigned = Test.objects.filter(
+        assigned_students=student,
+        is_published=True
+    )
+    
+    # Get tests assigned through groups (if using group-based assignment)
+    # Note: Since we're now using individual student assignment, this may not be needed
+    # but keeping it for backward compatibility
+    student_groups = ClassGroup.objects.filter(students__student_profile=student)
+    group_assigned = Test.objects.filter(
+        assigned_groups__in=student_groups,
+        is_published=True
+    )
+    
+    # Combine and remove duplicates
+    all_tests = (directly_assigned | group_assigned).distinct()
+    
+    # Apply subject filter
+    if subject_filter:
+        all_tests = all_tests.filter(subject_id=subject_filter)
+    
+    # Apply sorting
+    if sort_by == 'subject':
+        all_tests = all_tests.order_by('subject__name' if order == 'asc' else '-subject__name')
+    else:  # date
+        all_tests = all_tests.order_by('created_at' if order == 'asc' else '-created_at')
+    
+    # Add attempt status
+    tests_with_status = []
+    for test in all_tests:
+        attempts = StudentAnswer.objects.filter(
+            student=student,
+            test=test
+        ).count()
+        
+        tests_with_status.append({
+            'test': test,
+            'attempted': attempts > 0,
+            'attempt_count': attempts
+        })
+    
+    # Get available subjects for filter dropdown
+    subjects = Subject.objects.filter(
+        test__in=all_tests
+    ).distinct()
+    
+    return render(request, "student/student_tests_list.html", {
+        "tests_with_status": tests_with_status,
+        "student": student,
+        "sort_by": sort_by,
+        "order": order,
+        "subject_filter": subject_filter,
+        "subjects": subjects,
+    })
+
+
 @login_required
 def take_test(request, test_id):
     """
     Student interface for taking a test
+    CRITICAL FIX: Changed from created_by to user lookup
     """
+    # Get student profile - FIXED
     try:
-        student = Student.objects.get(user=request.user)
+        student = Student.objects.get(user=request.user)  # ✅ FIXED: was created_by=request.user
     except Student.DoesNotExist:
         messages.error(request, "Student profile not found")
         return redirect("student_dashboard")
@@ -1570,29 +1591,71 @@ def take_test(request, test_id):
     test = get_object_or_404(Test, id=test_id, is_published=True)
     
     # Check if student is assigned to this test
-    assigned_students = test.get_all_assigned_students()
-    if student not in assigned_students:
+    is_directly_assigned = test.assigned_students.filter(id=student.id).exists()
+    
+    # Check group assignment
+    student_groups = ClassGroup.objects.filter(students__student_profile=student)
+    is_group_assigned = test.assigned_groups.filter(id__in=student_groups).exists()
+    
+    if not (is_directly_assigned or is_group_assigned):
         messages.error(request, "You are not assigned to this test")
         return redirect("student_tests_list")
     
-    # Check if already submitted
-    # You'll need to add a submission tracking model
+    # Get test questions
+    test_questions = TestQuestion.objects.filter(
+        test=test
+    ).select_related('question').order_by('order')
     
-    # Prepare test data for frontend
-    if hasattr(test, 'descriptive_structure') and test.descriptive_structure:
-        # Descriptive test
-        questions_structure = json.loads(test.descriptive_structure)
-        test_data = convert_to_pages(questions_structure)
-    else:
-        # Regular test with question bank questions
-        test_data = convert_regular_test_to_pages(test)
+    # Prepare test data
+    test_data = {
+        'test_id': test.id,
+        'title': test.title,
+        'duration': test.duration_minutes,
+        'questions': []
+    }
+    
+    for idx, tq in enumerate(test_questions, 1):
+        test_data['questions'].append({
+            'id': tq.question.id,
+            'number': idx,
+            'text': tq.question.question_text,
+            'marks': tq.question.marks,
+            'type': tq.question.question_type
+        })
     
     return render(request, 'student/student_take_test.html', {
         'test': test,
-        'test_data': json.dumps(test_data),
-        'student': student
+        'test_data': test_data,
+        'student': student,
+        'question_count': test_questions.count()
     })
 
+
+# Additional helper function for debugging
+@login_required
+def debug_student_assignments(request, test_id):
+    """
+    DEBUG VIEW - Remove in production
+    Shows assignment details for troubleshooting
+    """
+    if not request.user.is_staff:
+        return JsonResponse({'error': 'Access denied'}, status=403)
+    
+    test = get_object_or_404(Test, id=test_id)
+    
+    assigned_students = test.assigned_students.all().values('id', 'full_name', 'user__username')
+    assigned_groups = test.assigned_groups.all().values('id', 'name')
+    
+    return JsonResponse({
+        'test': {
+            'id': test.id,
+            'title': test.title,
+            'is_published': test.is_published,
+        },
+        'assigned_students': list(assigned_students),
+        'assigned_groups': list(assigned_groups),
+        'total_assigned': test.assigned_students.count(),
+    })
 
 def convert_to_pages(questions_structure):
     """

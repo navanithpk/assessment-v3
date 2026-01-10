@@ -1,399 +1,911 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, Trash2, GripVertical, FileText } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Descriptive Test with Answer Keys</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.css">
+<style>
+* {
+  box-sizing: border-box;
+}
 
-const AdvancedTestEditor = () => {
-  const [testTitle, setTestTitle] = useState('Untitled Test');
-  const [questions, setQuestions] = useState([
-    {
-      id: '1',
-      level: 0,
-      number: '1',
-      content: 'Fig. 1.1 shows sea water flowing down a channel...',
-      marks: 9,
-      children: [
-        {
-          id: '1a',
-          level: 1,
-          number: '1(a)',
-          content: 'Initially, the tank is empty. Calculate the depth...',
-          marks: 3,
-          children: []
-        },
-        {
-          id: '1b',
-          level: 1,
-          number: '1(b)',
-          content: 'The height of the water decreases by 0.420m...',
-          marks: 3,
-          children: []
-        },
-        {
-          id: '1c',
-          level: 1,
-          number: '1(c)',
-          content: 'The water stops flowing. Calculate the pressure...',
-          marks: 3,
-          children: []
-        }
-      ]
-    },
-    {
-      id: '2',
-      level: 0,
-      number: '2',
-      content: 'A pendulum swings with a time period...',
-      marks: 6,
-      children: [
-        {
-          id: '2a',
-          level: 1,
-          number: '2(a)',
-          content: 'Describe how to use a stop-watch...',
-          marks: 3,
-          children: []
-        },
-        {
-          id: '2b',
-          level: 1,
-          number: '2(b)',
-          content: 'Complete Table 2.1 by writing...',
-          marks: 3,
-          children: []
-        }
-      ]
-    }
-  ]);
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f7fa;
+  padding: 20px;
+}
 
-  const [expandedNodes, setExpandedNodes] = useState(new Set(['1', '2']));
-  const [selectedQuestion, setSelectedQuestion] = useState(null);
+.test-editor-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
 
-  const toggleExpand = (id) => {
-    const newExpanded = new Set(expandedNodes);
-    if (newExpanded.has(id)) {
-      newExpanded.delete(id);
-    } else {
-      newExpanded.add(id);
-    }
-    setExpandedNodes(newExpanded);
-  };
+/* Header */
+.editor-header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
 
-  const addQuestion = (parentId = null, level = 0) => {
-    const newQuestion = {
-      id: `q-${Date.now()}`,
-      level: level,
-      number: level === 0 ? `${questions.length + 1}` : 'auto',
-      content: '',
-      marks: 1,
-      children: []
-    };
+.title-input {
+  width: 100%;
+  font-size: 24px;
+  font-weight: 600;
+  border: none;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 8px 0;
+  margin-bottom: 16px;
+  outline: none;
+}
 
-    if (parentId === null) {
-      setQuestions([...questions, newQuestion]);
-    } else {
-      const addToParent = (qs) => {
-        return qs.map(q => {
-          if (q.id === parentId) {
-            return { ...q, children: [...q.children, newQuestion] };
-          }
-          if (q.children.length > 0) {
-            return { ...q, children: addToParent(q.children) };
-          }
-          return q;
-        });
-      };
-      setQuestions(addToParent(questions));
-      setExpandedNodes(new Set([...expandedNodes, parentId]));
-    }
-  };
+.title-input:focus {
+  border-bottom-color: #2563eb;
+}
 
-  const deleteQuestion = (id) => {
-    const removeQuestion = (qs) => {
-      return qs.filter(q => q.id !== id).map(q => ({
-        ...q,
-        children: removeQuestion(q.children)
-      }));
-    };
-    setQuestions(removeQuestion(questions));
-  };
+.header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
-  const updateQuestion = (id, field, value) => {
-    const updateInTree = (qs) => {
-      return qs.map(q => {
-        if (q.id === id) {
-          return { ...q, [field]: value };
-        }
-        if (q.children.length > 0) {
-          return { ...q, children: updateInTree(q.children) };
-        }
-        return q;
-      });
-    };
-    setQuestions(updateInTree(questions));
-  };
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+}
 
-  const QuestionNode = ({ question, parentNumber = '' }) => {
-    const isExpanded = expandedNodes.has(question.id);
-    const hasChildren = question.children.length > 0;
-    const indent = question.level * 24;
+.btn-primary {
+  background: #2563eb;
+  color: white;
+}
 
-    // Auto-generate numbering
-    const autoNumber = question.level === 0 
-      ? question.number 
-      : `${parentNumber}(${String.fromCharCode(97 + parseInt(question.id.split('-').pop() || 0) % 26)})`;
+.btn-primary:hover {
+  background: #1d4ed8;
+}
 
-    return (
-      <div style={{ marginLeft: `${indent}px` }}>
-        <div 
-          style={{
-            background: selectedQuestion === question.id ? '#eff6ff' : 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '8px',
-            cursor: 'pointer'
-          }}
-          onClick={() => setSelectedQuestion(question.id)}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {hasChildren && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleExpand(question.id);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px'
-                }}
-              >
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </button>
-            )}
-            
-            <GripVertical size={16} color="#9ca3af" />
-            
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ 
-                  fontWeight: '600', 
-                  color: '#2563eb',
-                  fontSize: '14px'
-                }}>
-                  {autoNumber}
-                </span>
-                <input
-                  type="number"
-                  value={question.marks}
-                  onChange={(e) => updateQuestion(question.id, 'marks', parseInt(e.target.value))}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    width: '50px',
-                    padding: '2px 6px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '4px',
-                    fontSize: '12px'
-                  }}
-                />
-                <span style={{ fontSize: '12px', color: '#6b7280' }}>marks</span>
-              </div>
-              
-              <textarea
-                value={question.content}
-                onChange={(e) => updateQuestion(question.id, 'content', e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-                placeholder="Enter question text..."
-                style={{
-                  width: '100%',
-                  minHeight: '60px',
-                  padding: '8px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  resize: 'vertical'
-                }}
-              />
-            </div>
+.btn-success {
+  background: #10b981;
+  color: white;
+}
 
-            <div style={{ display: 'flex', gap: '4px' }}>
-              {question.level < 3 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    addQuestion(question.id, question.level + 1);
-                  }}
-                  style={{
-                    padding: '6px',
-                    background: '#dbeafe',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                  title="Add sub-question"
-                >
-                  <Plus size={16} color="#2563eb" />
-                </button>
-              )}
-              
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm('Delete this question and all sub-questions?')) {
-                    deleteQuestion(question.id);
-                  }
-                }}
-                style={{
-                  padding: '6px',
-                  background: '#fee2e2',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer'
-                }}
-              >
-                <Trash2 size={16} color="#dc2626" />
-              </button>
-            </div>
-          </div>
-        </div>
+.btn-success:hover {
+  background: #059669;
+}
 
-        {isExpanded && hasChildren && (
-          <div>
-            {question.children.map(child => (
-              <QuestionNode 
-                key={child.id} 
-                question={child} 
-                parentNumber={autoNumber}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
 
-  return (
-    <div style={{ 
-      maxWidth: '1200px', 
-      margin: '0 auto', 
-      padding: '20px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
-      {/* Header */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-      }}>
-        <input
-          type="text"
-          value={testTitle}
-          onChange={(e) => setTestTitle(e.target.value)}
-          style={{
-            width: '100%',
-            fontSize: '24px',
-            fontWeight: '600',
-            border: 'none',
-            borderBottom: '2px solid #e5e7eb',
-            padding: '8px 0',
-            marginBottom: '16px',
-            outline: 'none'
-          }}
-        />
-        
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            onClick={() => addQuestion(null, 0)}
-            style={{
-              padding: '10px 20px',
-              background: '#2563eb',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <Plus size={18} />
-            Add Main Question
-          </button>
-          
-          <button
-            style={{
-              padding: '10px 20px',
-              background: '#10b981',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <FileText size={18} />
-            Import from Library
-          </button>
-        </div>
-      </div>
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
 
-      {/* Question Tree */}
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        padding: '24px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-      }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: '18px' }}>
-          Questions ({questions.length})
-        </h3>
-        
-        {questions.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '60px 20px',
-            color: '#6b7280'
-          }}>
-            <FileText size={48} color="#d1d5db" style={{ margin: '0 auto 16px' }} />
-            <p style={{ margin: 0 }}>No questions yet. Add your first question to get started.</p>
-          </div>
-        ) : (
-          <div>
-            {questions.map(question => (
-              <QuestionNode key={question.id} question={question} />
-            ))}
-          </div>
-        )}
-      </div>
+/* Questions Container */
+.questions-container {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  min-height: 400px;
+}
 
-      {/* Info Panel */}
-      <div style={{
-        background: '#fffbeb',
-        border: '1px solid #fde68a',
-        borderRadius: '12px',
-        padding: '16px',
-        marginTop: '20px'
-      }}>
-        <h4 style={{ margin: '0 0 8px 0', color: '#92400e', fontSize: '14px' }}>
-          💡 How to use this editor
-        </h4>
-        <ul style={{ margin: 0, paddingLeft: '20px', color: '#78350f', fontSize: '13px' }}>
-          <li>Click "Add Main Question" to add top-level questions (1, 2, 3...)</li>
-          <li>Click the + button on any question to add sub-questions (a, b, c...)</li>
-          <li>Sub-questions can have their own sub-questions (i, ii, iii...)</li>
-          <li>Questions from the library will be imported as individual items that you can nest</li>
-          <li>Drag questions using the grip icon to reorder them</li>
-        </ul>
+.questions-header {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+/* Question Node */
+.question-node {
+  margin-bottom: 8px;
+}
+
+.question-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s;
+}
+
+.question-card.expanded {
+  background: #fafbfc;
+  border-color: #3b82f6;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.grip-icon {
+  color: #9ca3af;
+  cursor: move;
+  font-size: 16px;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #2563eb;
+  font-size: 14px;
+  min-width: 60px;
+}
+
+.marks-input {
+  width: 50px;
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.marks-label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.question-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.action-btn {
+  padding: 6px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.action-btn.add {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.action-btn.add:hover {
+  background: #bfdbfe;
+}
+
+.action-btn.delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.action-btn.delete:hover {
+  background: #fecaca;
+}
+
+.question-content-area {
+  margin-top: 8px;
+}
+
+.question-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.question-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Answer Key Section */
+.answer-key-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.answer-key-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #059669;
+  margin-bottom: 8px;
+}
+
+.answer-key-editor {
+  border: 2px solid #d1fae5;
+  border-radius: 8px;
+  background: #f0fdf4;
+  overflow: hidden;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: #ecfdf5;
+  border-bottom: 1px solid #d1fae5;
+  flex-wrap: wrap;
+}
+
+.toolbar-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.toolbar-btn.active {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.toolbar-divider {
+  width: 1px;
+  background: #d1d5db;
+  margin: 0 4px;
+}
+
+.ProseMirror {
+  padding: 12px;
+  min-height: 80px;
+  outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+  background: white;
+}
+
+.ProseMirror p {
+  margin: 0 0 8px 0;
+}
+
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.ProseMirror li {
+  margin: 4px 0;
+}
+
+/* Children container with indentation */
+.question-children {
+  margin-left: 24px;
+  margin-top: 8px;
+}
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+/* Info panel */
+.info-panel {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.info-title {
+  margin: 0 0 8px 0;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.info-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: white;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+
+.toast.success {
+  border-left: 4px solid #10b981;
+}
+
+.toast.error {
+  border-left: 4px solid #ef4444;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="test-editor-container">
+  <!-- Header -->
+  <div class="editor-header">
+    <input 
+      type="text" 
+      class="title-input" 
+      id="testTitle"
+      placeholder="Untitled Descriptive Test"
+      value="Sample Descriptive Test"
+    >
+    
+    <div class="header-actions">
+      <button class="btn btn-primary" onclick="addMainQuestion()">
+        ➕ Add Main Question
+      </button>
+      
+      <button class="btn btn-success" onclick="saveTest()">
+        💾 Save Test
+      </button>
+      
+      <button class="btn btn-secondary" onclick="alert('Navigate back to tests list')">
+        ← Back to Tests
+      </button>
+    </div>
+  </div>
+
+  <!-- Questions Container -->
+  <div class="questions-container">
+    <h3 class="questions-header">
+      Questions (<span id="questionCount">0</span>)
+    </h3>
+    
+    <div id="questionsTree">
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No questions yet. Add your first question to get started.</p>
       </div>
     </div>
-  );
-};
+  </div>
 
-export default AdvancedTestEditor;
+  <!-- Info Panel -->
+  <div class="info-panel">
+    <h4 class="info-title">💡 How to use this editor</h4>
+    <ul class="info-list">
+      <li>Click "Add Main Question" to add top-level questions (1, 2, 3...)</li>
+      <li>Click the ➕ button on any question to add sub-questions (a, b, c...)</li>
+      <li>Enter question text and marks for each question</li>
+      <li><strong>Add mark schemes</strong> for AI-powered evaluation of student responses</li>
+      <li>Mark schemes support rich formatting (bold, italic, lists, etc.)</li>
+      <li>Questions will be saved in a hierarchical structure</li>
+    </ul>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-model/1.19.0/prosemirror-model.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-state/1.4.2/prosemirror-state.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-view/1.31.3/prosemirror-view.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-schema-basic/1.2.2/prosemirror-schema-basic.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prosemirror-commands/1.5.2/prosemirror-commands.min.js"></script>
+
+<script>
+const { EditorState } = PM.state;
+const { EditorView } = PM.view;
+const { Schema, DOMParser, DOMSerializer } = PM.model;
+const { schema } = PM.schema_basic;
+const { toggleMark, setBlockType } = PM.commands;
+
+// Questions data structure
+let questions = [];
+let expandedNodes = new Set();
+let editorViews = {}; // Store ProseMirror instances by question ID
+let questionIdCounter = 0;
+
+// Create ProseMirror editor for answer key
+function createAnswerKeyEditor(questionId, initialContent = '') {
+  const editorContainer = document.getElementById(`editor-${questionId}`);
+  if (!editorContainer) return;
+
+  // Parse initial content if exists
+  let doc;
+  if (initialContent) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = initialContent;
+    doc = DOMParser.fromSchema(schema).parse(tempDiv);
+  } else {
+    doc = schema.node('doc', null, [schema.node('paragraph')]);
+  }
+
+  const state = EditorState.create({
+    doc,
+    schema
+  });
+
+  const view = new EditorView(editorContainer, {
+    state,
+    dispatchTransaction(transaction) {
+      const newState = view.state.apply(transaction);
+      view.updateState(newState);
+      
+      // Update question data
+      const question = findQuestionById(questionId, questions);
+      if (question) {
+        const serializer = DOMSerializer.fromSchema(schema);
+        const fragment = serializer.serializeFragment(newState.doc.content);
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(fragment);
+        question.answerKey = tempDiv.innerHTML;
+      }
+    }
+  });
+
+  editorViews[questionId] = view;
+  return view;
+}
+
+// Toolbar commands
+function execCommand(questionId, command) {
+  const view = editorViews[questionId];
+  if (!view) return;
+
+  let cmd;
+  switch(command) {
+    case 'bold':
+      cmd = toggleMark(schema.marks.strong);
+      break;
+    case 'italic':
+      cmd = toggleMark(schema.marks.em);
+      break;
+    case 'bulletList':
+      cmd = (state, dispatch) => {
+        const listType = schema.nodes.bullet_list;
+        const itemType = schema.nodes.list_item;
+        return setBlockType(itemType)(state, dispatch);
+      };
+      break;
+    case 'orderedList':
+      cmd = (state, dispatch) => {
+        const listType = schema.nodes.ordered_list;
+        const itemType = schema.nodes.list_item;
+        return setBlockType(itemType)(state, dispatch);
+      };
+      break;
+  }
+
+  if (cmd) {
+    cmd(view.state, view.dispatch);
+    view.focus();
+  }
+}
+
+// Generate question numbering
+function getQuestionNumber(question, allQuestions) {
+  if (question.level === 0) {
+    return question.number;
+  }
+  
+  const parent = findParent(question.id, allQuestions);
+  if (!parent) return question.number;
+  
+  const parentNumber = getQuestionNumber(parent, allQuestions);
+  const index = parent.children.indexOf(question);
+  
+  if (question.level === 1) {
+    return `${parentNumber}(${String.fromCharCode(97 + index)})`;
+  } else if (question.level === 2) {
+    const roman = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
+    return `${parentNumber}(${roman[index] || index + 1})`;
+  }
+  
+  return `${parentNumber}.${index + 1}`;
+}
+
+function findParent(questionId, questionsList) {
+  for (let q of questionsList) {
+    if (q.children.some(c => c.id === questionId)) {
+      return q;
+    }
+    const found = findParent(questionId, q.children);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Add main question
+function addMainQuestion() {
+  const newQuestion = {
+    id: `q-${++questionIdCounter}`,
+    level: 0,
+    number: questions.filter(q => q.level === 0).length + 1,
+    content: '',
+    marks: 1,
+    answerKey: '',
+    children: []
+  };
+  
+  questions.push(newQuestion);
+  expandedNodes.add(newQuestion.id);
+  renderQuestions();
+}
+
+// Add sub-question
+function addSubQuestion(parentId, level) {
+  const parent = findQuestionById(parentId, questions);
+  if (!parent) return;
+  
+  const newQuestion = {
+    id: `q-${++questionIdCounter}`,
+    level: level,
+    number: 'auto',
+    content: '',
+    marks: 1,
+    answerKey: '',
+    children: []
+  };
+  
+  parent.children.push(newQuestion);
+  expandedNodes.add(parentId);
+  renderQuestions();
+}
+
+// Delete question
+function deleteQuestion(questionId) {
+  if (!confirm('Delete this question and all sub-questions?')) return;
+  
+  // Clean up editor
+  if (editorViews[questionId]) {
+    editorViews[questionId].destroy();
+    delete editorViews[questionId];
+  }
+  
+  questions = removeFromTree(questions, questionId);
+  renderQuestions();
+}
+
+function removeFromTree(tree, id) {
+  return tree.filter(q => q.id !== id).map(q => ({
+    ...q,
+    children: removeFromTree(q.children, id)
+  }));
+}
+
+// Find question by ID
+function findQuestionById(id, tree) {
+  for (let q of tree) {
+    if (q.id === id) return q;
+    const found = findQuestionById(id, q.children);
+    if (found) return found;
+  }
+  return null;
+}
+
+// Update question
+function updateQuestion(id, field, value) {
+  const question = findQuestionById(id, questions);
+  if (question) {
+    question[field] = value;
+  }
+}
+
+// Toggle expand
+function toggleExpand(id) {
+  if (expandedNodes.has(id)) {
+    expandedNodes.delete(id);
+  } else {
+    expandedNodes.add(id);
+  }
+  renderQuestions();
+}
+
+// Render questions tree
+function renderQuestions() {
+  const container = document.getElementById('questionsTree');
+  
+  if (questions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No questions yet. Add your first question to get started.</p>
+      </div>
+    `;
+    document.getElementById('questionCount').textContent = '0';
+    return;
+  }
+  
+  let html = '';
+  
+  function renderNode(question, indent = 0) {
+    const isExpanded = expandedNodes.has(question.id);
+    const hasChildren = question.children.length > 0;
+    const questionNumber = getQuestionNumber(question, questions);
+    
+    let nodeHtml = `
+      <div class="question-node" style="margin-left: ${indent * 24}px">
+        <div class="question-card ${isExpanded ? 'expanded' : ''}">
+          <div class="question-header">
+            <button class="expand-btn" onclick="toggleExpand('${question.id}')">
+              ${isExpanded ? '▼' : '▶'}
+            </button>
+            
+            <span class="grip-icon">⋮⋮</span>
+            
+            <span class="question-number">${questionNumber}</span>
+            
+            <input 
+              type="number" 
+              class="marks-input" 
+              value="${question.marks}"
+              onchange="updateQuestion('${question.id}', 'marks', parseInt(this.value))"
+              min="1"
+            >
+            <span class="marks-label">marks</span>
+            
+            <div class="question-actions">
+              ${question.level < 3 ? `
+                <button class="action-btn add" onclick="addSubQuestion('${question.id}', ${question.level + 1})" title="Add sub-question">
+                  ➕
+                </button>
+              ` : ''}
+              
+              <button class="action-btn delete" onclick="deleteQuestion('${question.id}')" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </div>
+          
+          ${isExpanded ? `
+            <div class="question-content-area">
+              <textarea 
+                class="question-textarea" 
+                placeholder="Enter question text..."
+                oninput="updateQuestion('${question.id}', 'content', this.value)"
+              >${question.content}</textarea>
+              
+              <div class="answer-key-section">
+                <div class="answer-key-label">
+                  <span>🎯</span>
+                  <span>Mark Scheme / Expected Answer</span>
+                </div>
+                
+                <div class="answer-key-editor">
+                  <div class="editor-toolbar">
+                    <button class="toolbar-btn" onclick="execCommand('${question.id}', 'bold')" title="Bold">
+                      <strong>B</strong>
+                    </button>
+                    <button class="toolbar-btn" onclick="execCommand('${question.id}', 'italic')" title="Italic">
+                      <em>I</em>
+                    </button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn" onclick="execCommand('${question.id}', 'bulletList')" title="Bullet List">
+                      •
+                    </button>
+                    <button class="toolbar-btn" onclick="execCommand('${question.id}', 'orderedList')" title="Numbered List">
+                      1.
+                    </button>
+                  </div>
+                  <div id="editor-${question.id}" class="prosemirror-container"></div>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+        
+        ${isExpanded && hasChildren ? `
+          <div class="question-children">
+            ${question.children.map(child => renderNode(child, indent)).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+    
+    return nodeHtml;
+  }
+  
+  html = questions.map(q => renderNode(q, 0)).join('');
+  container.innerHTML = html;
+  
+  // Initialize ProseMirror editors for expanded questions
+  questions.forEach(q => initEditorsForQuestion(q));
+  
+  // Update count
+  const totalCount = countAllQuestions(questions);
+  document.getElementById('questionCount').textContent = totalCount;
+}
+
+function initEditorsForQuestion(question) {
+  if (expandedNodes.has(question.id) && !editorViews[question.id]) {
+    setTimeout(() => {
+      createAnswerKeyEditor(question.id, question.answerKey);
+    }, 0);
+  }
+  
+  question.children.forEach(child => initEditorsForQuestion(child));
+}
+
+function countAllQuestions(tree) {
+  let count = tree.length;
+  tree.forEach(q => {
+    count += countAllQuestions(q.children);
+  });
+  return count;
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <span>${type === 'success' ? '✓' : '✗'}</span>
+    <span>${message}</span>
+  `;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideIn 0.3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Save test
+function saveTest() {
+  const title = document.getElementById('testTitle').value.trim();
+  
+  if (!title) {
+    showToast('Please enter a test title', 'error');
+    return;
+  }
+  
+  if (questions.length === 0) {
+    showToast('Please add at least one question', 'error');
+    return;
+  }
+  
+  // Check if all questions have answer keys
+  const missingAnswerKeys = [];
+  function checkAnswerKeys(qs, path = '') {
+    qs.forEach(q => {
+      const num = getQuestionNumber(q, questions);
+      if (!q.answerKey || q.answerKey.trim() === '<p></p>' || q.answerKey.trim() === '') {
+        missingAnswerKeys.push(num);
+      }
+      checkAnswerKeys(q.children, path + num);
+    });
+  }
+  checkAnswerKeys(questions);
+  
+  if (missingAnswerKeys.length > 0) {
+    const proceed = confirm(
+      `The following questions are missing answer keys:\n${missingAnswerKeys.join(', ')}\n\nAnswer keys are required for AI evaluation. Continue anyway?`
+    );
+    if (!proceed) return;
+  }
+  
+  const testData = {
+    title: title,
+    questions: questions,
+    test_type: 'descriptive'
+  };
+  
+  console.log('Test data to save:', testData);
+  showToast('Test saved successfully! (Demo mode - check console)');
+  
+  // In production, uncomment this:
+  /*
+  fetch('/teacher/tests/create-descriptive/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken()
+    },
+    body: JSON.stringify(testData)
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      showToast('Test saved successfully!');
+      setTimeout(() => window.location.href = '/teacher/tests/', 1500);
+    } else {
+      showToast(data.error || 'Error saving test', 'error');
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    showToast('Error saving test. Please try again.', 'error');
+  });
+  */
+}
+
+// Initialize with sample data
+setTimeout(() => {
+  addMainQuestion();
+  questions[0].content = 'Explain the process of photosynthesis in plants.';
+  questions[0].marks = 5;
+  
+  renderQuestions();
+  
+  setTimeout(() => {
+    toggleExpand(questions[0].id);
+  }, 100);
+}, 500);
+</script>
+
+</body>
+</html>
