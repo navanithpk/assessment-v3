@@ -20,27 +20,22 @@ urlpatterns = [
 
     # Tests (teacher)
     path("teacher/tests/", views.tests_list, name="tests_list"),
-    path("teacher/tests/create/", views.create_test, name="create_test"),
-    path("teacher/tests/<int:test_id>/edit/", views.test_editor, name="edit_test"),
+    path("teacher/tests/create/", views.redirect_to_descriptive_create, name="create_test"),
+    path("teacher/tests/<int:test_id>/edit/", views.redirect_to_descriptive_edit, name="edit_test"),
     path("teacher/tests/<int:test_id>/delete/", views.delete_test, name="delete_test"),
     path("teacher/tests/<int:test_id>/toggle/", views.toggle_publish, name="toggle_publish"),
     path("teacher/tests/<int:test_id>/duplicate/", views.duplicate_test, name="duplicate_test"),
     path("teacher/tests/<int:test_id>/autosave/", views.autosave_test, name="autosave_test"),
-    path("teacher/tests/<int:test_id>/add-questions/", views.add_questions_to_test, name="add_questions_to_test"),
-    path("teacher/tests/<int:test_id>/questions/<int:test_question_id>/remove/", 
-         views.remove_question_from_test, name="remove_question_from_test"),
-    path("teacher/tests/<int:test_id>/inline-add-question/",
-         views.inline_add_question, name="inline_add_question"),
+    # Old question-related URLs removed
     
     # Tests (student)
     path("student/tests/", views.student_tests_list, name="student_tests_list"),
 
-    # Questions
-    path("questions/", views.question_library, name="question_library"),
-    path("questions/add/", views.add_edit_question, name="add_question"),
-    path("questions/edit/<int:question_id>/", views.add_edit_question, name="edit_question"),
+    # Question library removed - using hierarchical tests only
 
     # AJAX
+    path("ajax/grades/", views.ajax_grades, name="ajax_grades"),
+    path("ajax/subjects/", views.ajax_subjects, name="ajax_subjects"),
     path("ajax/topics/", views.ajax_topics, name="ajax_topics"),
     path("ajax/los/", views.ajax_learning_objectives, name="ajax_los"),
     
@@ -73,4 +68,8 @@ urlpatterns = [
     path("student/tests/<int:test_id>/autosave/", views.autosave_test_answers, name="autosave_test_answers"),
     path("student/tests/<int:test_id>/answers/", views.get_saved_answers, name="get_saved_answers"),
     path("student/tests/<int:test_id>/submit/", views.submit_test, name="submit_test"),
+
+    # Test Assignment API
+    path("teacher/tests/<int:test_id>/students-groups/", views.get_students_and_groups, name="get_students_and_groups"),
+    path("teacher/tests/<int:test_id>/save-assignments/", views.save_test_assignments, name="save_test_assignments"),
 ]

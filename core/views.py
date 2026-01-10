@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login
 from django.contrib.admin.views.decorators import staff_member_required
@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.template.loader import render_to_string
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 import json
 
 from .models import (
@@ -16,12 +17,11 @@ from .models import (
     Subject,
     Topic,
     LearningObjective,
-    Question,
     Test,
-    TestQuestion,
     Student,
     ClassGroup,
     StudentAnswer,
+    StudentTestAttempt,
     School,
     UserProfile,
 )
@@ -605,13 +605,15 @@ def tests_list(request):
 
 
 @login_required
-def create_test(request):
-    test = Test.objects.create(
-        title="Untitled Test",
-        created_by=request.user,
-        is_published=False,
-    )
-    return redirect("edit_test", test_id=test.id)
+def redirect_to_descriptive_create(request):
+    """Redirect old create_test URL to new hierarchical test creation"""
+    return redirect("create_descriptive_test")
+
+
+@login_required
+def redirect_to_descriptive_edit(request, test_id):
+    """Redirect old edit_test URL to new hierarchical test editor"""
+    return redirect("edit_descriptive_test", test_id=test_id)
 
 
 
@@ -619,8 +621,47 @@ def create_test(request):
 @login_required
 def toggle_publish(request, test_id):
     test = get_object_or_404(Test, id=test_id, created_by=request.user)
+
+    # If publishing, check if at least one student or group is assigned
+    if not test.is_published:
+        has_students = test.assigned_students.exists()
+        has_groups = test.assigned_groups.exists()
+
+        if not has_students and not has_groups:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+               request.content_type == 'application/json':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot publish test. Please assign at least one student or class group first.'
+                }, status=400)
+            messages.error(request, 'Cannot publish test. Please assign at least one student or class group first.')
+            return redirect("edit_descriptive_test", test_id=test.id)
+    else:
+        # If unpublishing, check if any students have started the test
+        has_attempts = StudentTestAttempt.objects.filter(test=test).exists()
+        if has_attempts:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+               request.content_type == 'application/json':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Cannot unpublish test. At least one student has already started this test.'
+                }, status=400)
+            messages.error(request, 'Cannot unpublish test. At least one student has already started this test.')
+            return redirect("edit_descriptive_test", test_id=test.id)
+
     test.is_published = not test.is_published
     test.save()
+
+    # Return JSON for AJAX requests
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or \
+       request.content_type == 'application/json':
+        return JsonResponse({
+            'success': True,
+            'is_published': test.is_published,
+            'message': f"Test {'published' if test.is_published else 'unpublished'} successfully!"
+        })
+
+    messages.success(request, f"Test {'published' if test.is_published else 'unpublished'} successfully!")
     return redirect("tests_list")
 
 
@@ -675,234 +716,11 @@ def autosave_test(request, test_id):
 # ===================== QUESTIONS =====================
 
 @login_required
-def question_library(request):
-    school = get_user_school(request.user)
-    qs = Question.objects.filter(
-        created_by=request.user
-    ).select_related("grade", "subject", "topic").prefetch_related("learning_objectives")
-
-    # Filters
-    grade = request.GET.get("grade")
-    subject = request.GET.get("subject")
-    qtype = request.GET.get("question_type")
-    marks = request.GET.get("marks")
-    year = request.GET.get("year")
-
-    if grade:
-        qs = qs.filter(grade_id=grade)
-    if subject:
-        qs = qs.filter(subject_id=subject)
-    if qtype:
-        qs = qs.filter(question_type=qtype)
-    if marks:
-        qs = qs.filter(marks=marks)
-    if year:
-        qs = qs.filter(year=year)
-
-    topics = request.GET.getlist("topics[]")
-    if topics:
-        qs = qs.filter(topic_id__in=topics)
-
-    los = request.GET.getlist("los[]")
-    if los:
-        qs = qs.filter(learning_objectives__id__in=los).distinct()
-
-    return render(
-        request,
-        "teacher/question_library.html",
-        {
-            "questions": qs,
-            "grades": Grade.objects.all(),
-            "subjects": Subject.objects.all(),
-            "topics": Topic.objects.all(),
-            "school": school,
-        }
-    )
+# Question library removed - using hierarchical tests only
 
 
-@login_required
-def add_edit_question(request, question_id=None):
-    question = None
-    selected_lo_ids = []
-
-    if question_id:
-        question = get_object_or_404(
-            Question,
-            id=question_id,
-            created_by=request.user
-        )
-        selected_lo_ids = list(
-            question.learning_objectives.values_list("id", flat=True)
-        )
-
-    grades = Grade.objects.all()
-    subjects = Subject.objects.all()
-    topics = Topic.objects.all()
-
-    if request.method == "POST":
-        data = request.POST
-
-        question_text = data.get("question_text", "").strip()
-        answer_text = data.get("answer_text", "").strip()
-
-        if not question_text:
-            raise ValueError("Question text is empty")
-
-        if not question:
-            question = Question.objects.create(
-                grade_id=data["grade"],
-                subject_id=data["subject"],
-                topic_id=data["topic"],
-                year=data.get("year") or None,
-                question_text=question_text,
-                answer_text=answer_text,
-                marks=data["marks"],
-                question_type=data["question_type"],
-                created_by=request.user,
-            )
-        else:
-            question.grade_id = data["grade"]
-            question.subject_id = data["subject"]
-            question.topic_id = data["topic"]
-            question.year = data.get("year") or None
-            question.question_text = question_text
-            question.answer_text = answer_text
-            question.marks = data["marks"]
-            question.question_type = data["question_type"]
-            question.save()
-
-        los_raw = data.get("los_selected", "")
-        lo_ids = [int(x) for x in los_raw.split(",") if x]
-        question.learning_objectives.set(lo_ids)
-
-        return redirect("question_library")
-
-    years = list(range(2026, 1999, -1))
-
-    return render(
-        request,
-        "teacher/question_editor.html",
-        {
-            "question": question,
-            "grades": grades,
-            "subjects": subjects,
-            "topics": topics,
-            "selected_lo_ids": selected_lo_ids,
-            "years": years,
-        }
-    )
-
-
-@login_required
-def inline_add_question(request, test_id):
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
-
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-
-    try:
-        data = json.loads(request.body)
-
-        if not data.get("question_text"):
-            return JsonResponse({"error": "Question text is required"}, status=400)
-        
-        if not data.get("grade") or not data.get("subject") or not data.get("topic"):
-            return JsonResponse({"error": "Grade, subject, and topic are required"}, status=400)
-
-        question = Question.objects.create(
-            question_text=data["question_text"],
-            answer_text=data.get("answer_text", ""),
-            marks=data.get("marks", 1),
-            question_type=data.get("question_type", "theory"),
-            year=data.get("year") or None,
-            grade_id=data["grade"],
-            subject_id=data["subject"],
-            topic_id=data["topic"],
-            created_by=request.user,
-        )
-        
-        lo_ids = data.get("learning_objectives", [])
-        if lo_ids:
-            question.learning_objectives.set(lo_ids)
-
-        last_order = (
-            TestQuestion.objects
-            .filter(test=test)
-            .aggregate(max_order=models.Max("order"))
-            ["max_order"] or 0
-        )
-
-        tq = TestQuestion.objects.create(
-            test=test,
-            question=question,
-            order=last_order + 1
-        )
-
-        return JsonResponse({
-            "status": "ok",
-            "question_id": question.id,
-            "order": tq.order,
-            "message": "Question added successfully"
-        })
-        
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
-
-
-@login_required
-def remove_question_from_test(request, test_id, test_question_id):
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-    
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-    test_question = get_object_or_404(TestQuestion, id=test_question_id, test=test)
-    
-    test_question.delete()
-    
-    # Reorder
-    remaining_questions = TestQuestion.objects.filter(test=test).order_by('order')
-    for idx, tq in enumerate(remaining_questions, start=1):
-        if tq.order != idx:
-            tq.order = idx
-            tq.save()
-    
-    return JsonResponse({"status": "ok", "message": "Question removed"})
-
-
-@login_required
-def add_questions_to_test(request, test_id):
-    if request.method != "POST":
-        return JsonResponse({"error": "POST required"}, status=405)
-    
-    test = get_object_or_404(Test, id=test_id, created_by=request.user)
-    
-    try:
-        data = json.loads(request.body)
-        question_ids = data.get("question_ids", [])
-        
-        if not question_ids:
-            return JsonResponse({"error": "No questions selected"}, status=400)
-        
-        max_order = TestQuestion.objects.filter(test=test).aggregate(
-            models.Max('order')
-        )['order__max'] or 0
-        
-        for idx, question_id in enumerate(question_ids):
-            question = get_object_or_404(Question, id=question_id)
-            
-            if not TestQuestion.objects.filter(test=test, question=question).exists():
-                TestQuestion.objects.create(
-                    test=test,
-                    question=question,
-                    order=max_order + idx + 1
-                )
-        
-        return JsonResponse({"status": "ok", "message": "Questions added successfully"})
-        
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON"}, status=400)
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=500)
+# Old question views removed - using hierarchical tests only
+# add_edit_question, inline_add_question, remove_question_from_test, add_questions_to_test removed
 
 
 # ===================== STUDENTS =====================
@@ -1061,6 +879,27 @@ def groups_list(request):
 # ===================== AJAX =====================
 
 @login_required
+@require_GET
+def ajax_grades(request):
+    grades = Grade.objects.all().order_by("name")
+    return JsonResponse([
+        {"id": g.id, "name": g.name}
+        for g in grades
+    ], safe=False)
+
+
+@login_required
+@require_GET
+def ajax_subjects(request):
+    subjects = Subject.objects.all().order_by("name")
+    return JsonResponse([
+        {"id": s.id, "name": s.name}
+        for s in subjects
+    ], safe=False)
+
+
+@login_required
+@require_GET
 def ajax_topics(request):
     grade_id = request.GET.get("grade_id")
     subject_id = request.GET.get("subject_id")
@@ -1077,7 +916,7 @@ def ajax_topics(request):
         for t in qs.order_by("name")
     ]
 
-    return JsonResponse({"topics": topics})
+    return JsonResponse(topics, safe=False)
 
 
 @login_required
@@ -1086,22 +925,20 @@ def ajax_learning_objectives(request):
     topic_id = request.GET.get("topic_id")
 
     if not topic_id:
-        return JsonResponse({"los": []})
+        return JsonResponse([], safe=False)
 
     los = LearningObjective.objects.filter(
         topic_id=topic_id
     ).order_by("code")
 
-    return JsonResponse({
-        "los": [
-            {
-                "id": lo.id,
-                "code": lo.code,
-                "description": lo.description,
-            }
-            for lo in los
-        ]
-    })
+    return JsonResponse([
+        {
+            "id": lo.id,
+            "code": lo.code,
+            "description": lo.description,
+        }
+        for lo in los
+    ], safe=False)
 
 
 @staff_member_required
@@ -1330,34 +1167,48 @@ def create_descriptive_test(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
+
             title = data.get('title', '').strip()
             questions_data = data.get('questions', [])
-            
+            markscheme = data.get('markscheme', '').strip()
+
             if not title:
                 return JsonResponse({'error': 'Title is required'}, status=400)
-            
+
             if not questions_data:
                 return JsonResponse({'error': 'At least one question is required'}, status=400)
-            
+
             # Create the test
             test = Test.objects.create(
                 title=title,
                 created_by=request.user,
-                is_published=False
+                is_published=False,
+                test_type='descriptive'
             )
-            
-            # Store the hierarchical structure as JSON in a TextField
-            # You'll need to add this field to your Test model
+
+            # Store the hierarchical structure and markscheme
             test.descriptive_structure = json.dumps(questions_data)
+            if markscheme:
+                test.markscheme = markscheme
+
+            # Set start time and duration
+            start_time = data.get('start_time')
+            if start_time:
+                from django.utils.dateparse import parse_datetime
+                test.start_time = parse_datetime(start_time)
+
+            duration_minutes = data.get('duration_minutes')
+            if duration_minutes:
+                test.duration_minutes = duration_minutes
+
             test.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'test_id': test.id,
                 'message': 'Test created successfully'
             })
-            
+
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
         except Exception as e:
@@ -1380,19 +1231,38 @@ def edit_descriptive_test(request, test_id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            
+
             test.title = data.get('title', test.title)
             test.descriptive_structure = json.dumps(data.get('questions', []))
+
+            markscheme = data.get('markscheme', '').strip()
+            if markscheme:
+                test.markscheme = markscheme
+
+            # Update start time and duration
+            start_time = data.get('start_time')
+            if start_time:
+                from django.utils.dateparse import parse_datetime
+                test.start_time = parse_datetime(start_time)
+            else:
+                test.start_time = None
+
+            duration_minutes = data.get('duration_minutes')
+            if duration_minutes:
+                test.duration_minutes = duration_minutes
+            else:
+                test.duration_minutes = None
+
             test.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'message': 'Test updated successfully'
             })
-            
+
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
-    
+
     # GET request - show editor with existing data
     questions_data = []
     if hasattr(test, 'descriptive_structure') and test.descriptive_structure:
@@ -1400,11 +1270,12 @@ def edit_descriptive_test(request, test_id):
             questions_data = json.loads(test.descriptive_structure)
         except:
             questions_data = []
-    
+
     return render(request, 'teacher/create_descriptive_test.html', {
         'school': school,
         'test': test,
-        'questions_data': json.dumps(questions_data)
+        'questions_data': json.dumps(questions_data),
+        'markscheme': test.markscheme or ''
     })
 
 
@@ -1578,56 +1449,41 @@ def student_tests_list(request):
 @login_required
 def take_test(request, test_id):
     """
-    Student interface for taking a test
-    CRITICAL FIX: Changed from created_by to user lookup
+    Student interface for taking a hierarchical test
     """
-    # Get student profile - FIXED
+    # Get student profile
     try:
-        student = Student.objects.get(user=request.user)  # ✅ FIXED: was created_by=request.user
+        student = Student.objects.get(user=request.user)
     except Student.DoesNotExist:
         messages.error(request, "Student profile not found")
         return redirect("student_dashboard")
-    
+
     test = get_object_or_404(Test, id=test_id, is_published=True)
-    
+
     # Check if student is assigned to this test
     is_directly_assigned = test.assigned_students.filter(id=student.id).exists()
-    
+
     # Check group assignment
     student_groups = ClassGroup.objects.filter(students__student_profile=student)
     is_group_assigned = test.assigned_groups.filter(id__in=student_groups).exists()
-    
+
     if not (is_directly_assigned or is_group_assigned):
         messages.error(request, "You are not assigned to this test")
         return redirect("student_tests_list")
-    
-    # Get test questions
-    test_questions = TestQuestion.objects.filter(
-        test=test
-    ).select_related('question').order_by('order')
-    
-    # Prepare test data
-    test_data = {
-        'test_id': test.id,
-        'title': test.title,
-        'duration': test.duration_minutes,
-        'questions': []
-    }
-    
-    for idx, tq in enumerate(test_questions, 1):
-        test_data['questions'].append({
-            'id': tq.question.id,
-            'number': idx,
-            'text': tq.question.question_text,
-            'marks': tq.question.marks,
-            'type': tq.question.question_type
-        })
-    
+
+    # Parse the hierarchical test structure
+    if test.descriptive_structure:
+        test_structure = json.loads(test.descriptive_structure)
+    else:
+        test_structure = []
+
+    # Convert to paginated format
+    test_data = convert_to_pages(test_structure)
+
     return render(request, 'student/student_take_test.html', {
         'test': test,
-        'test_data': test_data,
-        'student': student,
-        'question_count': test_questions.count()
+        'test_data': json.dumps(test_data),
+        'student': student
     })
 
 
@@ -1721,19 +1577,22 @@ def convert_regular_test_to_pages(test):
     return {'pages': pages}
 
 
+# save_answer view removed - only using hierarchical tests now
+
+
 @login_required
 @require_POST
 def autosave_test_answers(request, test_id):
     """
-    Auto-save student answers
+    Auto-save student answers (for descriptive tests)
     """
     try:
         student = Student.objects.get(user=request.user)
         test = get_object_or_404(Test, id=test_id)
-        
+
         data = json.loads(request.body)
         answers = data.get('answers', {})
-        
+
         # Store answers in session or database
         # You can create a StudentTestProgress model for this
         request.session[f'test_{test_id}_answers'] = answers
@@ -1760,33 +1619,140 @@ def get_saved_answers(request, test_id):
 @require_POST
 def submit_test(request, test_id):
     """
-    Submit completed test
+    Submit completed hierarchical test
     """
     try:
         student = Student.objects.get(user=request.user)
         test = get_object_or_404(Test, id=test_id)
-        
+
+        # Mark test attempt as submitted
+        try:
+            attempt = StudentTestAttempt.objects.get(student=student, test=test)
+            attempt.is_submitted = True
+            attempt.submitted_at = timezone.now()
+            attempt.save()
+        except StudentTestAttempt.DoesNotExist:
+            # Create attempt if it doesn't exist
+            StudentTestAttempt.objects.create(
+                student=student,
+                test=test,
+                is_submitted=True,
+                submitted_at=timezone.now(),
+                started_at=timezone.now()
+            )
+
+        # Save answers from the request
         data = json.loads(request.body)
         answers = data.get('answers', {})
-        
-        # Save all answers to StudentAnswer model
-        # You'll need to modify this based on your question structure
-        
+
         for question_id, answer_text in answers.items():
-            # Extract actual question ID from answerId format (e.g., "q1a" -> "1a")
-            # This depends on your question identification scheme
-            
-            # For now, store as JSON in a submission tracking model
-            pass
-        
+            StudentAnswer.objects.update_or_create(
+                student=student,
+                test=test,
+                question_id=question_id,
+                defaults={'answer_text': answer_text}
+            )
+
         # Clear session answers
         if f'test_{test_id}_answers' in request.session:
             del request.session[f'test_{test_id}_answers']
-        
+
+        return JsonResponse({
+            'status': 'ok',
+            'message': 'Test submitted successfully',
+            'redirect': '/student/tests/'
+        })
+
+    except Student.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Student not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ===================== TEST ASSIGNMENT API =====================
+
+@login_required
+@require_GET
+def get_students_and_groups(request, test_id):
+    """
+    API endpoint to get students and groups for assignment modal
+    """
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    school = get_user_school(request.user)
+
+    # Get all students in the school
+    students = Student.objects.filter(school=school).select_related('grade', 'user').order_by('grade', 'section', 'roll_number')
+
+    students_data = [{
+        'id': s.id,
+        'name': s.full_name,
+        'grade': str(s.grade),
+        'section': s.section,
+        'roll_number': s.roll_number,
+        'admission_id': s.admission_id
+    } for s in students]
+
+    # Get all class groups in the school
+    groups = ClassGroup.objects.filter(school=school).select_related('grade', 'subject')
+
+    groups_data = [{
+        'id': g.id,
+        'name': g.name,
+        'grade': str(g.grade) if g.grade else '',
+        'section': g.section,
+        'subject': str(g.subject) if g.subject else '',
+        'student_count': g.students.count()
+    } for g in groups]
+
+    # Get currently assigned students and groups
+    assigned_students = list(test.assigned_students.values_list('id', flat=True))
+    assigned_groups = list(test.assigned_groups.values_list('id', flat=True))
+
+    return JsonResponse({
+        'students': students_data,
+        'groups': groups_data,
+        'assigned_students': assigned_students,
+        'assigned_groups': assigned_groups
+    })
+
+
+@login_required
+@require_POST
+def save_test_assignments(request, test_id):
+    """
+    API endpoint to save student/group assignments for a test
+    """
+    test = get_object_or_404(Test, id=test_id, created_by=request.user)
+    school = get_user_school(request.user)
+
+    try:
+        data = json.loads(request.body)
+        student_ids = data.get('student_ids', [])
+        group_ids = data.get('group_ids', [])
+
+        # Validate that students belong to the school
+        valid_students = Student.objects.filter(
+            id__in=student_ids,
+            school=school
+        )
+
+        # Validate that groups belong to the school
+        valid_groups = ClassGroup.objects.filter(
+            id__in=group_ids,
+            school=school
+        )
+
+        # Update assignments
+        test.assigned_students.set(valid_students)
+        test.assigned_groups.set(valid_groups)
+
         return JsonResponse({
             'success': True,
-            'message': 'Test submitted successfully'
+            'message': 'Assignments saved successfully',
+            'assigned_count': valid_students.count() + valid_groups.count()
         })
-        
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

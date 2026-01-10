@@ -116,16 +116,16 @@
 <div class="dashboard-grid">
   <div class="card">
     <div class="card-icon">📝</div>
-    <h3>Create Test</h3>
-    <p>Build a new assessment with questions from your library or create new ones.</p>
-    <a href="{% url 'create_test' %}" class="card-btn">Create New Test</a>
+    <h3>Create Hierarchical Test</h3>
+    <p>Build a new assessment with hierarchical question structure.</p>
+    <a href="{% url 'create_descriptive_test' %}" class="card-btn">Create New Test</a>
   </div>
 
   <div class="card">
-    <div class="card-icon">📚</div>
-    <h3>Question Library</h3>
-    <p>Browse, search, and manage all your questions in one place.</p>
-    <a href="{% url 'question_library' %}" class="card-btn">View Questions</a>
+    <div class="card-icon">📋</div>
+    <h3>View All Tests</h3>
+    <p>Browse and manage all your created tests.</p>
+    <a href="{% url 'tests_list' %}" class="card-btn">View Tests</a>
   </div>
 
   <div class="card">

@@ -129,13 +129,13 @@ body {
 
     <!-- Assessments Section -->
     <div class="section-title">Assessments</div>
-    <a href="{% url 'tests_list' %}" 
+    <a href="{% url 'tests_list' %}"
        class="{% if '/tests/' in request.path %}active{% endif %}">
-      📝 Open Tests Library
+      📝 View All Tests
     </a>
-    <a href="{% url 'question_library' %}" 
-       class="{% if '/questions/' in request.path %}active{% endif %}">
-      📚 Question Library
+    <a href="{% url 'create_descriptive_test' %}"
+       class="{% if '/create-descriptive/' in request.path %}active{% endif %}">
+      ➕ Create New Test
     </a>
 
     <!-- User Management Section -->

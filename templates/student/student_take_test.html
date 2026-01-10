@@ -504,10 +504,10 @@ async function submitTest() {
   if (!confirm('Are you sure you want to submit your test? You cannot make changes after submission.')) {
     return;
   }
-  
+
   // Save all answers one final time
   saveCurrentPageAnswers();
-  
+
   try {
     const response = await fetch(`/student/tests/${testId}/submit/`, {
       method: 'POST',
@@ -520,12 +520,16 @@ async function submitTest() {
         submitted: true
       })
     });
-    
-    if (response.ok) {
-      alert('Test submitted successfully!');
-      window.location.href = '{% url "student_tests_list" %}';
+
+    const data = await response.json();
+
+    if (response.ok && data.status === 'ok') {
+      alert(data.message || 'Test submitted successfully!');
+      window.location.href = data.redirect || '{% url "student_tests_list" %}';
     } else {
-      alert('Error submitting test. Please try again.');
+      const errorMsg = data.message || 'Error submitting test. Please try again.';
+      alert(errorMsg);
+      console.error('Submission error:', data);
     }
   } catch (error) {
     console.error('Error:', error);

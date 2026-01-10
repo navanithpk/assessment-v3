@@ -127,67 +127,37 @@ class LearningObjective(models.Model):
         return f"{self.grade}.{self.subject}.{self.topic}.{self.code}"
 
 
-class Question(models.Model):
-
-    QUESTION_TYPES = [
-        ("mcq", "MCQ"),
-        ("theory", "Theory"),
-        ("structured", "Structured"),
-        ("practical", "Practical"),
-    ]
-
-    grade = models.ForeignKey(Grade, on_delete=models.PROTECT)
-    subject = models.ForeignKey(Subject, on_delete=models.PROTECT)
-    topic = models.ForeignKey(Topic, on_delete=models.PROTECT)
-    year = models.PositiveIntegerField(null=True, blank=True)
-
-    learning_objectives = models.ManyToManyField(
-        LearningObjective,
-        related_name="questions",
-        blank=True
-    )
-
-    question_text = models.TextField()
-    answer_text = models.TextField(blank=True)
-
-    marks = models.PositiveIntegerField(default=1)
-    question_type = models.CharField(
-        max_length=20,
-        choices=QUESTION_TYPES
-    )
-
-    created_by = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="questions"
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Q{self.id} | {self.grade}.{self.subject}.{self.topic}"
+# Question model removed - hierarchical tests use JSON structure instead
 
 
 # Update your Test model in models.py to add this field:
 
 class Test(models.Model):
+    """
+    Hierarchical/Descriptive Test Model
+    Tests are created with a hierarchical question structure stored as JSON
+    """
+    TEST_TYPE_CHOICES = [
+        ('standard', 'Standard Question Bank'),
+        ('descriptive', 'Descriptive/Hierarchical'),
+    ]
+
     title = models.CharField(max_length=255)
     subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     is_published = models.BooleanField(default=False)
+
+    test_type = models.CharField(
+        max_length=20,
+        choices=TEST_TYPE_CHOICES,
+        default='descriptive'
+    )
 
     start_time = models.DateTimeField(null=True, blank=True)
     duration_minutes = models.PositiveIntegerField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
-    questions = models.ManyToManyField(
-        "Question",
-        through="TestQuestion",
-        blank=True,
-        related_name="tests"
-    )
-    
     assigned_students = models.ManyToManyField(
         "Student",
         blank=True,
@@ -205,21 +175,19 @@ class Test(models.Model):
         blank=True,
         related_name="excluded_from_tests"
     )
-    
-    # NEW FIELD for descriptive tests
+
+    # Hierarchical question structure stored as JSON
     descriptive_structure = models.TextField(
         blank=True,
         null=True,
-        help_text="JSON structure for descriptive/hierarchical questions"
+        help_text="JSON structure for hierarchical questions"
     )
-    
-    test_type = models.CharField(
-        max_length=20,
-        choices=[
-            ('standard', 'Standard Question Bank'),
-            ('descriptive', 'Descriptive/Hierarchical')
-        ],
-        default='standard'
+
+    # Markscheme for AI evaluation
+    markscheme = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Marking criteria and rubric for AI-assisted evaluation"
     )
     
     def __str__(self):
@@ -250,27 +218,7 @@ class Test(models.Model):
 # python manage.py migrate
 
 
-class TestQuestion(models.Model):
-    test = models.ForeignKey(
-        Test,
-        on_delete=models.CASCADE,
-        related_name="test_questions"
-    )
-
-    question = models.ForeignKey(
-        Question,
-        on_delete=models.CASCADE
-    )
-
-    order = models.PositiveIntegerField(default=0)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["order"]
-
-    def __str__(self):
-        return f"{self.test.title} – Q{self.order}"
+# TestQuestion model removed - hierarchical tests use JSON structure instead
 
 
 class Student(models.Model):
@@ -318,34 +266,33 @@ class ClassGroup(models.Model):
 
 class StudentAnswer(models.Model):
     """
-    Stores student answers/attempts for test questions
+    Stores student answers for hierarchical test questions
+    question_id is a string identifier like 'q1a', 'q2bi', etc.
     """
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
         related_name="answers"
     )
-    
+
     test = models.ForeignKey(
         Test,
         on_delete=models.CASCADE,
         related_name="student_answers"
     )
-    
-    question = models.ForeignKey(
-        Question,
-        on_delete=models.CASCADE
-    )
-    
+
+    # Question identifier from the hierarchical structure (e.g., 'q1', 'q1a', 'q2bi')
+    question_id = models.CharField(max_length=50, default='q1')
+
     answer_text = models.TextField(blank=True)
-    
+
     marks_awarded = models.DecimalField(
         max_digits=5,
         decimal_places=2,
         null=True,
         blank=True
     )
-    
+
     submitted_at = models.DateTimeField(auto_now_add=True)
     evaluated_at = models.DateTimeField(null=True, blank=True)
     evaluated_by = models.ForeignKey(
@@ -355,10 +302,38 @@ class StudentAnswer(models.Model):
         blank=True,
         related_name="evaluated_answers"
     )
-    
+
     class Meta:
-        unique_together = ("student", "test", "question")
-        ordering = ["test", "student", "question"]
-    
+        unique_together = ("student", "test", "question_id")
+        ordering = ["test", "student", "question_id"]
+
     def __str__(self):
-        return f"{self.student.full_name} - {self.test.title} - Q{self.question.id}"
+        return f"{self.student.full_name} - {self.test.title} - {self.question_id}"
+
+
+class StudentTestAttempt(models.Model):
+    """
+    Track student test attempts - when they started, submitted, and time remaining
+    """
+    student = models.ForeignKey(
+        Student,
+        on_delete=models.CASCADE,
+        related_name="test_attempts"
+    )
+    test = models.ForeignKey(
+        Test,
+        on_delete=models.CASCADE,
+        related_name="attempts"
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    time_remaining_seconds = models.IntegerField(null=True, blank=True)
+    is_submitted = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ("student", "test")
+        ordering = ["-started_at"]
+
+    def __str__(self):
+        status = "Submitted" if self.is_submitted else "In Progress"
+        return f"{self.student.full_name} - {self.test.title} ({status})"

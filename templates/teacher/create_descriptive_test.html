@@ -4,9 +4,13 @@
 
 {% block content %}
 
+<!-- ProseMirror CSS -->
+<link rel="stylesheet" href="https://unpkg.com/prosemirror-view/style/prosemirror.css">
+<link rel="stylesheet" href="https://unpkg.com/prosemirror-menu/style/menu.css">
+
 <style>
 .test-editor-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -34,6 +38,417 @@
   border-bottom-color: #2563eb;
 }
 
+/* Stats Bar */
+.stats-bar {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+/* Topic/LO Mapping */
+.mapping-section {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #eff6ff;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+}
+
+.mapping-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.mapping-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mapping-item label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.mapping-item select {
+  padding: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+/* Floating ProseMirror Toolbar */
+.floating-editor {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  max-width: 900px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+}
+
+.floating-editor.active {
+  display: flex;
+}
+
+.floating-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 9998;
+  display: none;
+}
+
+.floating-editor-overlay.active {
+  display: block;
+}
+
+.floating-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.floating-editor-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.floating-editor-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.floating-editor-close:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.floating-editor-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.floating-editor-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* ProseMirror Menu Bar */
+.ProseMirror-menubar {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 8px;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.ProseMirror-menu-item {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.ProseMirror-menu-item:hover {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.ProseMirror-menu-item.active {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+/* Edit button for floating editor */
+.btn-edit-floating {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.btn-edit-floating:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+/* Metadata Box (Top) */
+.metadata-box {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.metadata-box-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e40af;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metadata-row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.metadata-select {
+  padding: 8px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+}
+
+.lo-checkboxes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  background: white;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+}
+
+.lo-checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lo-checkbox-item:hover {
+  background: #f0f9ff;
+}
+
+.lo-checkbox-item input[type="checkbox"] {
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.lo-checkbox-label {
+  color: #1e40af;
+  line-height: 1.4;
+  cursor: pointer;
+  flex: 1;
+}
+
+/* Pagination */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Metadata Visualization */
+.metadata-viz {
+  margin-top: 20px;
+  padding: 20px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.viz-section {
+  margin-bottom: 24px;
+}
+
+.viz-section:last-child {
+  margin-bottom: 0;
+}
+
+.viz-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-tag {
+  padding: 6px 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.lo-heatmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lo-cell {
+  position: relative;
+  padding: 8px 12px;
+  background: #dbeafe;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1e40af;
+  cursor: help;
+  transition: all 0.2s;
+}
+
+.lo-cell:hover {
+  background: #2563eb;
+  color: white;
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+.lo-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background: #111827;
+  color: white;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  max-width: 300px;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+}
+
+.lo-cell:hover .lo-tooltip {
+  opacity: 1;
+}
+
+.lo-frequency {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+/* Header Actions */
 .header-actions {
   display: flex;
   gap: 12px;
@@ -80,49 +495,85 @@
   background: #e5e7eb;
 }
 
-/* Questions Container */
-.questions-container {
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  background: #f3f4f6;
+}
+
+/* Tab Navigation */
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.tab-button {
+  padding: 12px 24px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #6b7280;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  transition: all 0.2s;
+}
+
+.tab-button:hover {
+  color: #2563eb;
+  background: #f9fafb;
+}
+
+.tab-button.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+/* Content Container */
+.content-container {
   background: white;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  min-height: 400px;
+  min-height: 500px;
 }
 
-.questions-header {
-  margin: 0 0 20px 0;
-  font-size: 18px;
-  color: #111827;
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
 }
 
 /* Question Node */
 .question-node {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .question-card {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  padding: 12px;
-  cursor: pointer;
+  padding: 16px;
   transition: all 0.2s;
 }
 
 .question-card:hover {
-  background: #f9fafb;
-}
-
-.question-card.selected {
-  background: #eff6ff;
-  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .question-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .expand-btn {
@@ -133,6 +584,7 @@
   color: #6b7280;
   display: flex;
   align-items: center;
+  font-size: 14px;
 }
 
 .grip-icon {
@@ -143,37 +595,39 @@
 .question-number {
   font-weight: 600;
   color: #2563eb;
-  font-size: 14px;
-  min-width: 60px;
+  font-size: 15px;
+  min-width: 80px;
 }
 
 .marks-input {
-  width: 50px;
-  padding: 2px 6px;
+  width: 60px;
+  padding: 6px 10px;
   border: 1px solid #d1d5db;
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 .marks-label {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
+  font-weight: 500;
 }
 
 .question-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
 }
 
 .action-btn {
-  padding: 6px;
+  padding: 8px;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   transition: all 0.2s;
+  font-size: 13px;
 }
 
 .action-btn.add {
@@ -194,130 +648,405 @@
   background: #fecaca;
 }
 
-.question-content-area {
-  margin-top: 8px;
-}
-
-.question-textarea {
-  width: 100%;
-  min-height: 60px;
-  padding: 8px;
+/* ProseMirror Editor */
+.editor-wrapper {
+  margin-top: 12px;
   border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.question-textarea:focus {
+.ProseMirror {
+  padding: 12px;
+  min-height: 80px;
   outline: none;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ProseMirror:focus {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ProseMirror p {
+  margin: 8px 0;
+}
+
+.ProseMirror ul, .ProseMirror ol {
+  padding-left: 24px;
+  margin: 8px 0;
+}
+
+.ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+  margin: 12px 0 8px 0;
+}
+
+.ProseMirror strong {
+  font-weight: 600;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.ProseMirror pre {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 12px;
+  color: #6b7280;
+  margin: 12px 0;
 }
 
 /* Children container with indentation */
 .question-children {
-  margin-left: 24px;
-  margin-top: 8px;
+  margin-left: 32px;
+  margin-top: 12px;
 }
 
 /* Empty state */
 .empty-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: 80px 20px;
   color: #6b7280;
 }
 
 .empty-icon {
-  font-size: 48px;
+  font-size: 64px;
   color: #d1d5db;
   margin-bottom: 16px;
 }
 
-/* Info panel */
-.info-panel {
-  background: #fffbeb;
-  border: 1px solid #fde68a;
-  border-radius: 12px;
-  padding: 16px;
-  margin-top: 20px;
+/* Student Assignment Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  z-index: 1000;
+  overflow-y: auto;
 }
 
-.info-title {
-  margin: 0 0 8px 0;
-  color: #92400e;
+.modal-content {
+  position: relative;
+  max-width: 800px;
+  margin: 40px auto;
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+  margin: 0 0 20px 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.list-container {
+  max-height: 350px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.list-header {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #111827;
   font-weight: 600;
 }
 
-.info-list {
-  margin: 0;
-  padding-left: 20px;
-  color: #78350f;
-  font-size: 13px;
-  line-height: 1.6;
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.2s;
 }
 
-/* Icons */
-.icon {
-  width: 16px;
-  height: 16px;
-  display: inline-block;
+.checkbox-item:hover {
+  background: #f9fafb;
+}
+
+.checkbox-item.selected {
+  background: #eff6ff;
+  border-color: #3b82f6;
+}
+
+.checkbox-item input {
+  margin-right: 12px;
+}
+
+.item-details {
+  flex: 1;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #111827;
+  font-size: 14px;
+}
+
+.item-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 </style>
 
 <div class="test-editor-container">
   <!-- Header -->
   <div class="editor-header">
-    <input 
-      type="text" 
-      class="title-input" 
+    <input
+      type="text"
+      class="title-input"
       id="testTitle"
       placeholder="Untitled Descriptive Test"
-      value="Untitled Descriptive Test"
+      value="{% if test %}{{ test.title }}{% else %}Untitled Descriptive Test{% endif %}"
     >
-    
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">Total Questions</span>
+        <span class="stat-value" id="totalQuestions">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Total Marks</span>
+        <span class="stat-value" id="totalMarks">0</span>
+      </div>
+      {% if test %}
+      <div class="stat-item">
+        <span class="stat-label">Status</span>
+        <span class="stat-value" style="font-size: 16px; color: {% if test.is_published %}#10b981{% else %}#f59e0b{% endif %};">
+          {% if test.is_published %}✓ Published{% else %}⚠ Draft{% endif %}
+        </span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Assigned To</span>
+        <span class="stat-value" style="font-size: 16px;" id="assignmentCount">
+          {{ test.assigned_students.count }} students, {{ test.assigned_groups.count }} groups
+        </span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Unified Metadata Box -->
+    <div class="metadata-box">
+      <div class="metadata-box-title">📚 Test Metadata & Learning Objectives</div>
+
+      <!-- Topic Selection Row -->
+      <div class="metadata-row" style="margin-bottom: 16px;">
+        <select id="topicSelect" class="metadata-select" onchange="loadLearningObjectivesForTest()">
+          <option value="">Select Topic</option>
+        </select>
+        <div id="loCheckboxesContainer" class="lo-checkboxes-grid" style="display: none;">
+          <!-- LO checkboxes will be populated here -->
+        </div>
+      </div>
+
+      <!-- Schedule Row -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+        <div>
+          <label style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Start Date & Time</label>
+          <input type="datetime-local" id="startTimeInput" class="metadata-select"
+                 value="{% if test.start_time %}{{ test.start_time|date:'Y-m-d\TH:i' }}{% endif %}">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Duration (minutes)</label>
+          <input type="number" id="durationInput" min="1" placeholder="e.g., 60" class="metadata-select"
+                 value="{% if test.duration_minutes %}{{ test.duration_minutes }}{% endif %}">
+        </div>
+        <div>
+          <label style="font-size: 12px; color: #6b7280; display: block; margin-bottom: 4px;">Subject</label>
+          <select id="subjectSelect" class="metadata-select">
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <div class="header-actions">
       <button class="btn btn-primary" onclick="addMainQuestion()">
         ➕ Add Main Question
       </button>
-      
+
       <button class="btn btn-success" onclick="saveTest()">
-        💾 Save Test
+        💾 {% if test %}Save Changes{% else %}Save & Continue{% endif %}
       </button>
-      
+
+      {% if test %}
+      <button class="btn btn-primary" onclick="openAssignmentModal()">
+        👥 Assign Students
+      </button>
+
+      <button class="btn {% if test.is_published %}btn-secondary{% else %}btn-primary{% endif %}" onclick="togglePublish()" id="publishBtn">
+        {% if test.is_published %}📤 Unpublish{% else %}📥 Publish Test{% endif %}
+      </button>
+      {% else %}
+      <button class="btn btn-secondary" disabled title="Save test first to assign students">
+        👥 Assign Students (Save First)
+      </button>
+      {% endif %}
+
       <button class="btn btn-secondary" onclick="window.location.href='{% url "tests_list" %}'">
         ← Back to Tests
       </button>
     </div>
   </div>
 
-  <!-- Questions Container -->
-  <div class="questions-container">
-    <h3 class="questions-header">
-      Questions (<span id="questionCount">0</span>)
-    </h3>
-    
-    <div id="questionsTree">
-      <div class="empty-state">
-        <div class="empty-icon">📝</div>
-        <p>No questions yet. Add your first question to get started.</p>
+  <!-- Tab Navigation -->
+  <div class="tab-nav">
+    <button class="tab-button active" onclick="switchTab('questions')">
+      📝 Questions
+    </button>
+    <button class="tab-button" onclick="switchTab('markschemes')">
+      ✓ Markschemes
+    </button>
+  </div>
+
+  <!-- Content Container -->
+  <div class="content-container">
+    <!-- Questions Tab -->
+    <div id="questionsTab" class="tab-content active">
+      <!-- Pagination Controls -->
+      <div id="paginationTop" class="pagination-controls" style="display: none;">
+        <button class="page-btn" onclick="previousQuestion()" id="prevBtn">← Previous</button>
+        <span class="page-info" id="pageInfo">Question 1 of 1</span>
+        <button class="page-btn" onclick="nextQuestion()" id="nextBtn">Next →</button>
+      </div>
+
+      <div id="questionsTree">
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <p>No questions yet. Add your first question to get started.</p>
+        </div>
+      </div>
+
+      <!-- Metadata Visualization -->
+      <div id="metadataViz" class="metadata-viz" style="display: none;">
+        <div class="viz-section">
+          <div class="viz-header">
+            📚 Topics Covered
+          </div>
+          <div id="topicsList" class="topics-list"></div>
+        </div>
+        <div class="viz-section">
+          <div class="viz-header">
+            🎯 Learning Objectives Heatmap
+          </div>
+          <div id="loHeatmap" class="lo-heatmap"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Markschemes Tab -->
+    <div id="markschemesTab" class="tab-content">
+      <div id="markschemesTree">
+        <div class="empty-state">
+          <div class="empty-icon">✓</div>
+          <p>No markschemes yet. Add questions first, then add markschemes.</p>
+        </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Info Panel -->
-  <div class="info-panel">
-    <h4 class="info-title">💡 How to use this editor</h4>
-    <ul class="info-list">
-      <li>Click "Add Main Question" to add top-level questions (1, 2, 3...)</li>
-      <li>Click the ➕ button on any question to add sub-questions (a, b, c...)</li>
-      <li>Sub-questions can have their own sub-questions (i, ii, iii...)</li>
-      <li>Enter question text and marks for each question</li>
-      <li>Questions will be saved in a hierarchical structure</li>
-    </ul>
+<!-- Floating ProseMirror Editor -->
+<div class="floating-editor-overlay" id="editorOverlay" onclick="closeFloatingEditor()"></div>
+<div class="floating-editor" id="floatingEditor">
+  <div class="floating-editor-header">
+    <div class="floating-editor-title">Rich Text Editor</div>
+    <button class="floating-editor-close" onclick="closeFloatingEditor()">×</button>
+  </div>
+  <div class="floating-editor-body">
+    <div id="floatingEditorContent"></div>
+  </div>
+  <div class="floating-editor-footer">
+    <button class="btn btn-secondary" onclick="closeFloatingEditor()">Cancel</button>
+    <button class="btn btn-primary" onclick="insertFromFloatingEditor()">Insert Content</button>
   </div>
 </div>
+
+<!-- Student Assignment Modal -->
+<div id="assignmentModal" class="modal">
+  <div class="modal-content">
+    <h2 class="modal-header">Assign Students to Test</h2>
+
+    <input
+      type="text"
+      id="studentSearch"
+      class="search-input"
+      placeholder="Search by name, roll number, or admission ID..."
+      oninput="filterStudents()"
+    >
+
+    <div class="list-container">
+      <h3 class="list-header">Individual Students</h3>
+      <div id="studentsList"></div>
+    </div>
+
+    <div class="list-container">
+      <h3 class="list-header">Class Groups</h3>
+      <div id="groupsList"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeAssignmentModal()">Cancel</button>
+      <button class="btn btn-success" onclick="saveAssignments()">Save Assignments</button>
+    </div>
+  </div>
+</div>
+
+<!-- ProseMirror Libraries -->
+<script src="https://unpkg.com/prosemirror-state/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-view/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-model/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-transform/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-schema-basic/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-schema-list/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-keymap/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-history/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-commands/dist/index.js"></script>
+<script src="https://unpkg.com/prosemirror-menu/dist/index.js"></script>
 
 <script>
 // Get CSRF token
@@ -338,34 +1067,107 @@ function getCookie(name) {
 
 const csrftoken = getCookie('csrftoken');
 
+// Store ProseMirror editors
+const questionEditors = new Map();
+const markschemeEditors = new Map();
+
 // Questions data structure
 let questions = [];
 let expandedNodes = new Set();
-let selectedQuestion = null;
 let questionIdCounter = 0;
+let currentQuestionPage = 0; // For pagination
+let availableLOs = []; // All LOs from selected topic
+
+// Tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+  if (tab === 'questions') {
+    document.querySelectorAll('.tab-button')[0].classList.add('active');
+    document.getElementById('questionsTab').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab-button')[1].classList.add('active');
+    document.getElementById('markschemesTab').classList.add('active');
+  }
+}
+
+// Create ProseMirror editor
+function createEditor(container, initialContent = '') {
+  try {
+    const { schema } = ProseMirror.schemaBasic;
+    const { EditorState } = ProseMirror.state;
+    const { EditorView } = ProseMirror.view;
+    const { keymap } = ProseMirror.keymap;
+    const { baseKeymap } = ProseMirror.commands;
+    const { history, undo, redo } = ProseMirror.history;
+
+    let doc;
+    if (initialContent) {
+      doc = schema.node('doc', null, [
+        schema.node('paragraph', null, [schema.text(initialContent)])
+      ]);
+    } else {
+      doc = schema.node('doc', null, [schema.node('paragraph')]);
+    }
+
+    const state = EditorState.create({
+      doc: doc,
+      plugins: [
+        history(),
+        keymap(baseKeymap),
+        keymap({
+          'Mod-z': undo,
+          'Mod-y': redo,
+          'Mod-Shift-z': redo
+        })
+      ]
+    });
+
+    const view = new EditorView(container, {
+      state,
+      dispatchTransaction(transaction) {
+        const newState = view.state.apply(transaction);
+        view.updateState(newState);
+      }
+    });
+
+    return view;
+  } catch (error) {
+    console.error('Error creating editor:', error);
+    // Fallback to textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = initialContent || '';
+    textarea.className = 'ProseMirror';
+    textarea.style.width = '100%';
+    textarea.style.minHeight = '80px';
+    container.appendChild(textarea);
+    return {
+      state: { doc: { textContent: initialContent || '' } },
+      dom: textarea
+    };
+  }
+}
 
 // Generate question numbering
 function getQuestionNumber(question, allQuestions) {
   if (question.level === 0) {
     return question.number;
   }
-  
-  // Find parent
+
   const parent = findParent(question.id, allQuestions);
   if (!parent) return question.number;
-  
+
   const parentNumber = getQuestionNumber(parent, allQuestions);
   const index = parent.children.indexOf(question);
-  
+
   if (question.level === 1) {
-    // a, b, c format
     return `${parentNumber}(${String.fromCharCode(97 + index)})`;
   } else if (question.level === 2) {
-    // i, ii, iii format
     const roman = ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'];
     return `${parentNumber}(${roman[index] || index + 1})`;
   }
-  
+
   return `${parentNumber}.${index + 1}`;
 }
 
@@ -387,43 +1189,65 @@ function addMainQuestion() {
     level: 0,
     number: questions.filter(q => q.level === 0).length + 1,
     content: '',
+    markscheme: '',
     marks: 1,
-    children: []
+    children: [],
+    los: [] // Array of LO IDs
   };
-  
+
   questions.push(newQuestion);
   expandedNodes.add(newQuestion.id);
+  currentQuestionPage = questions.filter(q => q.level === 0).length - 1; // Navigate to new question
   renderQuestions();
+  renderMarkschemes();
+  updateStats();
+  updateMetadataViz();
 }
 
 // Add sub-question
 function addSubQuestion(parentId, level) {
   const parent = findQuestionById(parentId, questions);
   if (!parent) return;
-  
+
   const newQuestion = {
     id: `q-${++questionIdCounter}`,
     level: level,
     number: 'auto',
     content: '',
+    markscheme: '',
     marks: 1,
-    children: []
+    children: [],
+    los: [] // Array of LO IDs
   };
-  
+
   parent.children.push(newQuestion);
   expandedNodes.add(parentId);
   renderQuestions();
+  renderMarkschemes();
+  updateStats();
+  updateMetadataViz();
 }
 
 // Delete question
 function deleteQuestion(questionId) {
   if (!confirm('Delete this question and all sub-questions?')) return;
-  
+
   questions = removeFromTree(questions, questionId);
-  if (selectedQuestion === questionId) {
-    selectedQuestion = null;
+
+  // Clean up editors
+  questionEditors.delete(questionId);
+  markschemeEditors.delete(questionId);
+
+  // Adjust pagination if needed
+  const mainQuestions = questions.filter(q => q.level === 0);
+  if (currentQuestionPage >= mainQuestions.length && currentQuestionPage > 0) {
+    currentQuestionPage = mainQuestions.length - 1;
   }
+
   renderQuestions();
+  renderMarkschemes();
+  updateStats();
+  updateMetadataViz();
 }
 
 function removeFromTree(tree, id) {
@@ -448,6 +1272,9 @@ function updateQuestion(id, field, value) {
   const question = findQuestionById(id, questions);
   if (question) {
     question[field] = value;
+    if (field === 'marks') {
+      updateStats();
+    }
   }
 }
 
@@ -459,95 +1286,16 @@ function toggleExpand(id) {
     expandedNodes.add(id);
   }
   renderQuestions();
+  renderMarkschemes();
 }
 
-// Render questions tree
-function renderQuestions() {
-  const container = document.getElementById('questionsTree');
-  
-  if (questions.length === 0) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <div class="empty-icon">📝</div>
-        <p>No questions yet. Add your first question to get started.</p>
-      </div>
-    `;
-    document.getElementById('questionCount').textContent = '0';
-    return;
-  }
-  
-  let html = '';
-  
-  function renderNode(question, indent = 0) {
-    const isExpanded = expandedNodes.has(question.id);
-    const hasChildren = question.children.length > 0;
-    const questionNumber = getQuestionNumber(question, questions);
-    const isSelected = selectedQuestion === question.id;
-    
-    let nodeHtml = `
-      <div class="question-node" style="margin-left: ${indent * 24}px">
-        <div class="question-card ${isSelected ? 'selected' : ''}" onclick="selectQuestion('${question.id}')">
-          <div class="question-header">
-            ${hasChildren ? `
-              <button class="expand-btn" onclick="event.stopPropagation(); toggleExpand('${question.id}')">
-                ${isExpanded ? '▼' : '▶'}
-              </button>
-            ` : '<span style="width: 20px"></span>'}
-            
-            <span class="grip-icon">⋮⋮</span>
-            
-            <span class="question-number">${questionNumber}</span>
-            
-            <input 
-              type="number" 
-              class="marks-input" 
-              value="${question.marks}"
-              onclick="event.stopPropagation()"
-              onchange="updateQuestion('${question.id}', 'marks', parseInt(this.value))"
-              min="1"
-            >
-            <span class="marks-label">marks</span>
-            
-            <div class="question-actions">
-              ${question.level < 3 ? `
-                <button class="action-btn add" onclick="event.stopPropagation(); addSubQuestion('${question.id}', ${question.level + 1})" title="Add sub-question">
-                  ➕
-                </button>
-              ` : ''}
-              
-              <button class="action-btn delete" onclick="event.stopPropagation(); deleteQuestion('${question.id}')" title="Delete">
-                🗑️
-              </button>
-            </div>
-          </div>
-          
-          <div class="question-content-area">
-            <textarea 
-              class="question-textarea" 
-              placeholder="Enter question text..."
-              onclick="event.stopPropagation()"
-              oninput="updateQuestion('${question.id}', 'content', this.value)"
-            >${question.content}</textarea>
-          </div>
-        </div>
-        
-        ${isExpanded && hasChildren ? `
-          <div class="question-children">
-            ${question.children.map(child => renderNode(child, indent)).join('')}
-          </div>
-        ` : ''}
-      </div>
-    `;
-    
-    return nodeHtml;
-  }
-  
-  html = questions.map(q => renderNode(q, 0)).join('');
-  container.innerHTML = html;
-  
-  // Update count
+// Update stats
+function updateStats() {
   const totalCount = countAllQuestions(questions);
-  document.getElementById('questionCount').textContent = totalCount;
+  const totalMarks = calculateTotalMarks(questions);
+
+  document.getElementById('totalQuestions').textContent = totalCount;
+  document.getElementById('totalMarks').textContent = totalMarks;
 }
 
 function countAllQuestions(tree) {
@@ -558,33 +1306,350 @@ function countAllQuestions(tree) {
   return count;
 }
 
-function selectQuestion(id) {
-  selectedQuestion = id;
-  renderQuestions();
+function calculateTotalMarks(tree) {
+  let total = 0;
+  tree.forEach(q => {
+    total += parseInt(q.marks) || 0;
+    total += calculateTotalMarks(q.children);
+  });
+  return total;
+}
+
+// Pagination functions
+function previousQuestion() {
+  const mainQuestions = questions.filter(q => q.level === 0);
+  if (currentQuestionPage > 0) {
+    currentQuestionPage--;
+    renderQuestions();
+    updatePaginationControls();
+  }
+}
+
+function nextQuestion() {
+  const mainQuestions = questions.filter(q => q.level === 0);
+  if (currentQuestionPage < mainQuestions.length - 1) {
+    currentQuestionPage++;
+    renderQuestions();
+    updatePaginationControls();
+  }
+}
+
+function updatePaginationControls() {
+  const mainQuestions = questions.filter(q => q.level === 0);
+  const paginationDiv = document.getElementById('paginationTop');
+  const pageInfo = document.getElementById('pageInfo');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  if (mainQuestions.length > 0) {
+    paginationDiv.style.display = 'flex';
+    pageInfo.textContent = `Question ${currentQuestionPage + 1} of ${mainQuestions.length}`;
+    prevBtn.disabled = currentQuestionPage === 0;
+    nextBtn.disabled = currentQuestionPage === mainQuestions.length - 1;
+  } else {
+    paginationDiv.style.display = 'none';
+  }
+}
+
+// Toggle LO checkbox
+function toggleLO(questionId, loId) {
+  const question = findQuestionById(questionId, questions);
+  if (!question) return;
+
+  if (!question.los) question.los = [];
+
+  const index = question.los.indexOf(loId);
+  if (index > -1) {
+    question.los.splice(index, 1);
+  } else {
+    question.los.push(loId);
+  }
+
+  updateMetadataViz();
+}
+
+// Render questions tree (with pagination)
+function renderQuestions() {
+  const container = document.getElementById('questionsTree');
+  const mainQuestions = questions.filter(q => q.level === 0);
+
+  if (mainQuestions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p>No questions yet. Add your first question to get started.</p>
+      </div>
+    `;
+    updatePaginationControls();
+    return;
+  }
+
+  // Show only the current question
+  const currentQuestion = mainQuestions[currentQuestionPage];
+  if (!currentQuestion) {
+    currentQuestionPage = 0;
+    renderQuestions();
+    return;
+  }
+
+  let html = '';
+
+  function renderNode(question, indent = 0) {
+    const isExpanded = expandedNodes.has(question.id);
+    const hasChildren = question.children.length > 0;
+    const questionNumber = getQuestionNumber(question, questions);
+
+    const editorId = `question-editor-${question.id}`;
+
+    // Render LO checkboxes
+    let loCheckboxesHtml = '';
+    if (availableLOs.length > 0) {
+      loCheckboxesHtml = `
+        <div class="lo-section">
+          <div class="lo-section-header">Learning Objectives for this question</div>
+          <div class="lo-checkboxes">
+            ${availableLOs.map(lo => `
+              <label class="lo-checkbox-item">
+                <input
+                  type="checkbox"
+                  ${(question.los || []).includes(lo.id) ? 'checked' : ''}
+                  onchange="toggleLO('${question.id}', ${lo.id})"
+                >
+                <span class="lo-checkbox-label">${lo.code}: ${lo.description}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    let nodeHtml = `
+      <div class="question-node" style="margin-left: ${indent * 32}px">
+        <div class="question-card">
+          <div class="question-header">
+            ${hasChildren ? `
+              <button class="expand-btn" onclick="event.stopPropagation(); toggleExpand('${question.id}')">
+                ${isExpanded ? '▼' : '▶'}
+              </button>
+            ` : '<span style="width: 20px"></span>'}
+
+            <span class="grip-icon">⋮⋮</span>
+
+            <span class="question-number">${questionNumber}</span>
+
+            <input
+              type="number"
+              class="marks-input"
+              value="${question.marks}"
+              onclick="event.stopPropagation()"
+              onchange="updateQuestion('${question.id}', 'marks', parseInt(this.value))"
+              min="1"
+            >
+            <span class="marks-label">marks</span>
+
+            <div class="question-actions">
+              ${question.level < 2 ? `
+                <button class="action-btn add" onclick="event.stopPropagation(); addSubQuestion('${question.id}', ${question.level + 1})" title="Add sub-question">
+                  ➕ Sub
+                </button>
+              ` : ''}
+
+              <button class="action-btn delete" onclick="event.stopPropagation(); deleteQuestion('${question.id}')" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </div>
+
+          <div class="editor-wrapper">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label style="font-weight: 600; color: #374151;">Question</label>
+              <button class="btn-edit-floating" onclick="event.stopPropagation(); openFloatingEditor('${question.id}-content')" title="Edit in floating editor">
+                ✏️ Edit
+              </button>
+            </div>
+            <div id="${editorId}"></div>
+          </div>
+
+          ${loCheckboxesHtml}
+        </div>
+
+        ${isExpanded && hasChildren ? `
+          <div class="question-children">
+            ${question.children.map(child => renderNode(child, indent)).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    return nodeHtml;
+  }
+
+  html = renderNode(currentQuestion, 0);
+  container.innerHTML = html;
+
+  // Initialize ProseMirror editors
+  initializeEditorsForTree(currentQuestion);
+
+  updatePaginationControls();
+}
+
+// Render markschemes tree
+function renderMarkschemes() {
+  const container = document.getElementById('markschemesTree');
+
+  if (questions.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">✓</div>
+        <p>No markschemes yet. Add questions first, then add markschemes.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+
+  function renderNode(question, indent = 0) {
+    const isExpanded = expandedNodes.has(question.id);
+    const hasChildren = question.children.length > 0;
+    const questionNumber = getQuestionNumber(question, questions);
+
+    const editorId = `markscheme-editor-${question.id}`;
+
+    let nodeHtml = `
+      <div class="question-node" style="margin-left: ${indent * 32}px">
+        <div class="question-card">
+          <div class="question-header">
+            ${hasChildren ? `
+              <button class="expand-btn" onclick="event.stopPropagation(); toggleExpand('${question.id}')">
+                ${isExpanded ? '▼' : '▶'}
+              </button>
+            ` : '<span style="width: 20px"></span>'}
+
+            <span class="question-number">${questionNumber}</span>
+            <span class="marks-label" style="margin-left: auto;">${question.marks} marks</span>
+          </div>
+
+          <div class="editor-wrapper">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label style="font-weight: 600; color: #374151;">Markscheme</label>
+              <button class="btn-edit-floating" onclick="event.stopPropagation(); openFloatingEditor('${question.id}-markscheme')" title="Edit in floating editor">
+                ✏️ Edit
+              </button>
+            </div>
+            <div id="${editorId}"></div>
+          </div>
+        </div>
+
+        ${isExpanded && hasChildren ? `
+          <div class="question-children">
+            ${question.children.map(child => renderNode(child, indent)).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+
+    return nodeHtml;
+  }
+
+  html = questions.map(q => renderNode(q, 0)).join('');
+  container.innerHTML = html;
+
+  // Initialize ProseMirror editors
+  questions.forEach(q => initializeMarkschemeEditorsForTree(q));
+}
+
+function initializeEditorsForTree(question) {
+  const editorId = `question-editor-${question.id}`;
+  const container = document.getElementById(editorId);
+
+  if (container && !questionEditors.has(question.id)) {
+    const editor = createEditor(container, question.content);
+    questionEditors.set(question.id, editor);
+
+    // Save content on change
+    editor.dom.addEventListener('blur', () => {
+      let content;
+      if (editor.state && editor.state.doc) {
+        content = editor.state.doc.textContent;
+      } else {
+        // Fallback for textarea
+        content = editor.dom.value;
+      }
+      updateQuestion(question.id, 'content', content);
+    });
+
+    // Also handle input for textarea fallback
+    if (editor.dom.tagName === 'TEXTAREA') {
+      editor.dom.addEventListener('input', () => {
+        updateQuestion(question.id, 'content', editor.dom.value);
+      });
+    }
+  }
+
+  question.children.forEach(child => initializeEditorsForTree(child));
+}
+
+function initializeMarkschemeEditorsForTree(question) {
+  const editorId = `markscheme-editor-${question.id}`;
+  const container = document.getElementById(editorId);
+
+  if (container && !markschemeEditors.has(question.id)) {
+    const editor = createEditor(container, question.markscheme);
+    markschemeEditors.set(question.id, editor);
+
+    // Save content on change
+    editor.dom.addEventListener('blur', () => {
+      let content;
+      if (editor.state && editor.state.doc) {
+        content = editor.state.doc.textContent;
+      } else {
+        // Fallback for textarea
+        content = editor.dom.value;
+      }
+      updateQuestion(question.id, 'markscheme', content);
+    });
+
+    // Also handle input for textarea fallback
+    if (editor.dom.tagName === 'TEXTAREA') {
+      editor.dom.addEventListener('input', () => {
+        updateQuestion(question.id, 'markscheme', editor.dom.value);
+      });
+    }
+  }
+
+  question.children.forEach(child => initializeMarkschemeEditorsForTree(child));
 }
 
 // Save test
 async function saveTest() {
   const title = document.getElementById('testTitle').value.trim();
-  
+
   if (!title) {
     alert('Please enter a test title');
     return;
   }
-  
+
   if (questions.length === 0) {
     alert('Please add at least one question');
     return;
   }
-  
+
   const testData = {
     title: title,
     questions: questions,
-    test_type: 'descriptive'
+    test_type: 'descriptive',
+    grade_id: document.getElementById('gradeSelect').value || null,
+    subject_id: document.getElementById('subjectSelect').value || null,
+    topic_id: document.getElementById('topicSelect').value || null,
+    lo_id: document.getElementById('loSelect').value || null,
+    start_time: document.getElementById('startTimeInput').value || null,
+    duration_minutes: parseInt(document.getElementById('durationInput').value) || null
   };
-  
+
   try {
-    const response = await fetch('{% url "create_descriptive_test" %}', {
+    const url = '{% if test %}{% url "edit_descriptive_test" test.id %}{% else %}{% url "create_descriptive_test" %}{% endif %}';
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -592,12 +1657,21 @@ async function saveTest() {
       },
       body: JSON.stringify(testData)
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
+      {% if test %}
       alert('Test saved successfully!');
-      window.location.href = '{% url "tests_list" %}';
+      location.reload();
+      {% else %}
+      // After creating, redirect to edit page where students can be assigned
+      if (confirm('Test created successfully! Would you like to assign students now?')) {
+        window.location.href = `/teacher/tests/${data.test_id}/edit-descriptive/`;
+      } else {
+        window.location.href = '{% url "tests_list" %}';
+      }
+      {% endif %}
     } else {
       alert('Error saving test: ' + (data.error || 'Unknown error'));
     }
@@ -607,8 +1681,763 @@ async function saveTest() {
   }
 }
 
+// Student assignment modal functions
+let allStudents = [];
+let allGroups = [];
+let selectedStudents = new Set();
+let selectedGroups = new Set();
+
+async function openAssignmentModal() {
+  document.getElementById('assignmentModal').style.display = 'block';
+  await loadStudentsAndGroups();
+}
+
+function closeAssignmentModal() {
+  document.getElementById('assignmentModal').style.display = 'none';
+}
+
+async function loadStudentsAndGroups() {
+  {% if test %}
+  const testId = {{ test.id }};
+  const studentsList = document.getElementById('studentsList');
+  const groupsList = document.getElementById('groupsList');
+
+  studentsList.innerHTML = '<p style="color: #6b7280;">Loading students...</p>';
+  groupsList.innerHTML = '<p style="color: #6b7280;">Loading groups...</p>';
+
+  try {
+    const response = await fetch(`/teacher/tests/${testId}/students-groups/`);
+    const data = await response.json();
+
+    allStudents = data.students;
+    allGroups = data.groups;
+
+    selectedStudents = new Set(data.assigned_students);
+    selectedGroups = new Set(data.assigned_groups);
+
+    renderStudentsList();
+    renderGroupsList();
+  } catch (error) {
+    console.error('Error loading students and groups:', error);
+    studentsList.innerHTML = '<p style="color: #ef4444;">Error loading students</p>';
+    groupsList.innerHTML = '<p style="color: #ef4444;">Error loading groups</p>';
+  }
+  {% endif %}
+}
+
+function renderStudentsList() {
+  const search = document.getElementById('studentSearch').value.toLowerCase();
+  const filtered = allStudents.filter(s =>
+    s.name.toLowerCase().includes(search) ||
+    s.roll_number.toLowerCase().includes(search) ||
+    (s.admission_id && s.admission_id.toLowerCase().includes(search))
+  );
+
+  const html = filtered.map(student => `
+    <label class="checkbox-item ${selectedStudents.has(student.id) ? 'selected' : ''}">
+      <input
+        type="checkbox"
+        ${selectedStudents.has(student.id) ? 'checked' : ''}
+        onchange="toggleStudent(${student.id})"
+      >
+      <div class="item-details">
+        <div class="item-name">${student.name}</div>
+        <div class="item-meta">Grade ${student.grade}-${student.section} • Roll: ${student.roll_number}</div>
+      </div>
+    </label>
+  `).join('');
+
+  document.getElementById('studentsList').innerHTML = html || '<p style="color: #6b7280;">No students found</p>';
+}
+
+function renderGroupsList() {
+  const html = allGroups.map(group => `
+    <label class="checkbox-item ${selectedGroups.has(group.id) ? 'selected' : ''}">
+      <input
+        type="checkbox"
+        ${selectedGroups.has(group.id) ? 'checked' : ''}
+        onchange="toggleGroup(${group.id})"
+      >
+      <div class="item-details">
+        <div class="item-name">${group.name}</div>
+        <div class="item-meta">
+          ${group.grade ? `Grade ${group.grade}` : ''}
+          ${group.section ? ` - ${group.section}` : ''}
+          ${group.subject ? ` • ${group.subject}` : ''}
+          • ${group.student_count} students
+        </div>
+      </div>
+    </label>
+  `).join('');
+
+  document.getElementById('groupsList').innerHTML = html || '<p style="color: #6b7280;">No groups found</p>';
+}
+
+function toggleStudent(id) {
+  if (selectedStudents.has(id)) {
+    selectedStudents.delete(id);
+  } else {
+    selectedStudents.add(id);
+  }
+  renderStudentsList();
+}
+
+function toggleGroup(id) {
+  if (selectedGroups.has(id)) {
+    selectedGroups.delete(id);
+  } else {
+    selectedGroups.add(id);
+  }
+  renderGroupsList();
+}
+
+function filterStudents() {
+  renderStudentsList();
+}
+
+async function saveAssignments() {
+  {% if test %}
+  const testId = {{ test.id }};
+
+  try {
+    const response = await fetch(`/teacher/tests/${testId}/save-assignments/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify({
+        student_ids: Array.from(selectedStudents),
+        group_ids: Array.from(selectedGroups)
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert(data.message);
+      closeAssignmentModal();
+
+      // Update assignment count display
+      const studentCount = selectedStudents.size;
+      const groupCount = selectedGroups.size;
+      const assignmentCountEl = document.getElementById('assignmentCount');
+      if (assignmentCountEl) {
+        assignmentCountEl.textContent = `${studentCount} students, ${groupCount} groups`;
+      }
+    } else {
+      alert('Error: ' + (data.error || 'Could not save assignments'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error saving assignments. Please try again.');
+  }
+  {% endif %}
+}
+
+// Publish/Unpublish functions
+async function togglePublish() {
+  {% if test %}
+  const testId = {{ test.id }};
+  const currentlyPublished = {{ test.is_published|lower }};
+
+  if (!currentlyPublished) {
+    // Check assignment count before publishing
+    const assignmentCountEl = document.getElementById('assignmentCount');
+    if (assignmentCountEl) {
+      const text = assignmentCountEl.textContent;
+      const hasAssignments = !text.startsWith('0 students, 0 groups');
+
+      if (!hasAssignments) {
+        alert('⚠️ Cannot publish test!\n\nPlease assign at least one student or class group before publishing.\n\nClick "Assign Students" to get started.');
+        return;
+      }
+    }
+
+    if (!confirm('📤 Publish this test?\n\nStudents will be able to see and take this test once published.')) {
+      return;
+    }
+  } else {
+    if (!confirm('📥 Unpublish this test?\n\nStudents will no longer be able to access this test.')) {
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(`/teacher/tests/${testId}/toggle/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': csrftoken,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert('✓ ' + data.message);
+      location.reload();
+    } else {
+      alert('❌ Error: ' + (data.error || 'Could not toggle publish status'));
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('❌ Error toggling publish status. Please try again.');
+  }
+  {% endif %}
+}
+
+// Load metadata (grades, subjects, topics, LOs)
+async function loadGrades() {
+  try {
+    const response = await fetch('/ajax/grades/');
+    const data = await response.json();
+    const select = document.getElementById('gradeSelect');
+    data.forEach(grade => {
+      const option = document.createElement('option');
+      option.value = grade.id;
+      option.textContent = grade.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading grades:', error);
+  }
+}
+
+async function loadSubjects() {
+  try {
+    const response = await fetch('/ajax/subjects/');
+    const data = await response.json();
+    const select = document.getElementById('subjectSelect');
+    data.forEach(subject => {
+      const option = document.createElement('option');
+      option.value = subject.id;
+      option.textContent = subject.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading subjects:', error);
+  }
+}
+
+async function loadTopics() {
+  const gradeId = document.getElementById('gradeSelect').value;
+  const subjectId = document.getElementById('subjectSelect').value;
+
+  if (!gradeId || !subjectId) return;
+
+  try {
+    const response = await fetch(`/ajax/topics/?grade_id=${gradeId}&subject_id=${subjectId}`);
+    const data = await response.json();
+    const select = document.getElementById('topicSelect');
+    select.innerHTML = '<option value="">Select Topic</option>';
+    data.forEach(topic => {
+      const option = document.createElement('option');
+      option.value = topic.id;
+      option.textContent = topic.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading topics:', error);
+  }
+}
+
+async function loadLearningObjectives() {
+  const topicId = document.getElementById('topicSelect').value;
+
+  if (!topicId) return;
+
+  try {
+    const response = await fetch(`/ajax/los/?topic_id=${topicId}`);
+    const data = await response.json();
+
+    // Store LOs for checkboxes
+    availableLOs = data;
+
+    const select = document.getElementById('loSelect');
+    select.innerHTML = '<option value="">Select LO</option>';
+    data.forEach(lo => {
+      const option = document.createElement('option');
+      option.value = lo.id;
+      option.textContent = `${lo.code} - ${lo.description}`;
+      select.appendChild(option);
+    });
+
+    // Re-render to show LO checkboxes
+    renderQuestions();
+    updateMetadataViz();
+  } catch (error) {
+    console.error('Error loading LOs:', error);
+  }
+}
+
+// Update metadata visualization
+function updateMetadataViz() {
+  const metadataDiv = document.getElementById('metadataViz');
+  const topicsList = document.getElementById('topicsList');
+  const loHeatmap = document.getElementById('loHeatmap');
+
+  // Collect all LOs from all questions
+  const loMap = new Map(); // loId -> {lo object, count}
+  const topicsSet = new Set();
+
+  function collectLOs(questionList) {
+    questionList.forEach(q => {
+      if (q.los && q.los.length > 0) {
+        q.los.forEach(loId => {
+          const lo = availableLOs.find(l => l.id === loId);
+          if (lo) {
+            if (loMap.has(loId)) {
+              loMap.get(loId).count++;
+            } else {
+              loMap.set(loId, { lo, count: 1 });
+            }
+            // Extract topic from LO (if available)
+            if (lo.topic_name) {
+              topicsSet.add(lo.topic_name);
+            }
+          }
+        });
+      }
+      if (q.children && q.children.length > 0) {
+        collectLOs(q.children);
+      }
+    });
+  }
+
+  collectLOs(questions);
+
+  // Infer topics from selected dropdown if no LOs mapped yet
+  const topicSelect = document.getElementById('topicSelect');
+  if (topicSelect.value && topicSelect.selectedIndex > 0) {
+    topicsSet.add(topicSelect.options[topicSelect.selectedIndex].text);
+  }
+
+  if (loMap.size === 0 && topicsSet.size === 0) {
+    metadataDiv.style.display = 'none';
+    return;
+  }
+
+  metadataDiv.style.display = 'block';
+
+  // Render topics
+  if (topicsSet.size > 0) {
+    topicsList.innerHTML = Array.from(topicsSet).map(topic =>
+      `<div class="topic-tag">${topic}</div>`
+    ).join('');
+  } else {
+    topicsList.innerHTML = '<p style="color: #6b7280; font-size: 13px;">No topics yet</p>';
+  }
+
+  // Render LO heatmap
+  if (loMap.size > 0) {
+    loHeatmap.innerHTML = Array.from(loMap.entries()).map(([loId, data]) => {
+      const intensity = Math.min(data.count / 3, 1); // Scale intensity
+      const bgColor = `rgba(37, 99, 235, ${0.3 + intensity * 0.7})`;
+
+      return `
+        <div class="lo-cell" style="background: ${bgColor};">
+          ${data.lo.code}
+          <span class="lo-frequency">×${data.count}</span>
+          <div class="lo-tooltip">${data.lo.description}</div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    loHeatmap.innerHTML = '<p style="color: #6b7280; font-size: 13px;">No learning objectives mapped yet</p>';
+  }
+}
+
 // Initialize
+{% if questions_data %}
+try {
+  const existingData = {{ questions_data|safe }};
+  if (existingData && Array.isArray(existingData)) {
+    questions = existingData;
+
+    // Ensure backward compatibility - add los field if missing
+    function ensureLOsField(qs) {
+      qs.forEach(q => {
+        if (!q.los) q.los = [];
+        if (q.children && q.children.length > 0) {
+          ensureLOsField(q.children);
+        }
+      });
+    }
+    ensureLOsField(questions);
+
+    function findMaxId(qs) {
+      let maxId = 0;
+      qs.forEach(q => {
+        const idNum = parseInt(q.id.split('-')[1]);
+        if (idNum > maxId) maxId = idNum;
+        if (q.children && q.children.length > 0) {
+          const childMax = findMaxId(q.children);
+          if (childMax > maxId) maxId = childMax;
+        }
+      });
+      return maxId;
+    }
+    questionIdCounter = findMaxId(questions);
+
+    function expandAll(qs) {
+      qs.forEach(q => {
+        expandedNodes.add(q.id);
+        if (q.children && q.children.length > 0) {
+          expandAll(q.children);
+        }
+      });
+    }
+    expandAll(questions);
+  }
+} catch (e) {
+  console.error('Error loading questions:', e);
+}
+{% endif %}
+
+// Initial render
 renderQuestions();
+renderMarkschemes();
+updateStats();
+updateMetadataViz();
+
+// Floating Editor Variables
+let floatingEditorInstance = null;
+let currentFocusedField = null;
+
+// Open floating editor
+function openFloatingEditor(fieldId) {
+  currentFocusedField = fieldId;
+  document.getElementById('editorOverlay').classList.add('active');
+  document.getElementById('floatingEditor').classList.add('active');
+
+  // Initialize ProseMirror if not already done
+  if (!floatingEditorInstance) {
+    initializeFloatingEditor();
+  }
+
+  // Load existing content into the floating editor
+  const questionId = fieldId.replace('-content', '').replace('-markscheme', '');
+  const question = findQuestionById(questionId, questions);
+
+  if (question) {
+    let existingContent = '';
+
+    if (fieldId.includes('-content')) {
+      existingContent = question.content || '';
+    } else if (fieldId.includes('-markscheme')) {
+      existingContent = question.markscheme || '';
+    }
+
+    // Load content into floating editor
+    if (floatingEditorInstance && floatingEditorInstance.state) {
+      try {
+        const { DOMParser } = ProseMirror.model;
+        const { schema } = ProseMirror.schemaBasic;
+
+        // Parse HTML content to ProseMirror document
+        const div = document.createElement('div');
+        div.innerHTML = existingContent;
+
+        const doc = DOMParser.fromSchema(schema).parse(div);
+        const tr = floatingEditorInstance.state.tr.replaceWith(
+          0,
+          floatingEditorInstance.state.doc.content.size,
+          doc.content
+        );
+        floatingEditorInstance.dispatch(tr);
+      } catch (error) {
+        console.error('Error loading content into floating editor:', error);
+        // Fallback: just set as text content
+        const textContent = existingContent.replace(/<[^>]*>/g, '');
+        const tr = floatingEditorInstance.state.tr.insertText(
+          textContent,
+          0,
+          floatingEditorInstance.state.doc.content.size
+        );
+        floatingEditorInstance.dispatch(tr);
+      }
+    } else {
+      // Fallback textarea
+      const textarea = document.getElementById('floatingEditorFallback');
+      if (textarea) {
+        textarea.value = existingContent;
+      }
+    }
+  }
+}
+
+// Close floating editor
+function closeFloatingEditor() {
+  document.getElementById('editorOverlay').classList.remove('active');
+  document.getElementById('floatingEditor').classList.remove('active');
+  currentFocusedField = null;
+}
+
+// Initialize full-featured ProseMirror editor
+function initializeFloatingEditor() {
+  const container = document.getElementById('floatingEditorContent');
+
+  try {
+    const { schema } = ProseMirror.schemaBasic;
+    const { EditorState } = ProseMirror.state;
+    const { EditorView } = ProseMirror.view;
+    const { keymap } = ProseMirror.keymap;
+    const { baseKeymap, toggleMark, setBlockType, wrapIn } = ProseMirror.commands;
+    const { history, undo, redo } = ProseMirror.history;
+
+    container.innerHTML = '';
+
+    // Create menu bar
+    const menuBar = document.createElement('div');
+    menuBar.className = 'ProseMirror-menubar';
+
+    const buttons = [
+      { label: 'B', title: 'Bold', mark: 'strong' },
+      { label: 'I', title: 'Italic', mark: 'em' },
+      { label: 'Code', title: 'Code', mark: 'code' },
+      { label: 'H1', title: 'Heading 1', block: 'heading', attrs: { level: 1 } },
+      { label: 'H2', title: 'Heading 2', block: 'heading', attrs: { level: 2 } },
+      { label: 'H3', title: 'Heading 3', block: 'heading', attrs: { level: 3 } },
+      { label: 'P', title: 'Paragraph', block: 'paragraph' },
+      { label: 'UL', title: 'Bullet List', wrap: 'bullet_list' },
+      { label: 'OL', title: 'Numbered List', wrap: 'ordered_list' },
+      { label: 'Quote', title: 'Blockquote', wrap: 'blockquote' },
+      { label: '📷', title: 'Insert Image', action: 'image' },
+    ];
+
+    // Create buttons
+    buttons.forEach(btn => {
+      const button = document.createElement('button');
+      button.className = 'ProseMirror-menu-item';
+      button.textContent = btn.label;
+      button.title = btn.title;
+      button.type = 'button';
+      menuBar.appendChild(button);
+
+      button.onclick = (e) => {
+        e.preventDefault();
+        if (!floatingEditorInstance) return;
+
+        const view = floatingEditorInstance;
+        const { state, dispatch } = view;
+
+        if (btn.mark) {
+          // Toggle mark (bold, italic, code)
+          const markType = schema.marks[btn.mark];
+          if (markType) {
+            toggleMark(markType)(state, dispatch);
+            view.focus();
+          }
+        } else if (btn.block) {
+          // Set block type (heading, paragraph)
+          const nodeType = schema.nodes[btn.block];
+          if (nodeType) {
+            setBlockType(nodeType, btn.attrs)(state, dispatch);
+            view.focus();
+          }
+        } else if (btn.wrap) {
+          // Wrap in list or blockquote
+          const nodeType = schema.nodes[btn.wrap];
+          if (nodeType) {
+            wrapIn(nodeType)(state, dispatch);
+            view.focus();
+          }
+        } else if (btn.action === 'image') {
+          // Image upload
+          insertImageIntoFloatingEditor();
+        }
+      };
+    });
+
+    container.appendChild(menuBar);
+
+    // Create editor div
+    const editorDiv = document.createElement('div');
+    editorDiv.className = 'prosemirror-editor-area';
+    container.appendChild(editorDiv);
+
+    // Create editor state
+    const state = EditorState.create({
+      schema,
+      plugins: [
+        history(),
+        keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Mod-Shift-z': redo }),
+        keymap(baseKeymap)
+      ]
+    });
+
+    // Create editor view
+    floatingEditorInstance = new EditorView(editorDiv, {
+      state,
+      dispatchTransaction(transaction) {
+        const newState = floatingEditorInstance.state.apply(transaction);
+        floatingEditorInstance.updateState(newState);
+      }
+    });
+
+    console.log('Floating editor initialized successfully');
+
+  } catch (error) {
+    console.error('Error initializing floating editor:', error);
+    // Fallback to textarea
+    container.innerHTML = '<textarea id="floatingEditorFallback" style="width: 100%; min-height: 300px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-family: inherit;"></textarea>';
+  }
+}
+
+// Insert image as base64 into floating editor
+function insertImageIntoFloatingEditor() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+
+      if (floatingEditorInstance && floatingEditorInstance.state) {
+        try {
+          const { schema } = ProseMirror.schemaBasic;
+          const { state, dispatch } = floatingEditorInstance;
+          const imageNode = schema.nodes.image.create({ src: base64 });
+          const transaction = state.tr.replaceSelectionWith(imageNode);
+          dispatch(transaction);
+          floatingEditorInstance.focus();
+        } catch (error) {
+          console.error('Error inserting image:', error);
+          alert('Could not insert image. ProseMirror basic schema may not support images.');
+        }
+      } else {
+        // Fallback textarea
+        const textarea = document.getElementById('floatingEditorFallback');
+        if (textarea) {
+          textarea.value += `\n<img src="${base64}" alt="Inserted image" style="max-width: 100%;">\n`;
+        }
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+// Insert content from floating editor
+function insertFromFloatingEditor() {
+  if (!currentFocusedField) {
+    closeFloatingEditor();
+    return;
+  }
+
+  let content = '';
+
+  if (floatingEditorInstance && floatingEditorInstance.state && floatingEditorInstance.state.doc) {
+    // Serialize ProseMirror document to HTML
+    try {
+      const { DOMSerializer } = ProseMirror.model;
+      const doc = floatingEditorInstance.state.doc;
+      const serializer = DOMSerializer.fromSchema(floatingEditorInstance.state.schema);
+      const fragment = serializer.serializeFragment(doc.content);
+
+      const div = document.createElement('div');
+      div.appendChild(fragment);
+      content = div.innerHTML;
+    } catch (error) {
+      console.error('Error serializing ProseMirror content:', error);
+      // Fallback to text content
+      content = floatingEditorInstance.state.doc.textContent;
+    }
+  } else {
+    // Fallback for textarea
+    const textarea = document.getElementById('floatingEditorFallback');
+    if (textarea) content = textarea.value;
+  }
+
+  // Find the question and update its content or markscheme
+  const question = findQuestionById(currentFocusedField, questions);
+  if (question) {
+    if (currentFocusedField.includes('content')) {
+      question.content = content;
+    } else if (currentFocusedField.includes('markscheme')) {
+      question.markscheme = content;
+    }
+  }
+
+  // Re-render to show updated content
+  renderQuestions();
+  closeFloatingEditor();
+}
+
+// Load topics directly (simplified - no grade/subject dependencies)
+async function loadTopicsForTest() {
+  try {
+    // Load all topics
+    const response = await fetch('/ajax/topics/');
+    const data = await response.json();
+    const select = document.getElementById('topicSelect');
+    select.innerHTML = '<option value="">Select Topic</option>';
+    data.forEach(topic => {
+      const option = document.createElement('option');
+      option.value = topic.id;
+      option.textContent = topic.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading topics:', error);
+  }
+}
+
+// Load LOs for test-level metadata box
+async function loadLearningObjectivesForTest() {
+  const topicId = document.getElementById('topicSelect').value;
+  const container = document.getElementById('loCheckboxesContainer');
+
+  if (!topicId) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+    availableLOs = [];
+    renderQuestions();
+    return;
+  }
+
+  try {
+    const response = await fetch(`/ajax/los/?topic_id=${topicId}`);
+    const data = await response.json();
+
+    availableLOs = data;
+
+    if (data.length > 0) {
+      container.style.display = 'grid';
+      container.innerHTML = data.map(lo => `
+        <label class="lo-checkbox-item">
+          <input type="checkbox" value="${lo.id}" onchange="updateTestLOs()">
+          <span class="lo-checkbox-label">${lo.code}: ${lo.description}</span>
+        </label>
+      `).join('');
+    } else {
+      container.style.display = 'none';
+      container.innerHTML = '';
+    }
+
+    // Re-render questions to show LO checkboxes per question
+    renderQuestions();
+    updateMetadataViz();
+  } catch (error) {
+    console.error('Error loading LOs:', error);
+  }
+}
+
+// Update test-level LO selection
+function updateTestLOs() {
+  // This function can be used to track which LOs are selected at test level
+  // For now, we'll just trigger metadata update
+  updateMetadataViz();
+}
+
+// Load metadata on page load
+loadTopicsForTest();
+loadSubjects();
 </script>
 
 {% endblock %}

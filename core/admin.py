@@ -4,12 +4,11 @@ from .models import (
     Subject,
     Topic,
     LearningObjective,
-    Question,
     Test,
-    TestQuestion,
     Student,
     ClassGroup,
     StudentAnswer,
+    StudentTestAttempt,
 )
 from django.contrib.auth.models import User
 
@@ -34,30 +33,10 @@ class LearningObjectiveAdmin(admin.ModelAdmin):
     list_display = ("code", "topic", "subject", "grade")
 
 
-@admin.register(Question)
-class QuestionAdmin(admin.ModelAdmin):
-    list_display = (
-        "id",
-        "grade",
-        "subject",
-        "topic",
-        "question_type",
-        "marks",
-        "year",
-        "created_by",
-    )
-    search_fields = ("question_text", "answer_text")
-
-
 @admin.register(Test)
 class TestAdmin(admin.ModelAdmin):
     list_display = ("id", "title", "created_by", "is_published", "created_at")
     list_filter = ("is_published",)
-
-
-@admin.register(TestQuestion)
-class TestQuestionAdmin(admin.ModelAdmin):
-    list_display = ("test", "question", "order")
 
 @admin.register(Student)
 class StudentAdmin(admin.ModelAdmin):
@@ -154,11 +133,26 @@ class StudentAnswerAdmin(admin.ModelAdmin):
     list_display = (
         "student",
         "test",
-        "question",
+        "question_id",
         "marks_awarded",
         "submitted_at",
         "evaluated_by"
     )
     list_filter = ("test", "evaluated_at")
-    search_fields = ("student__full_name", "test__title")
+    search_fields = ("student__full_name", "test__title", "question_id")
     readonly_fields = ("submitted_at",)
+
+
+@admin.register(StudentTestAttempt)
+class StudentTestAttemptAdmin(admin.ModelAdmin):
+    list_display = (
+        "student",
+        "test",
+        "started_at",
+        "submitted_at",
+        "is_submitted",
+        "time_remaining_seconds"
+    )
+    list_filter = ("is_submitted", "test")
+    search_fields = ("student__full_name", "test__title")
+    readonly_fields = ("started_at", "submitted_at")
