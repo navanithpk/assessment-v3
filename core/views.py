@@ -1255,7 +1255,7 @@ def create_descriptive_test(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     # GET request - show the editor
-    return render(request, 'teacher/create_descriptive_test_v2.html', {
+    return render(request, 'teacher/create_descriptive_test_v3.html', {
         'school': school
     })
 
@@ -1311,7 +1311,7 @@ def edit_descriptive_test(request, test_id):
         except:
             questions_data = []
 
-    return render(request, 'teacher/create_descriptive_test_v2.html', {
+    return render(request, 'teacher/create_descriptive_test_v3.html', {
         'school': school,
         'test': test,
         'questions_data': json.dumps(questions_data),

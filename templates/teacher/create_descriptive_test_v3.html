@@ -1,0 +1,1415 @@
+{% extends "teacher/teacher_base.html" %}
+{% load static %}
+
+{% block title %}{% if test %}Edit{% else %}Create{% endif %} Test{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% if test %}Edit{% else %}Create{% endif %} Test</title>
+
+  <!-- ProseMirror CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/prosemirror-view/style/prosemirror.css">
+  <script src="https://unpkg.com/prosemirror-state"></script>
+  <script src="https://unpkg.com/prosemirror-view"></script>
+  <script src="https://unpkg.com/prosemirror-model"></script>
+  <script src="https://unpkg.com/prosemirror-schema-basic"></script>
+  <script src="https://unpkg.com/prosemirror-schema-list"></script>
+  <script src="https://unpkg.com/prosemirror-commands"></script>
+  <script src="https://unpkg.com/prosemirror-keymap"></script>
+  <script src="https://unpkg.com/prosemirror-history"></script>
+  <script src="https://unpkg.com/prosemirror-transform"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 32px 40px;
+    }
+
+    .header-title {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .header-subtitle {
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .header-actions {
+      margin-top: 20px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Test Info */
+    .test-info {
+      padding: 32px 40px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .info-grid { grid-template-columns: 1fr; }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input, .form-select {
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: all 0.2s;
+      background: white;
+    }
+
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Questions Section */
+    .questions-section {
+      padding: 32px 40px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+    }
+
+    .btn-danger {
+      background: #fee;
+      color: #dc2626;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+
+    .btn-danger:hover {
+      background: #fcc;
+    }
+
+    /* Question Card */
+    .question-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+
+    .question-card:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .question-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .question-number {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .question-controls {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .marks-input {
+      width: 70px;
+      padding: 6px 10px;
+      border: 2px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    /* Editor Area - Inline */
+    .editor-section {
+      margin-bottom: 20px;
+    }
+
+    .editor-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .editor-wrapper {
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    .editor-wrapper:focus-within {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .editor-toolbar {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 8px;
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-btn {
+      background: white;
+      border: 1px solid #cbd5e1;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toolbar-btn:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .toolbar-btn.active {
+      background: #667eea;
+      color: white;
+    }
+
+    .ProseMirror {
+      padding: 12px;
+      min-height: 60px;
+      outline: none;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .ProseMirror p { margin-bottom: 6px; }
+    .ProseMirror h1 { font-size: 24px; font-weight: 700; margin-bottom: 12px; }
+    .ProseMirror h2 { font-size: 20px; font-weight: 700; margin-bottom: 10px; }
+    .ProseMirror h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .ProseMirror ul, .ProseMirror ol { margin-left: 20px; margin-bottom: 8px; }
+    .ProseMirror blockquote { border-left: 4px solid #cbd5e1; padding-left: 16px; margin: 12px 0; color: #64748b; }
+    .ProseMirror img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+    .ProseMirror p:empty::before {
+      content: 'Type your content here...';
+      color: #94a3b8;
+      font-style: italic;
+      pointer-events: none;
+    }
+
+    /* LO Tags */
+    .lo-tags {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .lo-tags-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .lo-checkboxes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .lo-checkbox {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+
+    .lo-checkbox:hover {
+      background: #e2e8f0;
+    }
+
+    .lo-checkbox input {
+      margin: 0;
+    }
+
+    .lo-checkbox.checked {
+      background: #dbeafe;
+      border-color: #3b82f6;
+    }
+
+    /* Sub-questions */
+    .sub-questions {
+      margin-left: 40px;
+      margin-top: 16px;
+    }
+
+    .sub-question-card {
+      background: #fefce8;
+      border-left: 4px solid #eab308;
+    }
+
+    .sub-sub-question-card {
+      background: #f0fdf4;
+      border-left: 4px solid #22c55e;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+
+    .stat-item {
+      flex: 1;
+      text-align: center;
+      padding: 12px;
+      background: white;
+      border-radius: 8px;
+      border: 2px solid #e2e8f0;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #667eea;
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 28px;
+      color: #94a3b8;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .close-btn:hover {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .modal-footer {
+      padding: 20px 24px;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #94a3b8;
+    }
+
+    .empty-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+
+    .empty-text {
+      font-size: 16px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-title">{% if test %}Edit Test{% else %}Create New Test{% endif %}</div>
+      <div class="header-subtitle">Just start typing! Each question has its own rich text editor with formatting tools.</div>
+      <div class="header-actions">
+        <button class="btn btn-success" onclick="saveTest()">💾 Save Test</button>
+        {% if test %}
+        <button class="btn btn-primary" onclick="publishTest()">
+          {% if test.is_published %}🔓 Unpublish{% else %}📤 Publish{% endif %}
+        </button>
+        {% endif %}
+        <button class="btn btn-primary" onclick="openAssignModal()">👥 Assign Students</button>
+      </div>
+    </div>
+
+    <!-- Test Information -->
+    <div class="test-info">
+      <div class="info-grid">
+        <div class="form-group">
+          <label class="form-label">Test Title</label>
+          <input type="text" class="form-input" id="testTitle" placeholder="e.g., Midterm Exam - Chapter 5" value="{% if test %}{{ test.title }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Grade</label>
+          <select class="form-select" id="gradeSelect" onchange="loadSubjects()">
+            <option value="">Select Grade</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Subject</label>
+          <select class="form-select" id="subjectSelect" onchange="loadTopics()">
+            <option value="">Select Subject</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Topic</label>
+          <select class="form-select" id="topicSelect" onchange="loadLOs()">
+            <option value="">Select Topic</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Start Date & Time</label>
+          <input type="datetime-local" class="form-input" id="startTime" value="{% if test.start_time %}{{ test.start_time|date:'Y-m-d\TH:i' }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Duration (minutes)</label>
+          <input type="number" class="form-input" id="duration" placeholder="e.g., 60" min="1" value="{% if test.duration_minutes %}{{ test.duration_minutes }}{% endif %}">
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Section -->
+    <div class="questions-section">
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-value" id="totalQuestions">0</span>
+          <span class="stat-label">QUESTIONS</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="totalMarks">0</span>
+          <span class="stat-label">TOTAL MARKS</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value" id="loCount">0</span>
+          <span class="stat-label">LEARNING OBJECTIVES</span>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">Questions</div>
+        <button class="btn btn-primary" onclick="addQuestion()">➕ Add Question</button>
+      </div>
+
+      <div id="questionsContainer">
+        <div class="empty-state">
+          <div class="empty-icon">📝</div>
+          <div class="empty-text">No questions yet. Click "Add Question" to get started!</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assignment Modal -->
+  <div class="modal-overlay" id="assignModal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Assign Students & Groups</div>
+        <button class="close-btn" onclick="closeAssignModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Search Students</label>
+          <input type="text" class="form-input" id="studentSearch" placeholder="Type to search..." oninput="filterStudents()">
+        </div>
+        <div style="margin-top: 24px;">
+          <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 600;">Individual Students</h3>
+          <div id="studentsList"></div>
+          <h3 style="margin: 24px 0 12px; font-size: 16px; font-weight: 600;">Class Groups</h3>
+          <div id="groupsList"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeAssignModal()">Cancel</button>
+        <button class="btn btn-success" onclick="saveAssignments()">Save Assignments</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // CSRF Token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // ===================== STATE =====================
+    let questions = [];
+    let questionIdCounter = 0;
+    let availableLOs = [];
+    let editorInstances = new Map(); // Map of question-field to ProseMirror view
+    let allStudents = [];
+    let allGroups = [];
+    let selectedStudents = new Set();
+    let selectedGroups = new Set();
+
+    // Load existing test data if editing
+    {% if test %}
+    const existingTestId = {{ test.id }};
+    {% if questions_data %}
+    try {
+      const existingData = {{ questions_data|safe }};
+      if (existingData && Array.isArray(existingData)) {
+        questions = existingData;
+        questionIdCounter = findMaxId(questions);
+      }
+    } catch (e) {
+      console.error('Error loading questions:', e);
+    }
+    {% endif %}
+    {% else %}
+    const existingTestId = null;
+    {% endif %}
+
+    function findMaxId(qs) {
+      let maxId = 0;
+      qs.forEach(q => {
+        const idNum = parseInt(q.id.toString());
+        if (idNum > maxId) maxId = idNum;
+        if (q.children && q.children.length > 0) {
+          const childMax = findMaxId(q.children);
+          if (childMax > maxId) maxId = childMax;
+        }
+      });
+      return maxId;
+    }
+
+    // ===================== INIT =====================
+    document.addEventListener('DOMContentLoaded', function() {
+      loadGrades();
+      loadStudentsAndGroups();
+      render();
+    });
+
+    // ===================== BACKEND DATA LOADING =====================
+    function loadGrades() {
+      fetch('/ajax/grades/')
+        .then(response => response.json())
+        .then(data => {
+          const select = document.getElementById('gradeSelect');
+          select.innerHTML = '<option value="">Select Grade</option>';
+          data.forEach(grade => {
+            const option = document.createElement('option');
+            option.value = grade.id;
+            option.textContent = grade.name;
+            select.appendChild(option);
+          });
+        })
+        .catch(err => console.error('Error loading grades:', err));
+    }
+
+    function loadSubjects() {
+      fetch('/ajax/subjects/')
+        .then(response => response.json())
+        .then(data => {
+          const select = document.getElementById('subjectSelect');
+          select.innerHTML = '<option value="">Select Subject</option>';
+          data.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.id;
+            option.textContent = subject.name;
+            select.appendChild(option);
+          });
+        })
+        .catch(err => console.error('Error loading subjects:', err));
+    }
+
+    function loadTopics() {
+      const gradeId = document.getElementById('gradeSelect').value;
+      const subjectId = document.getElementById('subjectSelect').value;
+      const select = document.getElementById('topicSelect');
+
+      if (!gradeId || !subjectId) {
+        select.innerHTML = '<option value="">Select Grade & Subject first</option>';
+        clearLOs();
+        return;
+      }
+
+      select.innerHTML = '<option value="">Loading...</option>';
+
+      fetch(`/ajax/topics/?grade_id=${gradeId}&subject_id=${subjectId}`)
+        .then(response => response.json())
+        .then(data => {
+          select.innerHTML = '<option value="">Select Topic</option>';
+          data.forEach(topic => {
+            const option = document.createElement('option');
+            option.value = topic.id;
+            option.textContent = topic.name;
+            select.appendChild(option);
+          });
+          clearLOs();
+        })
+        .catch(err => {
+          console.error('Error loading topics:', err);
+          select.innerHTML = '<option value="">Error loading</option>';
+        });
+    }
+
+    function loadLOs() {
+      const topicId = document.getElementById('topicSelect').value;
+      if (!topicId) {
+        clearLOs();
+        return;
+      }
+
+      fetch(`/ajax/los/?topic_id=${topicId}`)
+        .then(response => response.json())
+        .then(data => {
+          availableLOs = data || [];
+          render();
+        })
+        .catch(err => {
+          console.error('Error loading LOs:', err);
+          availableLOs = [];
+          render();
+        });
+    }
+
+    function clearLOs() {
+      availableLOs = [];
+      render();
+    }
+
+    function loadStudentsAndGroups() {
+      fetch('/ajax/students/')
+        .then(response => response.json())
+        .then(data => {
+          allStudents = data || [];
+          renderAssignmentLists();
+        })
+        .catch(err => console.error('Error loading students:', err));
+
+      fetch('/ajax/groups/')
+        .then(response => response.json())
+        .then(data => {
+          allGroups = data || [];
+          renderAssignmentLists();
+        })
+        .catch(err => console.error('Error loading groups:', err));
+    }
+
+    // ===================== PROSEMIRROR INLINE EDITORS =====================
+    function createInlineEditor(container, initialContent, fieldKey) {
+      try {
+        const { schema } = ProseMirror.schemaBasic;
+        const { EditorState } = ProseMirror.state;
+        const { EditorView } = ProseMirror.view;
+        const { keymap } = ProseMirror.keymap;
+        const { baseKeymap, toggleMark, setBlockType, wrapIn } = ProseMirror.commands;
+        const { history, undo, redo } = ProseMirror.history;
+        const { DOMParser } = ProseMirror.model;
+
+        // Create toolbar
+        const toolbar = document.createElement('div');
+        toolbar.className = 'editor-toolbar';
+
+        const buttons = [
+          { label: 'B', title: 'Bold', mark: 'strong' },
+          { label: 'I', title: 'Italic', mark: 'em' },
+          { label: 'H1', title: 'Heading', block: 'heading', attrs: { level: 1 } },
+          { label: '• List', title: 'Bullet List', wrap: 'bullet_list' },
+          { label: '1. List', title: 'Numbered List', wrap: 'ordered_list' },
+          { label: '🖼️', title: 'Image', action: 'image' },
+        ];
+
+        buttons.forEach(btn => {
+          const button = document.createElement('button');
+          button.className = 'toolbar-btn';
+          button.textContent = btn.label;
+          button.title = btn.title;
+          button.type = 'button';
+          toolbar.appendChild(button);
+
+          button.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          };
+
+          button.onclick = (e) => {
+            e.preventDefault();
+            const view = editorInstances.get(fieldKey);
+            if (!view) return;
+
+            const { state, dispatch } = view;
+
+            if (btn.mark) {
+              const markType = schema.marks[btn.mark];
+              if (markType) toggleMark(markType)(state, dispatch);
+            } else if (btn.block) {
+              const nodeType = schema.nodes[btn.block];
+              if (nodeType) setBlockType(nodeType, btn.attrs)(state, dispatch);
+            } else if (btn.wrap) {
+              const nodeType = schema.nodes[btn.wrap];
+              if (nodeType) wrapIn(nodeType)(state, dispatch);
+            } else if (btn.action === 'image') {
+              insertImageInline(fieldKey);
+            }
+            view.focus();
+          };
+        });
+
+        container.appendChild(toolbar);
+
+        // Create editor div
+        const editorDiv = document.createElement('div');
+        container.appendChild(editorDiv);
+
+        // Parse initial content
+        let doc;
+        if (initialContent) {
+          try {
+            const div = document.createElement('div');
+            div.innerHTML = initialContent;
+            doc = DOMParser.fromSchema(schema).parse(div);
+          } catch (err) {
+            console.error('Error parsing content:', err);
+            doc = schema.node('doc', null, [schema.node('paragraph')]);
+          }
+        } else {
+          doc = schema.node('doc', null, [schema.node('paragraph')]);
+        }
+
+        const state = EditorState.create({
+          doc,
+          schema,
+          plugins: [
+            history(),
+            keymap({ 'Mod-z': undo, 'Mod-y': redo }),
+            keymap(baseKeymap)
+          ]
+        });
+
+        const view = new EditorView(editorDiv, {
+          state,
+          dispatchTransaction(transaction) {
+            const newState = view.state.apply(transaction);
+            view.updateState(newState);
+
+            // Save content back to question
+            saveEditorContent(fieldKey, view);
+          }
+        });
+
+        editorInstances.set(fieldKey, view);
+        return view;
+      } catch (error) {
+        console.error('Error creating inline editor:', error);
+        container.innerHTML = '<textarea style="width: 100%; min-height: 80px; padding: 12px; border: none; font-family: inherit; font-size: 15px;"></textarea>';
+        return null;
+      }
+    }
+
+    function saveEditorContent(fieldKey, view) {
+      const parts = fieldKey.split('-');
+      const qId = parseInt(parts[0]);
+      const fieldType = parts[1]; // 'content' or 'markscheme'
+
+      const question = findQuestionById(qId);
+      if (!question) return;
+
+      try {
+        const { DOMSerializer } = ProseMirror.model;
+        const fragment = DOMSerializer.fromSchema(view.state.schema)
+          .serializeFragment(view.state.doc.content);
+
+        const div = document.createElement('div');
+        div.appendChild(fragment);
+        question[fieldType] = div.innerHTML;
+      } catch (error) {
+        console.error('Error saving content:', error);
+        question[fieldType] = view.state.doc.textContent;
+      }
+    }
+
+    function insertImageInline(fieldKey) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64 = event.target.result;
+          const view = editorInstances.get(fieldKey);
+          if (view && view.state) {
+            try {
+              const { schema } = ProseMirror.schemaBasic;
+              const imageNode = schema.nodes.image.create({ src: base64 });
+              const tr = view.state.tr.replaceSelectionWith(imageNode);
+              view.dispatch(tr);
+              view.focus();
+            } catch (error) {
+              console.error('Error inserting image:', error);
+            }
+          }
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+    }
+
+    // ===================== QUESTION MANAGEMENT =====================
+    function addQuestion() {
+      const newQ = {
+        id: ++questionIdCounter,
+        number: questions.length + 1,
+        content: '',
+        markscheme: '',
+        marks: 1,
+        level: 0,
+        children: [],
+        los: []
+      };
+      questions.push(newQ);
+      render();
+    }
+
+    function addSubQuestion(parentId, level) {
+      const parent = findQuestionById(parentId);
+      if (!parent || parent.level >= 2) return;
+
+      const newChild = {
+        id: ++questionIdCounter,
+        content: '',
+        markscheme: '',
+        marks: 1,
+        level: parent.level + 1,
+        children: [],
+        los: []
+      };
+
+      parent.children.push(newChild);
+      render();
+    }
+
+    function deleteQuestion(qId) {
+      if (!confirm('Delete this question and all its sub-questions?')) return;
+
+      for (let i = 0; i < questions.length; i++) {
+        if (questions[i].id === qId) {
+          questions.splice(i, 1);
+          renumberQuestions();
+          render();
+          return;
+        }
+        if (deleteFromChildren(questions[i].children, qId)) {
+          render();
+          return;
+        }
+      }
+    }
+
+    function deleteFromChildren(children, qId) {
+      for (let i = 0; i < children.length; i++) {
+        if (children[i].id === qId) {
+          children.splice(i, 1);
+          return true;
+        }
+        if (children[i].children && deleteFromChildren(children[i].children, qId)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function renumberQuestions() {
+      questions.forEach((q, idx) => {
+        q.number = idx + 1;
+      });
+    }
+
+    function updateMarks(qId, marks) {
+      const question = findQuestionById(qId);
+      if (question) {
+        question.marks = parseInt(marks) || 1;
+        updateStats();
+      }
+    }
+
+    function toggleLO(qId, loId) {
+      const question = findQuestionById(qId);
+      if (!question) return;
+
+      if (!question.los) question.los = [];
+
+      const idx = question.los.indexOf(loId);
+      if (idx > -1) {
+        question.los.splice(idx, 1);
+      } else {
+        question.los.push(loId);
+      }
+      render();
+    }
+
+    function findQuestionById(qId, list = questions) {
+      for (let q of list) {
+        if (q.id === qId) return q;
+        if (q.children && q.children.length > 0) {
+          const found = findQuestionById(qId, q.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    function getQuestionNumber(question, allQuestions) {
+      if (question.level === 0) {
+        return `Q${question.number}`;
+      }
+
+      let parent = null;
+      for (let q of allQuestions) {
+        if (q.children && q.children.includes(question)) {
+          parent = q;
+          break;
+        }
+        if (q.children) {
+          for (let child of q.children) {
+            if (child.children && child.children.includes(question)) {
+              parent = child;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!parent) return '';
+
+      const parentNum = getQuestionNumber(parent, allQuestions);
+      const childIndex = parent.children.indexOf(question) + 1;
+      return `${parentNum}.${childIndex}`;
+    }
+
+    // ===================== RENDER =====================
+    function render() {
+      const container = document.getElementById('questionsContainer');
+
+      if (questions.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📝</div>
+            <div class="empty-text">No questions yet. Click "Add Question" to get started!</div>
+          </div>
+        `;
+        updateStats();
+        return;
+      }
+
+      // Clear old editors
+      editorInstances.forEach((view, key) => {
+        view.destroy();
+      });
+      editorInstances.clear();
+
+      let html = '';
+      questions.forEach(q => {
+        html += renderQuestion(q, 0);
+      });
+
+      container.innerHTML = html;
+
+      // Initialize all inline editors
+      initializeAllEditors(questions);
+      updateStats();
+    }
+
+    function renderQuestion(q, indent) {
+      const qNum = getQuestionNumber(q, questions);
+      const cardClass = q.level === 0 ? 'question-card' :
+                        q.level === 1 ? 'question-card sub-question-card' :
+                        'question-card sub-sub-question-card';
+
+      let html = `
+        <div class="${cardClass}" style="margin-left: ${indent}px">
+          <div class="question-header">
+            <div class="question-number">${qNum}</div>
+            <div style="flex: 1;">
+              <input type="number" class="marks-input" value="${q.marks}"
+                     onchange="updateMarks(${q.id}, this.value)" min="1"> marks
+            </div>
+            <div class="question-controls">
+              ${q.level < 2 ? `<button class="btn btn-secondary" onclick="addSubQuestion(${q.id}, ${q.level + 1})">➕ Sub</button>` : ''}
+              <button class="btn btn-danger" onclick="deleteQuestion(${q.id})">🗑️</button>
+            </div>
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-label">Question Text</div>
+            <div class="editor-wrapper" id="editor-${q.id}-content"></div>
+          </div>
+
+          <div class="editor-section">
+            <div class="editor-label">Mark Scheme</div>
+            <div class="editor-wrapper" id="editor-${q.id}-markscheme"></div>
+          </div>
+      `;
+
+      // Learning Objectives
+      if (availableLOs.length > 0) {
+        html += `
+          <div class="lo-tags">
+            <div class="lo-tags-label">Learning Objectives:</div>
+            <div class="lo-checkboxes">
+        `;
+
+        availableLOs.forEach(lo => {
+          const isChecked = q.los && q.los.includes(lo.id);
+          html += `
+            <label class="lo-checkbox ${isChecked ? 'checked' : ''}">
+              <input type="checkbox" ${isChecked ? 'checked' : ''}
+                     onchange="toggleLO(${q.id}, ${lo.id})">
+              <span>${lo.code} - ${lo.description}</span>
+            </label>
+          `;
+        });
+
+        html += `
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+
+      // Render children
+      if (q.children && q.children.length > 0) {
+        q.children.forEach(child => {
+          html += renderQuestion(child, indent + 40);
+        });
+      }
+
+      return html;
+    }
+
+    function initializeAllEditors(qs) {
+      qs.forEach(q => {
+        // Create content editor
+        const contentContainer = document.getElementById(`editor-${q.id}-content`);
+        if (contentContainer) {
+          createInlineEditor(contentContainer, q.content, `${q.id}-content`);
+        }
+
+        // Create markscheme editor
+        const markschemeContainer = document.getElementById(`editor-${q.id}-markscheme`);
+        if (markschemeContainer) {
+          createInlineEditor(markschemeContainer, q.markscheme, `${q.id}-markscheme`);
+        }
+
+        // Initialize child editors
+        if (q.children && q.children.length > 0) {
+          initializeAllEditors(q.children);
+        }
+      });
+    }
+
+    function updateStats() {
+      let totalQ = 0;
+      let totalM = 0;
+      let uniqueLOs = new Set();
+
+      function count(qs) {
+        qs.forEach(q => {
+          totalQ++;
+          totalM += q.marks || 0;
+          if (q.los) q.los.forEach(lo => uniqueLOs.add(lo));
+          if (q.children) count(q.children);
+        });
+      }
+
+      count(questions);
+
+      document.getElementById('totalQuestions').textContent = totalQ;
+      document.getElementById('totalMarks').textContent = totalM;
+      document.getElementById('loCount').textContent = uniqueLOs.size;
+    }
+
+    // ===================== SAVE TEST =====================
+    function saveTest() {
+      const title = document.getElementById('testTitle').value.trim();
+      if (!title) {
+        alert('Please enter a test title');
+        return;
+      }
+
+      const data = {
+        title: title,
+        grade_id: document.getElementById('gradeSelect').value,
+        subject_id: document.getElementById('subjectSelect').value,
+        topic_id: document.getElementById('topicSelect').value,
+        start_time: document.getElementById('startTime').value,
+        duration_minutes: document.getElementById('duration').value,
+        questions: questions
+      };
+
+      const url = existingTestId ?
+        `/teacher/tests/${existingTestId}/edit-descriptive/` :
+        '/teacher/tests/create-descriptive/';
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.status === 'ok') {
+          alert('Test saved successfully!');
+          if (result.test_id && !existingTestId) {
+            window.location.href = `/teacher/tests/${result.test_id}/edit-descriptive/`;
+          }
+        } else {
+          alert('Error: ' + (result.message || 'Could not save test'));
+        }
+      })
+      .catch(err => {
+        console.error('Save error:', err);
+        alert('Error saving test. Please try again.');
+      });
+    }
+
+    // ===================== PUBLISH TEST =====================
+    {% if test %}
+    function publishTest() {
+      fetch('/teacher/tests/{{ test.id }}/toggle-publish/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        }
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          alert(result.message);
+          location.reload();
+        } else {
+          alert('Error: ' + (result.error || 'Could not publish/unpublish test'));
+        }
+      })
+      .catch(err => {
+        console.error('Publish error:', err);
+        alert('Error toggling publish status');
+      });
+    }
+    {% endif %}
+
+    // ===================== ASSIGNMENT MODAL =====================
+    function openAssignModal() {
+      document.getElementById('assignModal').classList.add('active');
+      renderAssignmentLists();
+    }
+
+    function closeAssignModal() {
+      document.getElementById('assignModal').classList.remove('active');
+    }
+
+    function renderAssignmentLists() {
+      const studentsList = document.getElementById('studentsList');
+      const groupsList = document.getElementById('groupsList');
+
+      if (studentsList) {
+        studentsList.innerHTML = allStudents.map(student => `
+          <label style="display: block; padding: 8px; cursor: pointer;">
+            <input type="checkbox" ${selectedStudents.has(student.id) ? 'checked' : ''}
+                   onchange="toggleStudent(${student.id})">
+            ${student.name} (${student.email || 'No email'})
+          </label>
+        `).join('');
+      }
+
+      if (groupsList) {
+        groupsList.innerHTML = allGroups.map(group => `
+          <label style="display: block; padding: 8px; cursor: pointer;">
+            <input type="checkbox" ${selectedGroups.has(group.id) ? 'checked' : ''}
+                   onchange="toggleGroup(${group.id})">
+            ${group.name} (${group.student_count || 0} students)
+          </label>
+        `).join('');
+      }
+    }
+
+    function filterStudents() {
+      const search = document.getElementById('studentSearch').value.toLowerCase();
+      const filtered = allStudents.filter(s =>
+        s.name.toLowerCase().includes(search) ||
+        (s.email && s.email.toLowerCase().includes(search))
+      );
+
+      const studentsList = document.getElementById('studentsList');
+      studentsList.innerHTML = filtered.map(student => `
+        <label style="display: block; padding: 8px; cursor: pointer;">
+          <input type="checkbox" ${selectedStudents.has(student.id) ? 'checked' : ''}
+                 onchange="toggleStudent(${student.id})">
+          ${student.name} (${student.email || 'No email'})
+        </label>
+      `).join('');
+    }
+
+    function toggleStudent(id) {
+      if (selectedStudents.has(id)) {
+        selectedStudents.delete(id);
+      } else {
+        selectedStudents.add(id);
+      }
+    }
+
+    function toggleGroup(id) {
+      if (selectedGroups.has(id)) {
+        selectedGroups.delete(id);
+      } else {
+        selectedGroups.add(id);
+      }
+    }
+
+    function saveAssignments() {
+      if (!existingTestId) {
+        alert('Please save the test first before assigning students');
+        return;
+      }
+
+      fetch(`/teacher/tests/${existingTestId}/save-assignments/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken
+        },
+        body: JSON.stringify({
+          student_ids: Array.from(selectedStudents),
+          group_ids: Array.from(selectedGroups)
+        })
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.status === 'ok' || result.success) {
+          alert('Assignments saved!');
+          closeAssignModal();
+        } else {
+          alert('Error saving assignments');
+        }
+      })
+      .catch(err => {
+        console.error('Assignment error:', err);
+        alert('Error saving assignments');
+      });
+    }
+  </script>
+</body>
+</html>
+{% endblock %}
